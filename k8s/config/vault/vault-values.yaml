@@ -1,0 +1,51 @@
+# https://github.com/hashicorp/vault-helm/blob/main/values.yaml
+global:
+  enabled: true
+  tlsDisable: false
+  namespace: "vault"
+
+  injector:
+    enabled: false
+
+server:
+  standalone:
+    enabled: true
+    config: |
+      ui = true
+
+      listener "tcp" {
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+        tls_cert_file = "/vault/userconfig/tls/tls.crt"
+        tls_key_file = "/vault/userconfig/tls/tls.key"
+      }
+      storage "raft" {
+        path = "/vault/data"
+      }
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+
+  dataStorage:
+    enabled: true
+    storageClass: "local-path"
+    size: 2Gi
+
+  auditStorage:
+    enabled: true
+    storageClass: "local-path"
+    size: 2Gi
+
+  ingress:
+    enabled: true
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+      cert-manager.io/cluster-issuer: default-issuer
+    ingressClassName: public
+    hosts:
+      - host: vault.3istor.com

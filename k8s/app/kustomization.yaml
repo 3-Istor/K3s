@@ -8,3 +8,5 @@ resources:
   - kyverno.yaml
   - keycloak.yaml
   - envoy-gateway.yaml
+  - vault-secrets-operator.yaml
+  - vault.yaml
