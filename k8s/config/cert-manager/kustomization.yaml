@@ -5,7 +5,8 @@ namespace: cert-manager
 
 resources:
   - namespace.yaml
-  - selfsigned-clusterissuer.yaml
+  - cluster-issuer.yaml
+  - secrets.yaml
 
 helmCharts:
   - name: cert-manager
@@ -14,3 +15,4 @@ helmCharts:
     releaseName: cert-manager
     namespace: cert-manager
     valuesFile: values.yaml
+    includeCRDs: true

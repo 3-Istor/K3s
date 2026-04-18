@@ -27,3 +27,15 @@ variable "cloudflare_api_token_secret_var" {
   type        = string
   sensitive   = true
 }
+
+# -----------------------------------------------------------------------------
+# Cert-Manager Secrets
+# -----------------------------------------------------------------------------
+
+resource "vault_kv_secret_v2" "cert_manager_cloudflare_api_token_secret" {
+  mount = vault_mount.kvv2.path
+  name  = "cert-manager/cloudflare-api-token"
+  data_json = jsonencode({
+    api-token = var.cloudflare_api_token_secret_var
+  })
+}

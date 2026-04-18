@@ -13,3 +13,5 @@ resources:
   - config/keycloak/
   - config/envoy-gateway/
   - config/cloudflared/
+  - config/vault/
+  - config/vault-secrets-operator/
