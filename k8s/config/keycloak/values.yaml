@@ -1,0 +1,106 @@
+replicas: 1
+
+enableServiceLinks: false
+
+image:
+  repository: quay.io/keycloak/keycloak
+  tag: "26.5.5"
+
+rbac:
+  create: false
+  rules: []
+
+proxy:
+  enabled: true
+  mode: xforwarded
+  http:
+    enabled: true
+
+http:
+  relativePath: "/"
+
+metrics:
+  enabled: true
+
+health:
+  enabled: true
+
+serviceMonitor:
+  enabled: false
+
+autoscaling:
+  enabled: false
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "512Mi"
+  limits:
+    memory: "1Gi"
+
+readinessProbe: |
+  httpGet:
+    path: "/health/ready"
+    port: "http-internal"
+    scheme: "HTTP"
+  initialDelaySeconds: 30
+  timeoutSeconds: 1
+startupProbe: |
+  httpGet:
+    path: "/health"
+    port: "http-internal"
+    scheme: "HTTP"
+  initialDelaySeconds: 30
+  timeoutSeconds: 1
+  failureThreshold: 60
+  periodSeconds: 5
+
+database:
+  vendor: postgres
+  existingSecret: keycloak-db-secret
+  existingSecretKey: password
+  hostname: keycloak-rw
+  port: 5432
+  database: keycloak
+  username: keycloak
+
+command:
+  - "/opt/keycloak/bin/kc.sh"
+  - "start"
+  - "--http-port=8080"
+
+extraEnv: |
+  - name: KC_HOSTNAME
+    value: "https://auth.3istor.com"
+  - name: KC_HOSTNAME_ADMIN
+    value: "https://auth.3istor.com"
+  - name: KC_HOSTNAME_STRICT
+    value: "true"
+  - name: KC_HOSTNAME_STRICT_HTTPS
+    value: "true"
+  - name: KEYCLOAK_ADMIN
+    value: admin
+  - name: KEYCLOAK_ADMIN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: keycloak-admin-password
+        key: password
+  - name: JAVA_OPTS_APPEND
+    value: >-
+      -Djgroups.dns.query=keycloak-keycloakx-headless
+
+extraVolumes: |
+  - name: theme-providers
+    emptyDir: {}
+
+extraVolumeMounts: |
+  - name: theme-providers
+    mountPath: /opt/keycloak/providers
+
+extraInitContainers: |
+  - name: theme-provider-init
+    image: ghcr.io/thegostsniperfr/keycloak-theme-kube-lab:latest
+    imagePullPolicy: Always
+    volumeMounts:
+      - name: theme-providers
+        mountPath: /providers

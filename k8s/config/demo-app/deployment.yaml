@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-classes-app
+  namespace: demo-app
+  labels:
+    app: kube-classes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kube-classes
+  template:
+    metadata:
+      labels:
+        app: kube-classes
+    spec:
+      containers:
+        - name: web
+          image: ghcr.io/thegostsniperfr/kube-classes:latest
+          ports:
+            - containerPort: 80
+          env:
+            - name: STUDENT_NAME
+              value: "Envoy Lab User"
+            - name: MISSION_STATEMENT
+              value: "Validation du stack Envoy Gateway API + Keycloak + MetalLB"
+            - name: APP_VERSION
+              value: "1.0 - Gateway Mode"

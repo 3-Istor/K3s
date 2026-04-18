@@ -1,0 +1,63 @@
+{{- range $routeName, $routeConfig := .Values.routes }}
+{{- if $routeConfig.auth.enabled }}
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: "{{ $routeName }}-auth"
+  namespace: "{{ $.Release.Namespace }}"
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: "{{ $routeName }}-route"
+
+  oidc:
+    provider:
+      issuer: "https://auth.{{ $.Values.global.baseDomain }}/realms/{{ $.Values.global.keycloakRealm }}"
+      authorizationEndpoint: "https://auth.{{ $.Values.global.baseDomain }}/realms/{{ $.Values.global.keycloakRealm }}/protocol/openid-connect/auth"
+      tokenEndpoint: "https://auth.{{ $.Values.global.baseDomain }}/realms/{{ $.Values.global.keycloakRealm }}/protocol/openid-connect/token"
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: keycloakx-http
+          namespace: keycloak
+          port: 80
+    clientID: "{{ $.Values.global.authClientId }}"
+    clientSecret:
+      name: "{{ $routeConfig.auth.secretName | default "keycloak-oidc-secret" }}"
+    redirectURL: "https://{{ $routeConfig.ingress.hostname }}/oauth2/callback"
+    logoutPath: "/logout"
+    cookieNames:
+      accessToken: "keycloak-access-token"
+    scopes:
+      - openid
+      - profile
+      - email
+      - groups
+
+  jwt:
+    providers:
+      - name: keycloak-jwt-provider
+        issuer: "https://auth.{{ $.Values.global.baseDomain }}/realms/{{ $.Values.global.keycloakRealm }}"
+        remoteJWKS:
+          uri: "http://keycloakx-http.keycloak.svc.cluster.local/realms/{{ $.Values.global.keycloakRealm }}/protocol/openid-connect/certs"
+        extractFrom:
+          cookies:
+            - "keycloak-access-token"
+
+  authorization:
+    defaultAction: Deny
+    rules:
+      - name: "allow-keycloak-groups"
+        action: Allow
+        principal:
+          jwt:
+            provider: keycloak-jwt-provider
+            claims:
+              - name: "groups"
+                valueType: StringArray
+                values:
+{{ toYaml $routeConfig.auth.allowedGroups | indent 18 }}
+---
+{{- end }}
+{{- end }}
