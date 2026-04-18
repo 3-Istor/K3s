@@ -28,6 +28,17 @@ variable "cloudflare_api_token_secret_var" {
   sensitive   = true
 }
 
+variable "cloudflare_tunnel_token" {
+  type      = string
+  sensitive = true
+}
+
+resource "vault_kv_secret_v2" "cloudflared_token" {
+  mount     = vault_mount.kvv2.path
+  name      = "cloudflared/token"
+  data_json = jsonencode({ token = var.cloudflare_tunnel_token })
+}
+
 # -----------------------------------------------------------------------------
 # Cert-Manager Secrets
 # -----------------------------------------------------------------------------
@@ -38,4 +49,28 @@ resource "vault_kv_secret_v2" "cert_manager_cloudflare_api_token_secret" {
   data_json = jsonencode({
     api-token = var.cloudflare_api_token_secret_var
   })
+}
+
+# -----------------------------------------------------------------------------
+# Keycloak Secrets
+# -----------------------------------------------------------------------------
+
+variable "keycloak_db_password" {
+  type      = string
+  sensitive = true
+}
+
+resource "vault_kv_secret_v2" "keycloak_db" {
+  mount     = vault_mount.kvv2.path
+  name      = "keycloak/db"
+  data_json = jsonencode({ password = var.keycloak_db_password })
+}
+
+# -----------------------------------------------------------------------------
+# ArgoCD Secrets
+# -----------------------------------------------------------------------------
+
+variable "argocd_admin_password" {
+  type      = string
+  sensitive = true
 }

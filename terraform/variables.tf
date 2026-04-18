@@ -52,7 +52,7 @@ variable "vault_url" {
 variable "cloudflare_zone_id" {
   description = "Cloudflare Zone Id of 3istor Record"
   type        = string
-  default     = "fixme"
+  default     = "5984eff5179d6656a7c9e1b00c768d21"
 }
 
 variable "dc_ip" {

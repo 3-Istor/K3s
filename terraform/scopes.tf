@@ -14,24 +14,14 @@ resource "keycloak_openid_group_membership_protocol_mapper" "group_mapper" {
   full_path       = false # Output "admins" instead of "/admins"
 }
 
-resource "keycloak_openid_client_default_scopes" "demo_app_default_scopes" {
+resource "keycloak_openid_client_default_scopes" "openid_client_default_scopes" {
   realm_id  = keycloak_realm.kube_lab.id
-  client_id = keycloak_openid_client.envoy_demo_app.id
+  client_id = keycloak_openid_client.openid_client.id
   default_scopes = [
     "profile",
     "email",
     "roles",
     "web-origins",
-    keycloak_openid_client_scope.groups.name
-  ]
-}
-
-resource "keycloak_openid_client_default_scopes" "argocd_default_scopes" {
-  realm_id  = keycloak_realm.kube_lab.id
-  client_id = keycloak_openid_client.argocd.id
-  default_scopes = [
-    "profile",
-    "email",
     keycloak_openid_client_scope.groups.name
   ]
 }

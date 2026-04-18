@@ -1,11 +1,11 @@
 # -----------------------------------------------------------------------------
-# OIDC CLIENT: DEMO APP
+# OIDC CLIENT: 3-Istor OpenID Client
 # -----------------------------------------------------------------------------
-resource "keycloak_openid_client" "envoy_demo_app" {
+resource "keycloak_openid_client" "openid_client" {
   realm_id  = keycloak_realm.kube_lab.id
-  client_id = "envoy-demo-app"
+  client_id = "3-istor-openid"
 
-  name    = "Envoy Proxy - Demo App"
+  name    = "3-Istor OpenID Client"
   enabled = true
 
   access_type                               = "CONFIDENTIAL"
@@ -29,30 +29,6 @@ resource "keycloak_openid_client" "envoy_demo_app" {
   ]
 
   authentication_flow_binding_overrides {
-    browser_id = keycloak_authentication_flow.browser_demo_app.id
+    browser_id = keycloak_authentication_flow.browser_openid_client.id
   }
-}
-
-# -----------------------------------------------------------------------------
-# OIDC CLIENT: ARGOCD
-# -----------------------------------------------------------------------------
-resource "keycloak_openid_client" "argocd" {
-  realm_id  = keycloak_realm.kube_lab.id
-  client_id = "argocd"
-
-  name    = "ArgoCD SSO"
-  enabled = true
-
-  access_type                  = "CONFIDENTIAL"
-  standard_flow_enabled        = true
-  direct_access_grants_enabled = true
-
-  valid_redirect_uris = [
-    "https://argocd.${var.base_domain}/auth/callback",
-    "https://argocd.${var.base_domain}/api/dex/callback"
-  ]
-
-  web_origins = [
-    "https://argocd.${var.base_domain}"
-  ]
 }

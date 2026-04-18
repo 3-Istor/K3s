@@ -6,9 +6,4 @@ namespace: cloudflared
 resources:
   - namespace.yaml
   - deployment.yaml
-
-secretGenerator:
-  - name: cloudflared-token
-    namespace: cloudflared
-    literals:
-      - token="CHANGE_ME_AVEC_TON_TOKEN_CLOUDFLARE"
+  - secrets.yaml

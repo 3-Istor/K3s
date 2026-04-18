@@ -2,32 +2,32 @@
 # ROLES & GROUP MAPPINGS
 # =============================================================================
 
-# Role required to access the demo application
-resource "keycloak_role" "demo_app_access" {
+# Role required to access 3-Istor Apps
+resource "keycloak_role" "openid_client_access" {
   realm_id    = keycloak_realm.kube_lab.id
-  name        = "demo_app_access"
-  description = "Role required to access the Envoy Demo App"
+  name        = "openid_client_access"
+  description = "Role required to access 3-Istor Apps"
 }
 
 # Authorize the 'developer' group
 # resource "keycloak_group_roles" "dev_app_access" {
 #   realm_id = keycloak_realm.kube_lab.id
 #   group_id = keycloak_group.developer.id
-#   role_ids = [keycloak_role.demo_app_access.id]
+#   role_ids = [keycloak_role.openid_client_access.id]
 # }
 
 # Authorize the 'sre' group
 resource "keycloak_group_roles" "sre_app_access" {
   realm_id = keycloak_realm.kube_lab.id
   group_id = keycloak_group.sre.id
-  role_ids = [keycloak_role.demo_app_access.id]
+  role_ids = [keycloak_role.openid_client_access.id]
 }
 
 # =============================================================================
 # PHASE 0: ROOT AUTHENTICATION FLOW
 # =============================================================================
 
-resource "keycloak_authentication_flow" "browser_demo_app" {
+resource "keycloak_authentication_flow" "browser_openid_client" {
   realm_id    = keycloak_realm.kube_lab.id
   alias       = "Browser-3-istor-Login-v4"
   description = "Complete Flow: Authentication Wrapper followed by RBAC Wrapper"
@@ -41,7 +41,7 @@ resource "keycloak_authentication_flow" "browser_demo_app" {
 
 resource "keycloak_authentication_subflow" "login_wrapper" {
   realm_id          = keycloak_realm.kube_lab.id
-  parent_flow_alias = keycloak_authentication_flow.browser_demo_app.alias
+  parent_flow_alias = keycloak_authentication_flow.browser_openid_client.alias
   alias             = "3-istor-login-wrapper"
   provider_id       = "basic-flow"
   requirement       = "REQUIRED"
@@ -143,7 +143,7 @@ resource "keycloak_authentication_execution" "otp_form" {
 
 resource "keycloak_authentication_subflow" "rbac_deny_wrapper" {
   realm_id          = keycloak_realm.kube_lab.id
-  parent_flow_alias = keycloak_authentication_flow.browser_demo_app.alias
+  parent_flow_alias = keycloak_authentication_flow.browser_openid_client.alias
   alias             = "3-istor-rbac-deny-wrapper"
   provider_id       = "basic-flow"
   requirement       = "CONDITIONAL"
@@ -165,7 +165,7 @@ resource "keycloak_authentication_execution_config" "condition_role_config" {
   alias        = "deny-if-not-3-istor-access"
 
   config = {
-    condUserRole = keycloak_role.demo_app_access.name
+    condUserRole = keycloak_role.openid_client_access.name
     negate       = "true"
   }
 }

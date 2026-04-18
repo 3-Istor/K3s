@@ -40,7 +40,7 @@ spec:
       - name: keycloak-jwt-provider
         issuer: "https://auth.{{ $.Values.global.baseDomain }}/realms/{{ $.Values.global.keycloakRealm }}"
         remoteJWKS:
-          uri: "http://keycloakx-http.keycloak.svc.cluster.local/realms/{{ $.Values.global.keycloakRealm }}/protocol/openid-connect/certs"
+          uri: "https://auth.{{ $.Values.global.baseDomain }}/realms/{{ $.Values.global.keycloakRealm }}/protocol/openid-connect/certs"
         extractFrom:
           cookies:
             - "keycloak-access-token"

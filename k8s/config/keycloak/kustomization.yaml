@@ -8,7 +8,6 @@ resources:
   - secrets.yaml
   - http-route.yaml
   - postgres.yaml
-  - reference-grant.yaml
 
 helmCharts:
   - name: keycloakx
