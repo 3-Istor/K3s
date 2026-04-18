@@ -1,0 +1,22 @@
+# Doc: https://github.com/ricoberger/vault-secrets-operator/blob/main/charts/README.md
+# Values: https://github.com/ricoberger/vault-secrets-operator/blob/main/charts/vault-secrets-operator/values.yaml
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/ricoberger/vault-secrets-operator
+  tag: v1.26.0
+  pullPolicy: IfNotPresent
+
+vault:
+  authMethod: kubernetes
+  reconciliationTime: 60
+  address: https://vault.3istor.com
+  kubernetesRole: "vault-secrets-operator-role"
+
+resources:
+  limits:
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi

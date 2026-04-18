@@ -1,0 +1,27 @@
+resource "keycloak_openid_client_scope" "groups" {
+  realm_id               = keycloak_realm.kube_lab.id
+  name                   = "groups"
+  description            = "TODO"
+  include_in_token_scope = true
+  gui_order              = 1
+}
+
+resource "keycloak_openid_group_membership_protocol_mapper" "group_mapper" {
+  realm_id        = keycloak_realm.kube_lab.id
+  client_scope_id = keycloak_openid_client_scope.groups.id
+  name            = "group-mapper"
+  claim_name      = "groups"
+  full_path       = false # Output "admins" instead of "/admins"
+}
+
+resource "keycloak_openid_client_default_scopes" "openid_client_default_scopes" {
+  realm_id  = keycloak_realm.kube_lab.id
+  client_id = keycloak_openid_client.openid_client.id
+  default_scopes = [
+    "profile",
+    "email",
+    "roles",
+    "web-origins",
+    keycloak_openid_client_scope.groups.name
+  ]
+}

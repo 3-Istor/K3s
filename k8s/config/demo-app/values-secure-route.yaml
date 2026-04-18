@@ -1,0 +1,12 @@
+routes:
+  demo-frontend:
+    targetService:
+      name: "kube-classes-svc"
+      port: 80
+    ingress:
+      hostname: "demo.3istor.com"
+    auth:
+      enabled: true
+      secretName: "envoy-demo-app-secret"
+      allowedGroups:
+        - "sre"
