@@ -54,6 +54,13 @@ resource "keycloak_user" "team" {
     value     = random_password.team[each.key].result
     temporary = true
   }
+
+  lifecycle {
+    ignore_changes = [
+      required_actions,
+      initial_password
+    ]
+  }
 }
 
 resource "keycloak_user_groups" "team_groups" {

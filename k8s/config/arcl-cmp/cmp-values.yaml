@@ -1,5 +1,15 @@
 replicaCount: 1
 
+image:
+  backend:
+    repository: ghcr.io/3-istor/cmp-backend
+    pullPolicy: Always
+    tag: "latest"
+  frontend:
+    repository: ghcr.io/3-istor/cmp-frontend
+    pullPolicy: Always
+    tag: "latest"
+
 frontend:
   apiUrl: "https://cmp.3istor.com/api"
 
