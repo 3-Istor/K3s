@@ -10,3 +10,4 @@ resources:
   - envoy-gateway.yaml
   - vault-secrets-operator.yaml
   - vault.yaml
+  - argocd.yaml
