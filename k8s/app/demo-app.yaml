@@ -5,6 +5,9 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/compare-options: ServerSideDiff=true,IncludeMutationWebhook=true
+    # argocd-image-updater.argoproj.io/image-list: demo=ghcr.io/thegostsniperfr/kube-classes
+    # argocd-image-updater.argoproj.io/demo.update-strategy: digest
+    # argocd-image-updater.argoproj.io/write-back-method: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
