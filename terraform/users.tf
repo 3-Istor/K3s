@@ -48,6 +48,8 @@ resource "keycloak_user" "team" {
   enabled        = true
   email_verified = true
 
+  required_actions = ["UPDATE_PASSWORD", "CONFIGURE_TOTP"]
+
   initial_password {
     value     = random_password.team[each.key].result
     temporary = true

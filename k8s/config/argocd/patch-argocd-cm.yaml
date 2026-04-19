@@ -18,6 +18,7 @@ data:
   resource.compareoptions: |
     ignoreAggregatedRoles: true
 
+  admin.enabled: "false"
   url: "https://argocd.3istor.com"
   timeout.reconciliation: "30s"
   oidc.config: |

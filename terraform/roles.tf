@@ -84,3 +84,32 @@ resource "vault_kubernetes_auth_backend_role" "argocd_role" {
   token_ttl                        = 86400
   token_policies                   = [vault_policy.argocd_policy.name]
 }
+
+# -----------------------------------------------------------------------------
+# Vault Admin Roles
+# -----------------------------------------------------------------------------
+
+resource "vault_jwt_auth_backend_role" "default" {
+  backend        = vault_jwt_auth_backend.keycloak.path
+  role_name      = "default"
+  token_policies = ["default"]
+  user_claim     = "preferred_username"
+  role_type      = "oidc"
+  groups_claim   = "groups"
+  allowed_redirect_uris = [
+    "https://vault.${var.base_domain}/ui/vault/auth/oidc/oidc/callback",
+    "http://localhost:8250/oidc/callback"
+  ]
+}
+
+resource "vault_identity_group" "infra" {
+  name     = "infra"
+  type     = "external"
+  policies = [vault_policy.vault_admin.name]
+}
+
+resource "vault_identity_group_alias" "infra_alias" {
+  name           = "infra"
+  mount_accessor = vault_jwt_auth_backend.keycloak.accessor
+  canonical_id   = vault_identity_group.infra.id
+}

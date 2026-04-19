@@ -98,36 +98,27 @@ resource "keycloak_authentication_execution" "username_password" {
 
 # =============================================================================
 # PHASE 1.3: MULTI FACTOR AUTHENTICATION
-# Only triggered after successful username/password authentication
+# Triggered after successful username/password authentication. Mandatory for all.
 # =============================================================================
 
-resource "keycloak_authentication_subflow" "conditional_otp" {
+resource "keycloak_authentication_subflow" "mandatory_otp" {
   realm_id          = keycloak_realm.kube_lab.id
   parent_flow_alias = keycloak_authentication_subflow.forms_wrapper.alias
-  alias             = "3-istor-conditional-otp"
+  alias             = "3-istor-mandatory-otp"
   provider_id       = "basic-flow"
-  requirement       = "CONDITIONAL"
+  requirement       = "REQUIRED"
   priority          = 20
 }
 
-# Check if the user has an OTP configured
-resource "keycloak_authentication_execution" "cond_user_configured" {
+# Ask for OTP token. If the user doesn't have one configured,
+# Keycloak will automatically force them to set it up (QR Code screen).
+resource "keycloak_authentication_execution" "otp_form" {
   realm_id          = keycloak_realm.kube_lab.id
-  parent_flow_alias = keycloak_authentication_subflow.conditional_otp.alias
-  authenticator     = "conditional-user-configured"
+  parent_flow_alias = keycloak_authentication_subflow.mandatory_otp.alias
+  authenticator     = "auth-otp-form"
   requirement       = "REQUIRED"
   priority          = 10
 }
-
-# Ask for OTP token if configured
-resource "keycloak_authentication_execution" "otp_form" {
-  realm_id          = keycloak_realm.kube_lab.id
-  parent_flow_alias = keycloak_authentication_subflow.conditional_otp.alias
-  authenticator     = "auth-otp-form"
-  requirement       = "REQUIRED"
-  priority          = 20
-}
-
 # =============================================================================
 # PHASE 2: RBAC WRAPPER
 # The user is authenticated at this point.

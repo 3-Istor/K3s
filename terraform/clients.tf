@@ -66,3 +66,35 @@ resource "keycloak_openid_client_default_scopes" "argocd_scopes" {
     keycloak_openid_client_scope.groups.name
   ]
 }
+
+# -----------------------------------------------------------------------------
+# OIDC CLIENT: Vault
+# -----------------------------------------------------------------------------
+resource "keycloak_openid_client" "vault" {
+  realm_id                     = keycloak_realm.kube_lab.id
+  client_id                    = "vault"
+  name                         = "Vault"
+  enabled                      = true
+  access_type                  = "CONFIDENTIAL"
+  standard_flow_enabled        = true
+  direct_access_grants_enabled = false
+
+  valid_redirect_uris = [
+    "https://vault.${var.base_domain}/ui/vault/auth/oidc/oidc/callback",
+    "http://localhost:8250/oidc/callback"
+  ]
+
+  authentication_flow_binding_overrides {
+    browser_id = keycloak_authentication_flow.browser_openid_client.id
+  }
+}
+
+resource "keycloak_openid_client_default_scopes" "vault_scopes" {
+  realm_id  = keycloak_realm.kube_lab.id
+  client_id = keycloak_openid_client.vault.id
+  default_scopes = [
+    "profile",
+    "email",
+    "groups"
+  ]
+}

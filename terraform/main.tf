@@ -22,7 +22,8 @@ resource "keycloak_realm" "kube_lab" {
   sso_session_max_lifespan = "24h" # The maximum amount of time before a session expires regardless of activity.
 
   # Enable user registration for testing (optional)
-  registration_allowed     = true
+  login_with_email_allowed = true
+  registration_allowed     = false
   reset_password_allowed   = false # When true, a "forgot password" link will be displayed on the login page.
   remember_me              = true  # When true, a "remember me" checkbox will be displayed on the login page, and the user's session will not expire between browser restarts.
   verify_email             = false # When true, users are required to verify their email address after registration and after email address changes.
@@ -62,4 +63,12 @@ resource "keycloak_realm" "kube_lab" {
     relying_party_id          = "keycloak.example.com"
     signature_algorithms      = ["ES256", "RS256"]
   }
+}
+
+resource "keycloak_required_action" "totp" {
+  realm_id       = keycloak_realm.kube_lab.id
+  alias          = "CONFIGURE_TOTP"
+  enabled        = true
+  default_action = true
+  name           = "Configure OTP"
 }
