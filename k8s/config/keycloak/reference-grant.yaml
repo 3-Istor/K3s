@@ -1,0 +1,17 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-envoy-oidc
+  namespace: keycloak
+spec:
+  from:
+    - group: gateway.envoyproxy.io
+      kind: SecurityPolicy
+      namespace: demo-app
+    - group: gateway.envoyproxy.io
+      kind: SecurityPolicy
+      namespace: argocd
+  to:
+    - group: ""
+      kind: Service
+      name: keycloakx-http

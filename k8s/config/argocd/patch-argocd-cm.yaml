@@ -22,7 +22,7 @@ data:
   oidc.config: |
     name: 3Istor ID
     issuer: https://auth.3istor.com/realms/3istor
-    clientID: $oidc.keycloak.clientId
+    clientID: argocd
     clientSecret: $oidc.keycloak.clientSecret
     requestedScopes: ["openid", "profile", "email", "groups"]
   timeout.reconciliation: "30s"

@@ -82,7 +82,18 @@ resource "vault_kv_secret_v2" "argocd_oidc" {
   mount = vault_mount.kvv2.path
   name  = "argocd/oidc"
   data_json = jsonencode({
-    clientId     = keycloak_openid_client.argocd.client_id
-    clientSecret = keycloak_openid_client.argocd.client_secret
+    "oidc.keycloak.clientSecret" = keycloak_openid_client.argocd.client_secret
+  })
+}
+
+
+# -----------------------------------------------------------------------------
+# Demo App Secrets
+# -----------------------------------------------------------------------------
+resource "vault_kv_secret_v2" "demo_app_envoy_auth" {
+  mount = vault_mount.kvv2.path
+  name  = "demo-app/envoy-auth"
+  data_json = jsonencode({
+    "client-secret" = keycloak_openid_client.openid_client.client_secret
   })
 }
