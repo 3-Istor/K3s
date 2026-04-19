@@ -1,5 +1,8 @@
 replicaCount: 1
 
+frontend:
+  apiUrl: "https://cmp.3istor.com/api"
+
 ingress:
   enabled: false
 
