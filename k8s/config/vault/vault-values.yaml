@@ -41,10 +41,4 @@ server:
     size: 2Gi
 
   ingress:
-    enabled: true
-    annotations:
-      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
-      cert-manager.io/cluster-issuer: default-issuer
-    ingressClassName: public
-    hosts:
-      - host: vault.3istor.com
+    enabled: false

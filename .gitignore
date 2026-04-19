@@ -1,4 +1,5 @@
-k8s/**/charts/
+charts/
+!charts/secure-route/
 **/.terraform/*
 *.tfstate
 *.tfstate.*

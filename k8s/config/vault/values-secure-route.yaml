@@ -1,0 +1,9 @@
+routes:
+  vault-ui:
+    targetService:
+      name: "vault"
+      port: 8200
+    ingress:
+      hostname: "vault.3istor.com"
+    auth:
+      enabled: false
