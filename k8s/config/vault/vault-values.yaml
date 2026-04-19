@@ -1,7 +1,7 @@
 # https://github.com/hashicorp/vault-helm/blob/main/values.yaml
 global:
   enabled: true
-  tlsDisable: false
+  tlsDisable: true
   namespace: "vault"
 
   injector:
@@ -16,8 +16,7 @@ server:
       listener "tcp" {
         address = "[::]:8200"
         cluster_address = "[::]:8201"
-        tls_cert_file = "/vault/userconfig/tls/tls.crt"
-        tls_key_file = "/vault/userconfig/tls/tls.key"
+        tls_disable = 1
       }
       storage "raft" {
         path = "/vault/data"

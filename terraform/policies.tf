@@ -33,7 +33,7 @@ resource "vault_policy" "keycloak_policy" {
 
 resource "vault_policy" "cloudflared_policy" {
   name = "cloudflared-policy"
-  policy = templatefile("${path.module}/policies/keycloak.hcl", {
+  policy = templatefile("${path.module}/policies/cloudflared.hcl", {
     mount_path = vault_mount.kvv2.path
   })
 }
@@ -45,6 +45,17 @@ resource "vault_policy" "cloudflared_policy" {
 resource "vault_policy" "demo_app_policy" {
   name = "demo-app-policy"
   policy = templatefile("${path.module}/policies/demo_app.hcl", {
+    mount_path = vault_mount.kvv2.path
+  })
+}
+
+# -----------------------------------------------------------------------------
+# Operator Policies
+# -----------------------------------------------------------------------------
+
+resource "vault_policy" "vault_secrets_operator_policy" {
+  name = "vault-secrets-operator-policy"
+  policy = templatefile("${path.module}/policies/vault_secrets_operator.hcl", {
     mount_path = vault_mount.kvv2.path
   })
 }

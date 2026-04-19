@@ -70,6 +70,8 @@ command:
   - "--http-port=8080"
 
 extraEnv: |
+  - name: KC_PROXY
+    value: edge
   - name: KC_HOSTNAME
     value: "https://auth.3istor.com"
   - name: KC_HOSTNAME_ADMIN

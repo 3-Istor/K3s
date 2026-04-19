@@ -11,7 +11,7 @@ image:
 vault:
   authMethod: kubernetes
   reconciliationTime: 60
-  address: https://vault.3istor.com
+  address: http://vault.vault.svc.cluster.local:8200
   kubernetesRole: "vault-secrets-operator-role"
 
 resources:

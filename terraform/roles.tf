@@ -59,3 +59,16 @@ resource "vault_kubernetes_auth_backend_role" "demo_app_role" {
   token_ttl                        = 86400
   token_policies                   = [vault_policy.demo_app_policy.name]
 }
+
+# -----------------------------------------------------------------------------
+# VSO Roles
+# -----------------------------------------------------------------------------
+
+resource "vault_kubernetes_auth_backend_role" "vault_secrets_operator_role" {
+  backend                          = vault_auth_backend.kubernetes.path
+  role_name                        = "vault-secrets-operator-role"
+  bound_service_account_names      = ["vault-secrets-operator"]
+  bound_service_account_namespaces = ["vault-secrets-operator"]
+  token_ttl                        = 86400 # 24h
+  token_policies                   = [vault_policy.vault_secrets_operator_policy.name]
+}

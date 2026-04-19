@@ -5,15 +5,17 @@
 variable "keycloak_url" {
   description = "The Base URL of the Keycloak instance"
   type        = string
+  default     = "https://auth.3istor.com"
+  # default = "http://localhost:8085"
 }
 
-variable "keycloak_username" {
+variable "keycloak_admin_username" {
   description = "Keycloak admin username"
   type        = string
   default     = "admin"
 }
 
-variable "keycloak_password" {
+variable "keycloak_admin_password" {
   description = "Keycloak admin password"
   type        = string
   sensitive   = true
@@ -43,6 +45,13 @@ variable "vault_url" {
   description = "The URL of the Vault server."
   type        = string
   default     = "https://vault.3istor.com"
+  # default = "http://localhost:8200"
+}
+
+variable "vault_token" {
+  description = "The token for accessing the Vault server."
+  type        = string
+  sensitive   = true
 }
 
 # -----------------------------------------------------------------------------
@@ -65,4 +74,9 @@ variable "domain_name" {
   description = "The domain name for the 3istor Cluster."
   type        = string
   default     = "3istor.com"
+}
+
+variable "cloudflare_account_id" {
+  description = "Cloudflare Account ID"
+  type        = string
 }

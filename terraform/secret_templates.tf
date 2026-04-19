@@ -28,15 +28,12 @@ variable "cloudflare_api_token_secret_var" {
   sensitive   = true
 }
 
-variable "cloudflare_tunnel_token" {
-  type      = string
-  sensitive = true
-}
-
 resource "vault_kv_secret_v2" "cloudflared_token" {
-  mount     = vault_mount.kvv2.path
-  name      = "cloudflared/token"
-  data_json = jsonencode({ token = var.cloudflare_tunnel_token })
+  mount = vault_mount.kvv2.path
+  name  = "cloudflared/token"
+  data_json = jsonencode({
+    token = local.generated_tunnel_token
+  })
 }
 
 # -----------------------------------------------------------------------------
@@ -64,6 +61,12 @@ resource "vault_kv_secret_v2" "keycloak_db" {
   mount     = vault_mount.kvv2.path
   name      = "keycloak/db"
   data_json = jsonencode({ password = var.keycloak_db_password })
+}
+
+resource "vault_kv_secret_v2" "keycloak_admin" {
+  mount     = vault_mount.kvv2.path
+  name      = "keycloak/admin"
+  data_json = jsonencode({ password = var.keycloak_admin_password })
 }
 
 # -----------------------------------------------------------------------------
