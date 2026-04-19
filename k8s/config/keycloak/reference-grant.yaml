@@ -11,6 +11,9 @@ spec:
     - group: gateway.envoyproxy.io
       kind: SecurityPolicy
       namespace: argocd
+    - group: gateway.envoyproxy.io
+      kind: SecurityPolicy
+      namespace: arcl-cmp
   to:
     - group: ""
       kind: Service

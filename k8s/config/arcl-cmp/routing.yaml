@@ -25,21 +25,6 @@ spec:
         - name: arcl-cmp-frontend
           port: 3000
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: ReferenceGrant
-metadata:
-  name: allow-cmp-oidc
-  namespace: arcl-cmp
-spec:
-  from:
-    - group: gateway.envoyproxy.io
-      kind: SecurityPolicy
-      namespace: arcl-cmp
-  to:
-    - group: ""
-      kind: Service
-      name: keycloakx-http
----
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
@@ -63,6 +48,6 @@ spec:
           port: 80
     clientID: "3-istor-openid"
     clientSecret:
-      name: "envoy-demo-app-secret"
+      name: "envoy-cmp-auth-secret"
     redirectURL: "https://cmp.3istor.com/oauth2/callback"
     logoutPath: "/logout"

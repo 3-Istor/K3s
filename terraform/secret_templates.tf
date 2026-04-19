@@ -168,3 +168,11 @@ resource "vault_kv_secret_v2" "arcl_cmp_creds" {
     "aws-secret-access-key"  = var.aws_secret_key
   })
 }
+
+resource "vault_kv_secret_v2" "arcl_cmp_envoy_auth" {
+  mount = vault_mount.kvv2.path
+  name  = "arcl-cmp/envoy-auth"
+  data_json = jsonencode({
+    "client-secret" = keycloak_openid_client.openid_client.client_secret
+  })
+}
