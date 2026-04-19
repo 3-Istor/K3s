@@ -86,20 +86,6 @@ resource "vault_kv_secret_v2" "argocd_oidc" {
   })
 }
 
-resource "vault_kv_secret_v2" "argocd_ghcr_repo" {
-  mount = vault_mount.kvv2.path
-  name  = "argocd/ghcr-repo"
-  data_json = jsonencode({
-    type      = "helm"
-    name      = "3-istor-ghcr"
-    url       = "ghcr.io"
-    enableOci = "true"
-    username  = var.ghcr_username
-    password  = var.ghcr_pat
-  })
-}
-
-
 # -----------------------------------------------------------------------------
 # Demo App Secrets
 # -----------------------------------------------------------------------------
@@ -114,29 +100,6 @@ resource "vault_kv_secret_v2" "demo_app_envoy_auth" {
 # -----------------------------------------------------------------------------
 # CMP Secrets
 # -----------------------------------------------------------------------------
-
-variable "ghcr_username" {
-  type = string
-}
-
-variable "ghcr_pat" {
-  type      = string
-  sensitive = true
-}
-
-resource "vault_kv_secret_v2" "arcl_ghcr" {
-  mount = vault_mount.kvv2.path
-  name  = "arcl-cmp/ghcr"
-  data_json = jsonencode({
-    ".dockerconfigjson" = jsonencode({
-      auths = {
-        "ghcr.io" = {
-          auth = base64encode("${var.ghcr_username}:${var.ghcr_pat}")
-        }
-      }
-    })
-  })
-}
 
 variable "os_auth_url" {
   type = string

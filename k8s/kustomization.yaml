@@ -15,4 +15,4 @@ resources:
   - config/cloudflared/
   - config/vault/
   - config/vault-secrets-operator/
-  # - config/arcl-cmp/
+  - config/arcl-cmp/
