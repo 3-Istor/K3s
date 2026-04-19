@@ -75,7 +75,7 @@ extraEnv: |
   - name: KC_HOSTNAME
     value: "https://auth.3istor.com"
   - name: KC_HOSTNAME_ADMIN
-    value: "https://auth.3istor.com"
+    value: "https://admin-auth.3istor.com"
   - name: KC_HOSTNAME_STRICT
     value: "true"
   - name: KC_HOSTNAME_STRICT_HTTPS

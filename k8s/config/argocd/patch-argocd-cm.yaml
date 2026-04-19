@@ -19,10 +19,10 @@ data:
     ignoreAggregatedRoles: true
 
   url: "https://argocd.3istor.com"
+  timeout.reconciliation: "30s"
   oidc.config: |
     name: 3Istor ID
     issuer: https://auth.3istor.com/realms/3istor
     clientID: argocd
     clientSecret: $oidc.keycloak.clientSecret
     requestedScopes: ["openid", "profile", "email", "groups"]
-  timeout.reconciliation: "30s"

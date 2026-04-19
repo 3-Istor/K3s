@@ -1,6 +1,7 @@
 locals {
   tunnel_services = toset([
     "auth",
+    "admin-auth",
     "argocd",
     "vault",
     "demo"
