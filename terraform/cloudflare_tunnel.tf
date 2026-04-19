@@ -4,7 +4,8 @@ locals {
     "admin-auth",
     "argocd",
     "vault",
-    "demo"
+    "demo",
+    "cmp"
   ])
 
   tunnel_secret_b64 = base64encode(random_password.tunnel_secret.result)

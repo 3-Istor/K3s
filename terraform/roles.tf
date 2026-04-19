@@ -113,3 +113,16 @@ resource "vault_identity_group_alias" "infra_alias" {
   mount_accessor = vault_jwt_auth_backend.keycloak.accessor
   canonical_id   = vault_identity_group.infra.id
 }
+
+# -----------------------------------------------------------------------------
+# CMP Roles
+# -----------------------------------------------------------------------------
+
+resource "vault_kubernetes_auth_backend_role" "arcl_cmp_role" {
+  backend                          = vault_auth_backend.kubernetes.path
+  role_name                        = "arcl-cmp-role"
+  bound_service_account_names      = ["vault-secrets-operator"]
+  bound_service_account_namespaces = ["vault-secrets-operator"]
+  token_ttl                        = 86400
+  token_policies                   = [vault_policy.arcl_cmp_policy.name]
+}

@@ -1,0 +1,68 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: cmp-route
+  namespace: arcl-cmp
+spec:
+  parentRefs:
+    - name: shared-gateway
+      namespace: gateway-infra
+  hostnames:
+    - "cmp.3istor.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: "/api"
+      backendRefs:
+        - name: arcl-cmp-backend
+          port: 8000
+    - matches:
+        - path:
+            type: PathPrefix
+            value: "/"
+      backendRefs:
+        - name: arcl-cmp-frontend
+          port: 3000
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-cmp-oidc
+  namespace: arcl-cmp
+spec:
+  from:
+    - group: gateway.envoyproxy.io
+      kind: SecurityPolicy
+      namespace: arcl-cmp
+  to:
+    - group: ""
+      kind: Service
+      name: keycloakx-http
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: cmp-auth
+  namespace: arcl-cmp
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: cmp-route
+  oidc:
+    provider:
+      issuer: "https://auth.3istor.com/realms/3istor"
+      authorizationEndpoint: "https://auth.3istor.com/realms/3istor/protocol/openid-connect/auth"
+      tokenEndpoint: "https://auth.3istor.com/realms/3istor/protocol/openid-connect/token"
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: keycloakx-http
+          namespace: keycloak
+          port: 80
+    clientID: "3-istor-openid"
+    clientSecret:
+      name: "envoy-demo-app-secret"
+    redirectURL: "https://cmp.3istor.com/oauth2/callback"
+    logoutPath: "/logout"

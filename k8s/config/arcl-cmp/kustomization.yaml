@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: arcl-cmp
+resources:
+  - namespace.yaml
+  - secrets.yaml
+  - routing.yaml
+
+helmCharts:
+  - name: arcl-cmp
+    repo: oci://ghcr.io/3-istor/charts
+    version: 0.0.9
+    releaseName: arcl-cmp
+    namespace: arcl-cmp
+    valuesFile: cmp-values.yaml

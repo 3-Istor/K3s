@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: arcl-cmp
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/compare-options: ServerSideDiff=true,IncludeMutationWebhook=true
+
+    argocd-image-updater.argoproj.io/image-list: backend=ghcr.io/3-istor/cmp-backend, frontend=ghcr.io/3-istor/cmp-frontend
+    argocd-image-updater.argoproj.io/backend.update-strategy: digest
+    argocd-image-updater.argoproj.io/frontend.update-strategy: digest
+    argocd-image-updater.argoproj.io/backend.pull-secret: pullsecret:arcl-cmp/ghcr-pull-secret
+    argocd-image-updater.argoproj.io/frontend.pull-secret: pullsecret:arcl-cmp/ghcr-pull-secret
+    argocd-image-updater.argoproj.io/write-back-method: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+      - CreateNamespace=true
+  project: default
+  source:
+    repoURL: https://github.com/3-Istor/K3s.git
+    targetRevision: HEAD
+    path: k8s/config/arcl-cmp
+  destination:
+    name: in-cluster
+    namespace: arcl-cmp

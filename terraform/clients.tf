@@ -17,15 +17,18 @@ resource "keycloak_openid_client" "openid_client" {
   oauth2_device_authorization_grant_enabled = false
 
   valid_redirect_uris = [
-    "https://demo.${var.base_domain}/oauth2/callback"
+    "https://demo.${var.base_domain}/oauth2/callback",
+    "https://cmp.${var.base_domain}/oauth2/callback"
   ]
 
   valid_post_logout_redirect_uris = [
-    "https://demo.${var.base_domain}/"
+    "https://demo.${var.base_domain}/",
+    "https://cmp.${var.base_domain}/"
   ]
 
   web_origins = [
-    "https://demo.${var.base_domain}"
+    "https://demo.${var.base_domain}",
+    "https://cmp.${var.base_domain}"
   ]
 
   authentication_flow_binding_overrides {

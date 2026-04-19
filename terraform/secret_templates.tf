@@ -86,6 +86,19 @@ resource "vault_kv_secret_v2" "argocd_oidc" {
   })
 }
 
+resource "vault_kv_secret_v2" "argocd_ghcr_repo" {
+  mount = vault_mount.kvv2.path
+  name  = "argocd/ghcr-repo"
+  data_json = jsonencode({
+    type      = "helm"
+    name      = "3-istor-ghcr"
+    url       = "ghcr.io"
+    enableOci = "true"
+    username  = var.ghcr_username
+    password  = var.ghcr_pat
+  })
+}
+
 
 # -----------------------------------------------------------------------------
 # Demo App Secrets
@@ -95,5 +108,100 @@ resource "vault_kv_secret_v2" "demo_app_envoy_auth" {
   name  = "demo-app/envoy-auth"
   data_json = jsonencode({
     "client-secret" = keycloak_openid_client.openid_client.client_secret
+  })
+}
+
+# -----------------------------------------------------------------------------
+# CMP Secrets
+# -----------------------------------------------------------------------------
+
+variable "ghcr_username" {
+  type = string
+}
+
+variable "ghcr_pat" {
+  type      = string
+  sensitive = true
+}
+
+resource "vault_kv_secret_v2" "arcl_ghcr" {
+  mount = vault_mount.kvv2.path
+  name  = "arcl-cmp/ghcr"
+  data_json = jsonencode({
+    ".dockerconfigjson" = jsonencode({
+      auths = {
+        "ghcr.io" = {
+          auth = base64encode("${var.ghcr_username}:${var.ghcr_pat}")
+        }
+      }
+    })
+  })
+}
+
+variable "os_auth_url" {
+  type = string
+}
+
+variable "os_project_name" {
+  type = string
+}
+
+variable "os_username" {
+  type      = string
+  sensitive = true
+}
+
+variable "os_password" {
+  type      = string
+  sensitive = true
+}
+
+variable "os_user_domain_name" {
+  type = string
+}
+
+variable "os_project_domain_name" {
+  type = string
+}
+
+variable "aws_region" {
+  type = string
+}
+
+variable "aws_s3_bucket" {
+  type = string
+}
+
+variable "aws_s3_key_prefix" {
+  type = string
+}
+
+variable "aws_access_key_id" {
+  type      = string
+  sensitive = true
+}
+
+variable "aws_secret_key" {
+  type      = string
+  sensitive = true
+}
+
+
+resource "vault_kv_secret_v2" "arcl_cmp_creds" {
+  mount = vault_mount.kvv2.path
+  name  = "arcl-cmp/credentials"
+
+  data_json = jsonencode({
+    "os-auth-url"            = var.os_auth_url
+    "os-project-name"        = var.os_project_name
+    "os-username"            = var.os_username
+    "os-password"            = var.os_password
+    "os-project-domain-name" = var.os_project_domain_name
+    "os-user-domain-name"    = var.os_user_domain_name
+    "aws-access-key-id"      = var.aws_access_key_id
+    "aws-region"             = var.aws_region
+    "aws-s3-bucket"          = var.aws_s3_bucket
+    "aws-s3-key-prefix"      = var.aws_s3_key_prefix
+    "aws-secret-access-key"  = var.aws_secret_key
   })
 }

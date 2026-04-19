@@ -1,0 +1,38 @@
+replicaCount: 1
+
+imagePullSecrets:
+  - name: ghcr-pull-secret
+
+ingress:
+  enabled: false
+
+resources:
+  backend:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+
+  frontend:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+
+persistence:
+  enabled: true
+  storageClass: "local-path"
+  backend:
+    size: 2Gi
+    accessMode: ReadWriteOnce
+
+env:
+  backend:
+    DATABASE_URL: "sqlite:///./arcl.db"
+
+secrets:
+  create: false

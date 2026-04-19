@@ -79,3 +79,11 @@ resource "vault_policy" "vault_admin" {
     mount_path = vault_mount.kvv2.path
   })
 }
+
+# -----------------------------------------------------------------------------
+# CMP Policies
+# -----------------------------------------------------------------------------
+resource "vault_policy" "arcl_cmp_policy" {
+  name   = "arcl-cmp-policy"
+  policy = templatefile("${path.module}/policies/arcl_cmp.hcl", {})
+}

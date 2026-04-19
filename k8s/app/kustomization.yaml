@@ -11,3 +11,4 @@ resources:
   - vault-secrets-operator.yaml
   - vault.yaml
   - argocd.yaml
+  - arcl-cmp.yaml
