@@ -59,3 +59,13 @@ resource "vault_policy" "vault_secrets_operator_policy" {
     mount_path = vault_mount.kvv2.path
   })
 }
+
+# -----------------------------------------------------------------------------
+# ArgoCD Policies
+# -----------------------------------------------------------------------------
+resource "vault_policy" "argocd_policy" {
+  name = "argocd-policy"
+  policy = templatefile("${path.module}/policies/argocd.hcl", {
+    mount_path = vault_mount.kvv2.path
+  })
+}

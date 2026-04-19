@@ -2,7 +2,7 @@ global:
   gatewayName: "shared-gateway"
   gatewayNamespace: "gateway-infra"
   baseDomain: "3istor.com"
-  keycloakRealm: "kube-lab"
-  authClientId: "envoy-demo-app"
+  keycloakRealm: "3istor"
+  authClientId: "3-istor-openid"
 
 routes: {}

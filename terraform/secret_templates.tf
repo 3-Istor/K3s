@@ -77,3 +77,12 @@ variable "argocd_admin_password" {
   type      = string
   sensitive = true
 }
+
+resource "vault_kv_secret_v2" "argocd_oidc" {
+  mount = vault_mount.kvv2.path
+  name  = "argocd/oidc"
+  data_json = jsonencode({
+    clientId     = keycloak_openid_client.argocd.client_id
+    clientSecret = keycloak_openid_client.argocd.client_secret
+  })
+}

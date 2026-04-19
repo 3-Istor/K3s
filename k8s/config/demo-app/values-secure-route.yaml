@@ -9,4 +9,5 @@ routes:
       enabled: true
       secretName: "envoy-demo-app-secret"
       allowedGroups:
-        - "sre"
+        - "member"
+        - "infra"

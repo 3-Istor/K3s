@@ -1,14 +1,9 @@
-resource "keycloak_group" "admin" {
+resource "keycloak_group" "infra" {
   realm_id = keycloak_realm.kube_lab.id
-  name     = "admin"
+  name     = "infra"
 }
 
-resource "keycloak_group" "developer" {
+resource "keycloak_group" "member" {
   realm_id = keycloak_realm.kube_lab.id
-  name     = "developer"
-}
-
-resource "keycloak_group" "sre" {
-  realm_id = keycloak_realm.kube_lab.id
-  name     = "sre"
+  name     = "member"
 }

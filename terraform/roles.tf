@@ -72,3 +72,15 @@ resource "vault_kubernetes_auth_backend_role" "vault_secrets_operator_role" {
   token_ttl                        = 86400 # 24h
   token_policies                   = [vault_policy.vault_secrets_operator_policy.name]
 }
+
+# -----------------------------------------------------------------------------
+# ArgoCD Roles
+# -----------------------------------------------------------------------------
+resource "vault_kubernetes_auth_backend_role" "argocd_role" {
+  backend                          = vault_auth_backend.kubernetes.path
+  role_name                        = "argocd-role"
+  bound_service_account_names      = ["vault-secrets-operator"]
+  bound_service_account_namespaces = ["vault-secrets-operator"]
+  token_ttl                        = 86400
+  token_policies                   = [vault_policy.argocd_policy.name]
+}

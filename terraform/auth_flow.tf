@@ -9,17 +9,10 @@ resource "keycloak_role" "openid_client_access" {
   description = "Role required to access 3-Istor Apps"
 }
 
-# Authorize the 'developer' group
-# resource "keycloak_group_roles" "dev_app_access" {
-#   realm_id = keycloak_realm.kube_lab.id
-#   group_id = keycloak_group.developer.id
-#   role_ids = [keycloak_role.openid_client_access.id]
-# }
-
-# Authorize the 'sre' group
-resource "keycloak_group_roles" "sre_app_access" {
+# Authorize the 'member' group
+resource "keycloak_group_roles" "member_app_access" {
   realm_id = keycloak_realm.kube_lab.id
-  group_id = keycloak_group.sre.id
+  group_id = keycloak_group.member.id
   role_ids = [keycloak_role.openid_client_access.id]
 }
 

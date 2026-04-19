@@ -6,9 +6,19 @@ namespace: argocd
 resources:
   - namespace.yaml
   - github.com/argoproj/argo-cd/manifests/cluster-install?ref=v3.3.3
-  - http-route.yaml
   - apps.yaml
+  - secrets.yaml
 
 patches:
   - path: patch-argocd-cm.yaml
   - path: argocd-cmd-params-cm-patch.yaml
+  - path: patch-argocd-rbac-cm.yaml
+
+helmGlobals:
+  chartHome: ../../../charts
+
+helmCharts:
+  - name: secure-route
+    releaseName: argocd-routes
+    namespace: argocd
+    valuesFile: values-secure-route.yaml

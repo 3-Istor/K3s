@@ -10,7 +10,6 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: "{{ $routeName }}-route"
-
   oidc:
     provider:
       issuer: "https://auth.{{ $.Values.global.baseDomain }}/realms/{{ $.Values.global.keycloakRealm }}"
@@ -27,37 +26,6 @@ spec:
       name: "{{ $routeConfig.auth.secretName | default "keycloak-oidc-secret" }}"
     redirectURL: "https://{{ $routeConfig.ingress.hostname }}/oauth2/callback"
     logoutPath: "/logout"
-    cookieNames:
-      accessToken: "keycloak-access-token"
-    scopes:
-      - openid
-      - profile
-      - email
-      - groups
-
-  jwt:
-    providers:
-      - name: keycloak-jwt-provider
-        issuer: "https://auth.{{ $.Values.global.baseDomain }}/realms/{{ $.Values.global.keycloakRealm }}"
-        remoteJWKS:
-          uri: "https://auth.{{ $.Values.global.baseDomain }}/realms/{{ $.Values.global.keycloakRealm }}/protocol/openid-connect/certs"
-        extractFrom:
-          cookies:
-            - "keycloak-access-token"
-
-  authorization:
-    defaultAction: Deny
-    rules:
-      - name: "allow-keycloak-groups"
-        action: Allow
-        principal:
-          jwt:
-            provider: keycloak-jwt-provider
-            claims:
-              - name: "groups"
-                valueType: StringArray
-                values:
-{{ toYaml $routeConfig.auth.allowedGroups | indent 18 }}
 ---
 {{- end }}
 {{- end }}

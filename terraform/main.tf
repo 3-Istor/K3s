@@ -2,10 +2,10 @@
 # REALM CONFIGURATION
 # -----------------------------------------------------------------------------
 resource "keycloak_realm" "kube_lab" {
-  realm             = "kube-lab"
+  realm             = "3istor"
   enabled           = true
-  display_name      = "Kube Lab Authentication"
-  display_name_html = "<b>Kube Lab Authentication</b>"
+  display_name      = "3Istor ID"
+  display_name_html = "<b>3Istor ID</b>"
 
   terraform_deletion_protection = false # When set to true, the realm cannot be deleted. Defaults to false.
 

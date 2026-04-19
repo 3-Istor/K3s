@@ -17,3 +17,12 @@ data:
   # Ref: https://argo-cd.readthedocs.io/en/stable/user-guide/diffing/#ignoring-rbac-changes-made-by-aggregateroles
   resource.compareoptions: |
     ignoreAggregatedRoles: true
+
+  url: "https://argocd.3istor.com"
+  oidc.config: |
+    name: 3Istor ID
+    issuer: https://auth.3istor.com/realms/3istor
+    clientID: $oidc.keycloak.clientId
+    clientSecret: $oidc.keycloak.clientSecret
+    requestedScopes: ["openid", "profile", "email", "groups"]
+  timeout.reconciliation: "30s"

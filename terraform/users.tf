@@ -19,44 +19,59 @@
 #   group_ids = [keycloak_group.admin.id]
 # }
 
-#  DEV USER
-resource "keycloak_user" "dev_user" {
-  realm_id       = keycloak_realm.kube_lab.id
-  username       = "dev"
-  enabled        = true
-  email          = "dev@kube-lab.local"
-  email_verified = true
-  first_name     = "Dev"
-  last_name      = "User"
-
-  initial_password {
-    value     = "Dev12345!"
-    temporary = false
+# USERS
+locals {
+  team_members = {
+    "hugo.guillet"  = { first = "Hugo", last = "Guillet", is_infra = false }
+    "newfel.levrel" = { first = "Newfel", last = "Levrel", is_infra = false }
+    "joe.bejjani"   = { first = "Joe", last = "Bejjani", is_infra = false }
+    "raphael.ye"    = { first = "Raphael", last = "Ye", is_infra = false }
+    "arthur.presle" = { first = "Arthur", last = "Presle", is_infra = false }
+    "brian.perret"  = { first = "Brian", last = "Perret", is_infra = true }
   }
 }
-resource "keycloak_user_groups" "dev_user_groups" {
-  realm_id  = keycloak_realm.kube_lab.id
-  user_id   = keycloak_user.dev_user.id
-  group_ids = [keycloak_group.developer.id]
+
+resource "random_password" "team" {
+  for_each = local.team_members
+
+  length  = 16
+  special = true
 }
 
-# SRE USER
-resource "keycloak_user" "sre_user" {
+resource "keycloak_user" "team" {
+  for_each       = local.team_members
   realm_id       = keycloak_realm.kube_lab.id
-  username       = "sre"
+  username       = each.key
+  email          = "${each.key}@epita.fr"
+  first_name     = each.value.first
+  last_name      = each.value.last
   enabled        = true
-  email          = "sre@kube-lab.local"
   email_verified = true
-  first_name     = "Sre"
-  last_name      = "User"
 
   initial_password {
-    value     = "Sre12345!"
-    temporary = false
+    value     = random_password.team[each.key].result
+    temporary = true
   }
 }
-resource "keycloak_user_groups" "sre_user_groups" {
-  realm_id  = keycloak_realm.kube_lab.id
-  user_id   = keycloak_user.sre_user.id
-  group_ids = [keycloak_group.sre.id]
+
+resource "keycloak_user_groups" "team_groups" {
+  for_each = local.team_members
+  realm_id = keycloak_realm.kube_lab.id
+  user_id  = keycloak_user.team[each.key].id
+
+  group_ids = each.value.is_infra ? [
+    keycloak_group.member.id,
+    keycloak_group.infra.id
+    ] : [
+    keycloak_group.member.id
+  ]
+}
+
+output "initial_passwords" {
+  value = {
+    for k, v in random_password.team :
+    k => v.result
+  }
+
+  sensitive = true
 }

@@ -32,3 +32,37 @@ resource "keycloak_openid_client" "openid_client" {
     browser_id = keycloak_authentication_flow.browser_openid_client.id
   }
 }
+
+
+# -----------------------------------------------------------------------------
+# OIDC CLIENT: ArgoCD
+# -----------------------------------------------------------------------------
+resource "keycloak_openid_client" "argocd" {
+  realm_id                     = keycloak_realm.kube_lab.id
+  client_id                    = "argocd"
+  name                         = "ArgoCD"
+  enabled                      = true
+  access_type                  = "CONFIDENTIAL"
+  standard_flow_enabled        = true
+  direct_access_grants_enabled = false
+
+  valid_redirect_uris = [
+    "https://argocd.${var.base_domain}/auth/callback"
+  ]
+
+  valid_post_logout_redirect_uris = [
+    "https://argocd.${var.base_domain}/"
+  ]
+}
+
+resource "keycloak_openid_client_default_scopes" "argocd_scopes" {
+  realm_id  = keycloak_realm.kube_lab.id
+  client_id = keycloak_openid_client.argocd.id
+  default_scopes = [
+    "profile",
+    "email",
+    "roles",
+    "web-origins",
+    keycloak_openid_client_scope.groups.name
+  ]
+}

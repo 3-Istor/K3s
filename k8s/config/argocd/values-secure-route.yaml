@@ -1,0 +1,9 @@
+routes:
+  argocd-ui:
+    targetService:
+      name: "argocd-server"
+      port: 80
+    ingress:
+      hostname: "argocd.3istor.com"
+    auth:
+      enabled: false
