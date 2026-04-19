@@ -32,7 +32,7 @@ persistence:
 
 env:
   backend:
-    DATABASE_URL: "sqlite:///./arcl.db"
+    DATABASE_URL: "sqlite:////app/db/arcl.db"
 
 secrets:
   create: false
