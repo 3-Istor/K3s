@@ -11,7 +11,8 @@ image:
     tag: "latest"
 
 frontend:
-  apiUrl: "/api"
+  apiUrl: "https://cmp.3istor.com/api"
+  authUrl: "https://cmp.3istor.com/"
 
 ingress:
   enabled: false
