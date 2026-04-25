@@ -12,3 +12,4 @@ resources:
   - vault.yaml
   - argocd.yaml
   - arcl-cmp.yaml
+  - garage-s3.yaml

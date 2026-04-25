@@ -14,6 +14,9 @@ spec:
         - path:
             type: PathPrefix
             value: "/api"
+        - path:
+            type: PathPrefix
+            value: "/static"
       backendRefs:
         - name: arcl-cmp-backend
           port: 8000
