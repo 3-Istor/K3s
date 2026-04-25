@@ -9,6 +9,7 @@ spec:
       namespace: gateway-infra
   hostnames:
     - "s3.3istor.com"
+    - "s3-avatars.3istor.com"
   rules:
     - backendRefs:
         - name: garage

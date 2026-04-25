@@ -12,7 +12,7 @@ resource "keycloak_openid_client" "openid_client" {
   standard_flow_enabled                     = true
   direct_access_grants_enabled              = false
   implicit_flow_enabled                     = false
-  service_accounts_enabled                  = false
+  service_accounts_enabled                  = true
   standard_token_exchange_enabled           = false
   oauth2_device_authorization_grant_enabled = false
 
@@ -100,4 +100,16 @@ resource "keycloak_openid_client_default_scopes" "vault_scopes" {
     "email",
     "groups"
   ]
+}
+
+
+resource "keycloak_openid_client_service_account_role" "cmp_manage_users" {
+  realm_id                = keycloak_realm.kube_lab.id
+  service_account_user_id = keycloak_openid_client.openid_client.service_account_user_id
+  client_id               = data.keycloak_openid_client.realm_management.id
+  role                    = "manage-users"
+}
+data "keycloak_openid_client" "realm_management" {
+  realm_id  = keycloak_realm.kube_lab.id
+  client_id = "realm-management"
 }

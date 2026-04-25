@@ -6,7 +6,8 @@ locals {
     "vault",
     "demo",
     "cmp",
-    "s3"
+    "s3",
+    "avatars-s3"
   ])
 
   tunnel_secret_b64 = base64encode(random_password.tunnel_secret.result)
