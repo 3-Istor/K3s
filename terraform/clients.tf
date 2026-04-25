@@ -18,17 +18,21 @@ resource "keycloak_openid_client" "openid_client" {
 
   valid_redirect_uris = [
     "https://demo.${var.base_domain}/oauth2/callback",
-    "https://cmp.${var.base_domain}/oauth2/callback"
+    "https://cmp.${var.base_domain}/oauth2/callback",
+    "https://cmp.${var.base_domain}/api/auth/callback/keycloak",
+    "http://localhost:3000/api/auth/callback/keycloak"
   ]
 
   valid_post_logout_redirect_uris = [
     "https://demo.${var.base_domain}/",
-    "https://cmp.${var.base_domain}/"
+    "https://cmp.${var.base_domain}/",
+    "http://localhost:3000/"
   ]
 
   web_origins = [
     "https://demo.${var.base_domain}",
-    "https://cmp.${var.base_domain}"
+    "https://cmp.${var.base_domain}",
+    "http://localhost:3000/"
   ]
 
   authentication_flow_binding_overrides {

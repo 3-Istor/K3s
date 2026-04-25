@@ -72,3 +72,57 @@ resource "keycloak_required_action" "totp" {
   default_action = true
   name           = "Configure OTP"
 }
+
+resource "keycloak_realm_user_profile" "kube_lab_profile" {
+  realm_id = keycloak_realm.kube_lab.id
+
+  attribute {
+    name         = "username"
+    display_name = "$${username}"
+    permissions {
+      view = ["admin", "user"]
+      edit = ["admin", "user"]
+    }
+  }
+
+  attribute {
+    name         = "email"
+    display_name = "$${email}"
+    permissions {
+      view = ["admin", "user"]
+      edit = ["admin", "user"]
+    }
+  }
+
+  attribute {
+    name         = "firstName"
+    display_name = "$${firstName}"
+    permissions {
+      view = ["admin", "user"]
+      edit = ["admin", "user"]
+    }
+  }
+
+  attribute {
+    name         = "lastName"
+    display_name = "$${lastName}"
+    permissions {
+      view = ["admin", "user"]
+      edit = ["admin", "user"]
+    }
+  }
+
+  attribute {
+    name         = "picture"
+    display_name = "Profile Picture URL"
+
+    permissions {
+      view = ["admin", "user"]
+      edit = ["admin", "user"]
+    }
+
+    validator {
+      name = "uri"
+    }
+  }
+}
