@@ -149,23 +149,61 @@ variable "aws_secret_key" {
   sensitive = true
 }
 
+variable "avatars_s3_access_key_id" {
+  type      = string
+  sensitive = true
+}
+
+variable "avatars_s3_secret_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "avatars_s3_endpoint" {
+  type    = string
+  default = "https://s3.3istor.com"
+}
+
+variable "avatars_s3_bucket" {
+  type    = string
+  default = "user-avatars"
+}
+
+variable "avatars_s3_region" {
+  type    = string
+  default = "eu-west-3"
+}
+
+variable "avatars_s3_public_url_base" {
+  type    = string
+  default = "https://avatars-s3.3istor.com"
+}
+
+
 
 resource "vault_kv_secret_v2" "arcl_cmp_creds" {
   mount = vault_mount.kvv2.path
   name  = "arcl-cmp/credentials"
 
   data_json = jsonencode({
-    "os-auth-url"            = var.os_auth_url
-    "os-project-name"        = var.os_project_name
-    "os-username"            = var.os_username
-    "os-password"            = var.os_password
-    "os-project-domain-name" = var.os_project_domain_name
-    "os-user-domain-name"    = var.os_user_domain_name
-    "aws-access-key-id"      = var.aws_access_key_id
-    "aws-region"             = var.aws_region
-    "aws-s3-bucket"          = var.aws_s3_bucket
-    "aws-s3-key-prefix"      = var.aws_s3_key_prefix
-    "aws-secret-access-key"  = var.aws_secret_key
+    "os-auth-url"                  = var.os_auth_url
+    "os-project-name"              = var.os_project_name
+    "os-username"                  = var.os_username
+    "os-password"                  = var.os_password
+    "os-project-domain-name"       = var.os_project_domain_name
+    "os-user-domain-name"          = var.os_user_domain_name
+    "aws-access-key-id"            = var.aws_access_key_id
+    "aws-region"                   = var.aws_region
+    "aws-s3-bucket"                = var.aws_s3_bucket
+    "aws-s3-key-prefix"            = var.aws_s3_key_prefix
+    "aws-secret-access-key"        = var.aws_secret_key
+    "avatars-s3-access-key-id"     = var.avatars_s3_access_key_id
+    "avatars-s3-secret-access-key" = var.avatars_s3_secret_key
+    "avatars-s3-endpoint"          = var.avatars_s3_endpoint
+    "avatars-s3-bucket"            = var.avatars_s3_bucket
+    "avatars-s3-region"            = var.avatars_s3_region
+    "avatars-s3-public-url-base"   = var.avatars_s3_public_url_base
+    "cloudflare-api-token"         = var.cloudflare_api_token_secret_var
   })
 }
 
@@ -174,5 +212,20 @@ resource "vault_kv_secret_v2" "arcl_cmp_envoy_auth" {
   name  = "arcl-cmp/envoy-auth"
   data_json = jsonencode({
     "client-secret" = keycloak_openid_client.openid_client.client_secret
+  })
+}
+
+
+variable "nextauth_secret" {
+  type      = string
+  sensitive = true
+}
+
+
+resource "vault_kv_secret_v2" "arcl_cmp_frontend" {
+  mount = vault_mount.kvv2.path
+  name  = "arcl-cmp/frontend"
+  data_json = jsonencode({
+    "nextauth-secret" = var.nextauth_secret
   })
 }
