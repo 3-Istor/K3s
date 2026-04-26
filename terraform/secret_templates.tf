@@ -209,6 +209,7 @@ resource "vault_kv_secret_v2" "arcl_cmp_creds" {
     "avatars-s3-region"            = var.avatars_s3_region
     "avatars-s3-public-url-base"   = var.avatars_s3_public_url_base
     "cloudflare-api-token"         = var.cloudflare_api_token_secret_var
+    "cloudflare-zone-id"           = var.cloudflare_zone_id
   })
 }
 
