@@ -58,7 +58,8 @@ resource "keycloak_user" "team" {
   lifecycle {
     ignore_changes = [
       required_actions,
-      initial_password
+      initial_password,
+      attributes
     ]
   }
 }

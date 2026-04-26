@@ -127,6 +127,10 @@ variable "os_project_domain_name" {
   type = string
 }
 
+variable "os_endpoint_type" {
+  type = string
+}
+
 variable "aws_region" {
   type = string
 }
@@ -191,6 +195,7 @@ resource "vault_kv_secret_v2" "arcl_cmp_creds" {
     "os-username"                  = var.os_username
     "os-password"                  = var.os_password
     "os-project-domain-name"       = var.os_project_domain_name
+    "os-endpoint-type"             = var.os_endpoint_type
     "os-user-domain-name"          = var.os_user_domain_name
     "aws-access-key-id"            = var.aws_access_key_id
     "aws-region"                   = var.aws_region
