@@ -44,8 +44,8 @@ variable "k8s_host_url" {
 variable "vault_url" {
   description = "The URL of the Vault server."
   type        = string
-  # default     = "https://vault.3istor.com"
-  default = "http://localhost:8200"
+  default     = "https://vault.3istor.com"
+  # default = "http://localhost:8200"
 }
 
 variable "vault_token" {
