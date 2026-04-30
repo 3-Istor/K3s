@@ -7,9 +7,6 @@ routes:
       hostname: "demo.3istor.com"
     auth:
       enabled: true
-      allowedGroups:
-        - "member"
-        - "infra"
       vault:
         path: "kvv2/demo-app/envoy-auth"
         role: "demo-app-role"

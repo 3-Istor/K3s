@@ -13,7 +13,7 @@ spec:
   targetRefs:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: "{{ $routeName }}-route"
+      name: "{{ $routeName }}"
 
   {{- if $authEnabled }}
   oidc:
@@ -41,29 +41,14 @@ spec:
     logoutPath: "/logout"
   {{- end }}
 
-  {{- $hasGroups := and $authEnabled $routeConfig.auth.allowedGroups }}
-  {{- $hasCidrs := and $ipFilterEnabled $routeConfig.ipFilter.allowedCidrs }}
-
-  {{- if or $hasGroups $hasCidrs }}
+  {{- if $ipFilterEnabled }}
   authorization:
     defaultAction: Deny
     rules:
       - action: Allow
         principal:
-          {{- if $hasGroups }}
-          jwt:
-            claims:
-              - name: "groups"
-                values:
-                {{- range $routeConfig.auth.allowedGroups }}
-                  - {{ . | quote }}
-                {{- end }}
-          {{- end }}
-
-          {{- if $hasCidrs }}
           clientCIDRs:
             {{- toYaml $routeConfig.ipFilter.allowedCidrs | nindent 12 }}
-          {{- end }}
   {{- end }}
 ---
 {{- end }}

@@ -7,16 +7,13 @@ global:
 
 routes: {}
   # demo-frontend:
-  #   hostnames:
-  #     - "demo.3istor.com"
-  #   rules:
-  #     - backendRefs:
-  #         - name: kube-classes-svc
-  #           port: 80
+  #   targetService:
+  #     name: "kube-classes-svc"
+  #     port: 80
+  #   ingress:
+  #     hostname: "demo.3istor.com"
   #   auth:
   #     enabled: true
-  #     allowedGroups:
-  #       - "infra"
   #     vault:
   #       path: "kvv2/demo-app/envoy-auth"
   #       role: "demo-app-role"
