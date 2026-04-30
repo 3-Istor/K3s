@@ -6,7 +6,9 @@ namespace: arcl-cmp
 resources:
   - namespace.yaml
   - secrets.yaml
-  - routing.yaml
+
+helmGlobals:
+  chartHome: ../../../charts
 
 helmCharts:
   - name: arcl-cmp
@@ -15,3 +17,8 @@ helmCharts:
     releaseName: arcl-cmp
     namespace: arcl-cmp
     valuesFile: cmp-values.yaml
+
+  - name: secure-route
+    releaseName: cmp-routes
+    namespace: arcl-cmp
+    valuesFile: values-secure-route.yaml

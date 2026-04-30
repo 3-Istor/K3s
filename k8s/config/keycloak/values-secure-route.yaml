@@ -1,0 +1,26 @@
+routes:
+  keycloak-http-route:
+    hostnames:
+      - "auth.3istor.com"
+      - "admin-auth.3istor.com"
+    rules:
+      - matches:
+          - path:
+              type: Exact
+              value: "/"
+            headers:
+              - type: Exact
+                name: "Host"
+                value: "auth.3istor.com"
+        filters:
+          - type: RequestRedirect
+            requestRedirect:
+              statusCode: 302
+              path:
+                type: ReplaceFullPath
+                replaceFullPath: "/realms/3istor/account/"
+      - backendRefs:
+          - name: keycloakx-http
+            port: 80
+    auth:
+      enabled: false

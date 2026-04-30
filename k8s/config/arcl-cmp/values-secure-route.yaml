@@ -1,0 +1,34 @@
+routes:
+  cmp-route:
+    hostnames:
+      - "cmp.3istor.com"
+    rules:
+      - matches:
+          - path:
+              type: PathPrefix
+              value: "/api/auth"
+        backendRefs:
+          - name: arcl-cmp-frontend
+            port: 3000
+      - matches:
+          - path:
+              type: PathPrefix
+              value: "/api"
+          - path:
+              type: PathPrefix
+              value: "/static"
+        backendRefs:
+          - name: arcl-cmp-backend
+            port: 8000
+      - matches:
+          - path:
+              type: PathPrefix
+              value: "/"
+        backendRefs:
+          - name: arcl-cmp-frontend
+            port: 3000
+    auth:
+      enabled: true
+      vault:
+        path: "kvv2/arcl-cmp/envoy-auth"
+        role: "arcl-cmp-role"

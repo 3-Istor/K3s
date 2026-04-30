@@ -6,3 +6,22 @@ global:
   authClientId: "3-istor-openid"
 
 routes: {}
+  # demo-frontend:
+  #   hostnames:
+  #     - "demo.3istor.com"
+  #   rules:
+  #     - backendRefs:
+  #         - name: kube-classes-svc
+  #           port: 80
+  #   auth:
+  #     enabled: true
+  #     allowedGroups:
+  #       - "infra"
+  #     vault:
+  #       path: "kvv2/demo-app/envoy-auth"
+  #       role: "demo-app-role"
+  #   ipFilter:
+  #     enabled: true
+  #     allowedCidrs:
+  #       - "82.65.250.241/32"
+  #       - "10.42.0.0/16"

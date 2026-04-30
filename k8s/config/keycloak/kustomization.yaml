@@ -6,9 +6,11 @@ namespace: keycloak
 resources:
   - namespace.yaml
   - secrets.yaml
-  - http-route.yaml
   - postgres.yaml
   - reference-grant.yaml
+
+helmGlobals:
+  chartHome: ../../../charts
 
 helmCharts:
   - name: keycloakx
@@ -17,3 +19,8 @@ helmCharts:
     releaseName: keycloakx
     namespace: keycloak
     valuesFile: values.yaml
+
+  - name: secure-route
+    releaseName: keycloak-routes
+    namespace: keycloak
+    valuesFile: values-secure-route.yaml
