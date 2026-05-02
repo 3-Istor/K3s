@@ -13,3 +13,4 @@ resources:
   - argocd.yaml
   - arcl-cmp.yaml
   - garage-s3.yaml
+  - n8n.yaml

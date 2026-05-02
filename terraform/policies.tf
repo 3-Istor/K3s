@@ -87,3 +87,13 @@ resource "vault_policy" "arcl_cmp_policy" {
   name   = "arcl-cmp-policy"
   policy = templatefile("${path.module}/policies/arcl_cmp.hcl", {})
 }
+
+# -----------------------------------------------------------------------------
+# n8n Policies
+# -----------------------------------------------------------------------------
+resource "vault_policy" "n8n_policy" {
+  name = "n8n-policy"
+  policy = templatefile("${path.module}/policies/n8n.hcl", {
+    mount_path = vault_mount.kvv2.path
+  })
+}
