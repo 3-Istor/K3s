@@ -241,3 +241,33 @@ resource "vault_kv_secret_v2" "arcl_cmp_frontend" {
     "nextauth-secret" = var.nextauth_secret
   })
 }
+
+# -----------------------------------------------------------------------------
+# n8n Secrets
+# -----------------------------------------------------------------------------
+variable "n8n_db_password" {
+  type      = string
+  sensitive = true
+}
+
+variable "n8n_encryption_key" {
+  type      = string
+  sensitive = true
+}
+
+resource "vault_kv_secret_v2" "n8n_db" {
+  mount = vault_mount.kvv2.path
+  name  = "n8n/db"
+  data_json = jsonencode({
+    username = "n8n"
+    password = var.n8n_db_password
+  })
+}
+
+resource "vault_kv_secret_v2" "n8n_encryption_key" {
+  mount = vault_mount.kvv2.path
+  name  = "n8n/encryption-key"
+  data_json = jsonencode({
+    key = var.n8n_encryption_key
+  })
+}

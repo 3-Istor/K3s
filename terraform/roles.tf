@@ -128,31 +128,13 @@ resource "vault_kubernetes_auth_backend_role" "arcl_cmp_role" {
 }
 
 # -----------------------------------------------------------------------------
-# n8n Secrets
+# n8n Roles
 # -----------------------------------------------------------------------------
-variable "n8n_db_password" {
-  type      = string
-  sensitive = true
-}
-
-variable "n8n_encryption_key" {
-  type      = string
-  sensitive = true
-}
-
-resource "vault_kv_secret_v2" "n8n_db" {
-  mount = vault_mount.kvv2.path
-  name  = "n8n/db"
-  data_json = jsonencode({
-    username = "n8n"
-    password = var.n8n_db_password
-  })
-}
-
-resource "vault_kv_secret_v2" "n8n_encryption_key" {
-  mount = vault_mount.kvv2.path
-  name  = "n8n/encryption-key"
-  data_json = jsonencode({
-    key = var.n8n_encryption_key
-  })
+resource "vault_kubernetes_auth_backend_role" "n8n_role" {
+  backend                          = vault_auth_backend.kubernetes.path
+  role_name                        = "n8n-role"
+  bound_service_account_names      = ["vault-secrets-operator"]
+  bound_service_account_namespaces = ["vault-secrets-operator"]
+  token_ttl                        = 86400
+  token_policies                   = [vault_policy.n8n_policy.name]
 }

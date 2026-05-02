@@ -1,7 +1,7 @@
 routes:
   n8n:
     hostnames:
-      - "n8n.arffornia.com"
+      - "n8n.3istor.com"
     rules:
       - backendRefs:
           - name: n8n
