@@ -99,7 +99,7 @@ main:
     #   set, choosing the default provisioner.  (gp2 on AWS, standard on
     #   GKE, AWS & OpenStack)
     #
-    storageClass: "longhorn"
+    storageClass: "local-path"
     # PVC annotations
     #
     # If you need this annotation include it under `values.yml` file and pvc.yml template will add it.
