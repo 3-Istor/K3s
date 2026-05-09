@@ -5,7 +5,6 @@ namespace: roadmap
 
 resources:
   - namespace.yaml
-  - reference-grant.yaml
   - postgres.yaml
   - secrets.yaml
 
