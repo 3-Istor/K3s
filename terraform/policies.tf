@@ -97,3 +97,13 @@ resource "vault_policy" "n8n_policy" {
     mount_path = vault_mount.kvv2.path
   })
 }
+
+# -----------------------------------------------------------------------------
+# Roadmap Policies
+# -----------------------------------------------------------------------------
+resource "vault_policy" "roadmap_policy" {
+  name = "roadmap-policy"
+  policy = templatefile("${path.module}/policies/roadmap.hcl", {
+    mount_path = vault_mount.kvv2.path
+  })
+}

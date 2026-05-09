@@ -8,7 +8,8 @@ locals {
     "cmp",
     "s3",
     "avatars-s3",
-    "n8n"
+    "n8n",
+    "roadmap"
   ])
 
   tunnel_secret_b64 = base64encode(random_password.tunnel_secret.result)

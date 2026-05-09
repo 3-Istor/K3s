@@ -17,3 +17,4 @@ resources:
   - config/vault-secrets-operator/
   - config/arcl-cmp/
   - config/n8n/
+  - config/roadmap/

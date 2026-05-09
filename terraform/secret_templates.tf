@@ -271,3 +271,60 @@ resource "vault_kv_secret_v2" "n8n_encryption_key" {
     key = var.n8n_encryption_key
   })
 }
+
+# -----------------------------------------------------------------------------
+# Roadmap Secrets
+# -----------------------------------------------------------------------------
+
+variable "roadmap_db_password" {
+  type      = string
+  sensitive = true
+}
+variable "roadmap_notion_api_key" {
+  type      = string
+  sensitive = true
+}
+variable "roadmap_notion_members_db_id" {
+  type = string
+}
+variable "roadmap_notion_projects_db_id" {
+  type = string
+}
+variable "roadmap_notion_events_db_id" {
+  type = string
+}
+variable "roadmap_notion_tasks_db_id" {
+  type = string
+}
+variable "roadmap_webhook_secret" {
+  type      = string
+  sensitive = true
+}
+variable "roadmap_cron_secret" {
+  type      = string
+  sensitive = true
+}
+
+
+resource "vault_kv_secret_v2" "roadmap_config" {
+  mount = vault_mount.kvv2.path
+  name  = "roadmap/config"
+  data_json = jsonencode({
+    "database-url"          = "postgresql://roadmap:${var.roadmap_db_password}@roadmap-postgres:5432/roadmap?schema=public"
+    "notion-api-key"        = var.roadmap_notion_api_key
+    "notion-members-db-id"  = var.roadmap_notion_members_db_id
+    "notion-projects-db-id" = var.roadmap_notion_projects_db_id
+    "notion-events-db-id"   = var.roadmap_notion_events_db_id
+    "notion-tasks-db-id"    = var.roadmap_notion_tasks_db_id
+    "webhook-secret"        = var.roadmap_webhook_secret
+    "cron-secret"           = var.roadmap_cron_secret
+  })
+}
+
+resource "vault_kv_secret_v2" "roadmap_envoy_auth" {
+  mount = vault_mount.kvv2.path
+  name  = "roadmap/envoy-auth"
+  data_json = jsonencode({
+    "client-secret" = keycloak_openid_client.openid_client.client_secret
+  })
+}

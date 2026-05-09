@@ -14,6 +14,9 @@ spec:
     - group: gateway.envoyproxy.io
       kind: SecurityPolicy
       namespace: arcl-cmp
+    - group: gateway.envoyproxy.io
+      kind: SecurityPolicy
+      namespace: roadmap
   to:
     - group: ""
       kind: Service

@@ -14,3 +14,4 @@ resources:
   - arcl-cmp.yaml
   - garage-s3.yaml
   - n8n.yaml
+  - roadmap.yaml

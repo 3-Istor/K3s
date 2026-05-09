@@ -1,0 +1,13 @@
+routes:
+  roadmap:
+    hostnames:
+      - "roadmap.3istor.com"
+    rules:
+      - backendRefs:
+          - name: roadmap
+            port: 3000
+    auth:
+      enabled: true
+      vault:
+        path: "kvv2/roadmap/envoy-auth"
+        role: "roadmap-role"

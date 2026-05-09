@@ -138,3 +138,15 @@ resource "vault_kubernetes_auth_backend_role" "n8n_role" {
   token_ttl                        = 86400
   token_policies                   = [vault_policy.n8n_policy.name]
 }
+
+# -----------------------------------------------------------------------------
+# Roadmap Roles
+# -----------------------------------------------------------------------------
+resource "vault_kubernetes_auth_backend_role" "roadmap_role" {
+  backend                          = vault_auth_backend.kubernetes.path
+  role_name                        = "roadmap-role"
+  bound_service_account_names      = ["vault-secrets-operator"]
+  bound_service_account_namespaces = ["vault-secrets-operator"]
+  token_ttl                        = 86400
+  token_policies                   = [vault_policy.roadmap_policy.name]
+}

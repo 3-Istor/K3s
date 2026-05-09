@@ -1,0 +1,17 @@
+image:
+  repository: ghcr.io/3-istor/roadmap
+  tag: "main-34b4d7d"
+  pullPolicy: Always
+
+ingress:
+  enabled: false
+
+env:
+  - name: NODE_ENV
+    value: "production"
+  - name: NEXT_PUBLIC_APP_URL
+    value: "https://roadmap.3istor.com"
+
+cronjob:
+  enabled: true
+  schedule: "0 * * * *"

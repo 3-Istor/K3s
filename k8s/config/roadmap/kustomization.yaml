@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: roadmap
+
+resources:
+  - namespace.yaml
+  - reference-grant.yaml
+  - postgres.yaml
+  - secrets.yaml
+
+helmGlobals:
+  chartHome: ../../../charts
+
+helmCharts:
+  - name: roadmap
+    repo: oci://ghcr.io/3-istor/charts
+    version: 0.1.0
+    releaseName: roadmap
+    namespace: roadmap
+    valuesFile: roadmap-values.yaml
+
+  - name: secure-route
+    releaseName: roadmap-routes
+    namespace: roadmap
+    valuesFile: values-secure-route.yaml
