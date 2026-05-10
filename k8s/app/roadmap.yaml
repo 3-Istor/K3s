@@ -8,7 +8,7 @@ metadata:
 
     argocd-image-updater.argoproj.io/image-list: roadmap=ghcr.io/3-istor/roadmap
     argocd-image-updater.argoproj.io/roadmap.update-strategy: digest
-    argocd-image-updater.argoproj.io/roadmap.allow-tags: regexp:^main-[a-f0-9]+$
+    argocd-image-updater.argoproj.io/roadmap.allow-tags: regexp:^sha-[a-f0-9]+$
     argocd-image-updater.argoproj.io/write-back-method: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
