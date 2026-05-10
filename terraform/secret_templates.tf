@@ -311,6 +311,7 @@ resource "vault_kv_secret_v2" "roadmap_config" {
   name  = "roadmap/config"
   data_json = jsonencode({
     "database-url"          = "postgresql://roadmap:${var.roadmap_db_password}@roadmap-postgres:5432/roadmap?schema=public"
+    "database-password"     = var.roadmap_db_password
     "notion-api-key"        = var.roadmap_notion_api_key
     "notion-members-db-id"  = var.roadmap_notion_members_db_id
     "notion-projects-db-id" = var.roadmap_notion_projects_db_id
