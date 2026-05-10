@@ -11,6 +11,48 @@ env:
     value: "production"
   - name: NEXT_PUBLIC_APP_URL
     value: "https://roadmap.3istor.com"
+  - name: NEXT_TELEMETRY_DISABLED
+    value: "1"
+  - name: DATABASE_URL
+    valueFrom:
+      secretKeyRef:
+        name: roadmap-secrets
+        key: database-url
+  - name: NOTION_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: roadmap-secrets
+        key: notion-api-key
+  - name: NOTION_MEMBERS_DB_ID
+    valueFrom:
+      secretKeyRef:
+        name: roadmap-secrets
+        key: notion-members-db-id
+  - name: NOTION_PROJECTS_DB_ID
+    valueFrom:
+      secretKeyRef:
+        name: roadmap-secrets
+        key: notion-projects-db-id
+  - name: NOTION_EVENTS_DB_ID
+    valueFrom:
+      secretKeyRef:
+        name: roadmap-secrets
+        key: notion-events-db-id
+  - name: NOTION_TASKS_DB_ID
+    valueFrom:
+      secretKeyRef:
+        name: roadmap-secrets
+        key: notion-tasks-db-id
+  - name: WEBHOOK_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: roadmap-secrets
+        key: webhook-secret
+  - name: CRON_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: roadmap-secrets
+        key: cron-secret
 
 cronjob:
   enabled: true
