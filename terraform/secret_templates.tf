@@ -86,6 +86,32 @@ resource "vault_kv_secret_v2" "argocd_oidc" {
   })
 }
 
+
+# -----------------------------------------------------------------------------
+# ArgoCD Image Updater (using ArgoCD namespace)Secrets
+# -----------------------------------------------------------------------------
+
+variable "github_bot_username" {
+  description = "Username for the GitHub bot/PAT"
+  type        = string
+  default     = "ton-username-github"
+}
+
+variable "github_bot_token" {
+  description = "Fine-grained PAT for ArgoCD Image Updater"
+  type        = string
+  sensitive   = true
+}
+
+resource "vault_kv_secret_v2" "argocd_github_bot" {
+  mount = vault_mount.kvv2.path
+  name  = "argocd/github-bot"
+  data_json = jsonencode({
+    username = var.github_bot_username
+    password = var.github_bot_token
+  })
+}
+
 # -----------------------------------------------------------------------------
 # Demo App Secrets
 # -----------------------------------------------------------------------------
