@@ -1,0 +1,54 @@
+# ---------------------------------------------------------
+# 1. ADMINS: Full Access (Cluster Admin)
+# ---------------------------------------------------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: oidc-admin-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: Group
+    name: "oidc:k3s-admin"
+
+---
+# ---------------------------------------------------------
+# 2. VIEWERS + DEVS: Read-only across the entire cluster
+# ---------------------------------------------------------
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: oidc-view-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+subjects:
+  - kind: Group
+    name: "oidc:k3s-view"
+  - kind: Group
+    name: "oidc:k3s-dev"
+
+---
+# ---------------------------------------------------------
+# 3. DEVS: Write/edit permissions in their own namespace
+# ---------------------------------------------------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dev-sandbox
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: oidc-dev-sandbox-binding
+  namespace: dev-sandbox
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: admin
+subjects:
+  - kind: Group
+    name: "oidc:k3s-dev"
