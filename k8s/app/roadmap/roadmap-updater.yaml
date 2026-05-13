@@ -10,9 +10,10 @@ spec:
         - alias: "roadmap"
           imageName: "ghcr.io/3-istor/roadmap"
 
-          helm:
-            imageName: "image.repository"
-            imageTag: "image.tag"
+          manifestTargets:
+            helm:
+              name: "image.repository"
+              tag: "image.tag"
 
           commonUpdateSettings:
             updateStrategy: "newest-build"
