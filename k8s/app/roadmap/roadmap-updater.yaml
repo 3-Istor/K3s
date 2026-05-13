@@ -9,6 +9,11 @@ spec:
       images:
         - alias: "roadmap"
           imageName: "ghcr.io/3-istor/roadmap"
+
+          helm:
+            imageName: "image.repository"
+            imageTag: "image.tag"
+
           commonUpdateSettings:
             updateStrategy: "newest-build"
             allowTags: "regexp:^sha-[a-f0-9]+$"
