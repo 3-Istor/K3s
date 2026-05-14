@@ -120,3 +120,33 @@ data "keycloak_openid_client" "realm_management" {
   realm_id  = keycloak_realm.kube_lab.id
   client_id = "realm-management"
 }
+
+# -----------------------------------------------------------------------------
+# OIDC CLIENT: kubeLogin (used for kubectl OIDC authentication)
+# -----------------------------------------------------------------------------
+
+resource "keycloak_openid_client" "k3s_api" {
+  realm_id                     = keycloak_realm.kube_lab.id
+  client_id                    = "k3s-cluster"
+  name                         = "K3s Cluster API"
+  enabled                      = true
+  access_type                  = "PUBLIC"
+  standard_flow_enabled        = true
+  direct_access_grants_enabled = true
+
+  valid_redirect_uris = [
+    "http://localhost:8000",
+    "http://localhost:18000"
+  ]
+}
+
+resource "keycloak_openid_client_default_scopes" "k3s_api_scopes" {
+  realm_id  = keycloak_realm.kube_lab.id
+  client_id = keycloak_openid_client.k3s_api.id
+  default_scopes = [
+    "profile",
+    "email",
+    "groups",
+    keycloak_openid_client_scope.groups.name
+  ]
+}
