@@ -146,6 +146,7 @@ resource "keycloak_openid_client_default_scopes" "k3s_api_scopes" {
   default_scopes = [
     "profile",
     "email",
+    "groups",
     keycloak_openid_client_scope.groups.name
   ]
 }
