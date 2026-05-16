@@ -4,7 +4,7 @@ kind: Kustomization
 namespace: kyverno
 
 resources:
-  - policy/
+  - policies/
   - namespace.yaml
 
 helmCharts:

@@ -1,0 +1,59 @@
+# Based on : https://kyverno.io/policies/other-vpol/require-qos-guaranteed/require-qos-guaranteed/
+
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: require-resources-and-memory-limits
+spec:
+  validationActions:
+    - Audit # warning mode
+  matchConstraints:
+    resourceRules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - pods
+  validations:
+    # Standard Containers Check
+    - message: "All containers must define CPU and Memory requests, and Memory limits must explicitly equal Memory requests."
+      expression: >-
+        !has(object.spec.containers) || object.spec.containers.all(c,
+          has(c.resources) &&
+          has(c.resources.requests) &&
+          has(c.resources.requests.cpu) &&
+          has(c.resources.requests.memory) &&
+          has(c.resources.limits) &&
+          has(c.resources.limits.memory) &&
+          c.resources.requests.memory == c.resources.limits.memory
+        )
+
+    # Init Containers Check
+    - message: "All initContainers must define CPU and Memory requests, and Memory limits must explicitly equal Memory requests."
+      expression: >-
+        !has(object.spec.initContainers) || object.spec.initContainers.all(c,
+          has(c.resources) &&
+          has(c.resources.requests) &&
+          has(c.resources.requests.cpu) &&
+          has(c.resources.requests.memory) &&
+          has(c.resources.limits) &&
+          has(c.resources.limits.memory) &&
+          c.resources.requests.memory == c.resources.limits.memory
+        )
+
+    # Ephemeral Containers Check
+    - message: "All ephemeralContainers must define CPU and Memory requests, and Memory limits must explicitly equal Memory requests."
+      expression: >-
+        !has(object.spec.ephemeralContainers) || object.spec.ephemeralContainers.all(c,
+          has(c.resources) &&
+          has(c.resources.requests) &&
+          has(c.resources.requests.cpu) &&
+          has(c.resources.requests.memory) &&
+          has(c.resources.limits) &&
+          has(c.resources.limits.memory) &&
+          c.resources.requests.memory == c.resources.limits.memory
+        )
