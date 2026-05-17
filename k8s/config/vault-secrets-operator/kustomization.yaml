@@ -9,7 +9,7 @@ resources:
 helmCharts:
   - name: vault-secrets-operator
     repo: oci://ghcr.io/ricoberger/charts
-    version: 3.0.0
+    version: 3.1.5
     releaseName: vault-secrets-operator
     namespace: vault-secrets-operator
     valuesFile: vso-values.yaml
