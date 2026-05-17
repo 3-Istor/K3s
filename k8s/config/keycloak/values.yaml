@@ -4,7 +4,7 @@ enableServiceLinks: false
 
 image:
   repository: quay.io/keycloak/keycloak
-  tag: "26.5.5"
+  tag: "26.6.1"
 
 rbac:
   create: false
