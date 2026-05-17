@@ -6,16 +6,24 @@
   ],
   "minimumReleaseAge": "14 days",
   "argocd": {
-    "fileMatch": ["k8s/apps/.*\\.yaml$"]
+    "managerFilePatterns": [
+      "/k8s/apps/.*\\.yaml$/"
+    ]
   },
   "kustomize": {
-    "fileMatch": ["k8s/config/.*/kustomization\\.yaml$"]
+    "managerFilePatterns": [
+      "/k8s/config/.*/kustomization\\.yaml$/"
+    ]
   },
   "helm-values": {
-    "fileMatch": ["k8s/config/.*/values.*\\.yaml$"]
+    "managerFilePatterns": [
+      "/k8s/config/.*/values.*\\.yaml$/"
+    ]
   },
   "terraform": {
-    "fileMatch": ["terraform/.*\\.tf$"]
+    "managerFilePatterns": [
+      "/terraform/.*\\.tf$/"
+    ]
   },
   "packageRules": [
     {
@@ -39,7 +47,9 @@
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": ["values.*\\.yaml$"],
+      "managerFilePatterns": [
+        "/values.*\\.yaml$/"
+      ],
       "matchStrings": [
         "#\\s*renovate:\\s*datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\s+.*?:\\s*[\"']?(?<currentValue>[^\"'\\s]+)[\"']?"
       ]
