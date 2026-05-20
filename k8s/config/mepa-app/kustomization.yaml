@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mepa-app
+
+resources:
+  - namespace.yaml
+  - secrets.yaml
+
+helmGlobals:
+  chartHome: ../../../charts
+
+helmCharts:
+  - name: mepa-app
+    repo: oci://ghcr.io/3-istor/charts
+    version: 0.1.0
+    releaseName: mepa-app
+    namespace: mepa-app
+    valuesFile: mepa-app-values.yaml
+
+  - name: secure-route
+    releaseName: mepa-app-routes
+    namespace: mepa-app
+    valuesFile: values-secure-route.yaml

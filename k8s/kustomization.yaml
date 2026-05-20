@@ -18,3 +18,4 @@ resources:
   - config/arcl-cmp/
   - config/n8n/
   - config/roadmap/
+  - config/mepa-app/

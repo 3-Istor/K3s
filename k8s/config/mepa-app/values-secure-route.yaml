@@ -1,0 +1,13 @@
+routes:
+  ia-clair:
+    hostnames:
+      - "mepa.3istor.com"
+    rules:
+      - backendRefs:
+          - name: mepa-app
+            port: 8000
+    auth:
+      enabled: true
+      vault:
+        path: "kvv2/mepa-app/envoy-auth"
+        role: "mepa-app-role"
