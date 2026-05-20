@@ -107,3 +107,13 @@ resource "vault_policy" "roadmap_policy" {
     mount_path = vault_mount.kvv2.path
   })
 }
+
+# -----------------------------------------------------------------------------
+# Mepa Policies
+# -----------------------------------------------------------------------------
+resource "vault_policy" "mepa_policy" {
+  name = "mepa-policy"
+  policy = templatefile("${path.module}/policies/mepa.hcl", {
+    mount_path = vault_mount.kvv2.path
+  })
+}
