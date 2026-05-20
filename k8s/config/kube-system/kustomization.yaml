@@ -3,6 +3,9 @@ kind: Kustomization
 
 namespace: kube-system
 
+resources:
+  - rbac.yaml
+
 helmCharts:
   - name: cilium
     repo: https://helm.cilium.io/

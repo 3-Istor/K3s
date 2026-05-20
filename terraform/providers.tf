@@ -1,4 +1,13 @@
 terraform {
+  backend "s3" {
+    bucket         = "3-istor-tf-infra-aws"
+    key            = "infra/bare-metal/k3s-master/terraform.tfstate"
+    region         = "eu-west-3"
+    dynamodb_table = "terraform-state-lock"
+    encrypt        = true
+    profile        = "3-istor"
+  }
+
   required_providers {
     keycloak = {
       source  = "keycloak/keycloak"
@@ -7,12 +16,12 @@ terraform {
 
     vault = {
       source  = "hashicorp/vault"
-      version = "5.6.0"
+      version = "5.9.0"
     }
 
     cloudflare = {
       source  = "cloudflare/cloudflare"
-      version = "5.16.0"
+      version = "5.19.1"
     }
   }
 }

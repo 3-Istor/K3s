@@ -4,13 +4,13 @@ kind: Kustomization
 namespace: kyverno
 
 resources:
-  - policy/
+  - policies/
   - namespace.yaml
 
 helmCharts:
   - name: kyverno
     repo: https://kyverno.github.io/kyverno/
-    version: 3.7.1
+    version: 3.8.0
     releaseName: kyverno
     namespace: kyverno
     valuesFile: values.yaml
