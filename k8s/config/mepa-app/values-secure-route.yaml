@@ -10,4 +10,4 @@ routes:
       enabled: true
       vault:
         path: "kvv2/mepa-app/envoy-auth"
-        role: "mepa-app-role"
+        role: "mepa-role"
