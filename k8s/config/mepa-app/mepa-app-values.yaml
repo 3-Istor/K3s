@@ -10,6 +10,9 @@ image:
 ingress:
   enabled: false
 
+autoscaling:
+  enabled: false
+
 env:
   AI_PROVIDER: "gemini"
 
