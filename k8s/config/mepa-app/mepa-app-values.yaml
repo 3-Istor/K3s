@@ -71,6 +71,9 @@ persistence:
   size: 1Gi
   mountPath: /app/data
 
+autoscaling:
+  enabled: false
+
 env:
   AI_PROVIDER: "openai"
 
