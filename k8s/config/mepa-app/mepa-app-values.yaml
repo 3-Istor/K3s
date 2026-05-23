@@ -1,124 +1,19 @@
+fullnameOverride: "mepa"
+
 replicaCount: 1
 
-ia-clair:
-  hostnames:
-    - "mepa.3istor.com"
-  rules:
-    - backendRefs:
-        - name: mepa
-          port: 80
-  auth:
-    enabled: true
-    vault:
-      path: "kvv2/mepa-app/envoy-auth"
-      role: "mepa-app-role"
-
 image:
-  repository: ia-clair
-  pullPolicy: IfNotPresent
+  repository: ghcr.io/3-istor/mepa
   tag: "latest"
-
-imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
-
-serviceAccount:
-  create: true
-  annotations: {}
-  name: ""
-
-podAnnotations: {}
-
-podSecurityContext:
-  runAsNonRoot: true
-  runAsUser: 1000
-  fsGroup: 1000
-
-securityContext:
-  allowPrivilegeEscalation: false
-  capabilities:
-    drop:
-      - ALL
-  readOnlyRootFilesystem: false
-
-service:
-  type: ClusterIP
-  port: 80
-  targetPort: 8000
+  pullPolicy: Always
 
 ingress:
-  enabled: true
-  className: "nginx"
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-  hosts:
-    - host: ia-clair.example.com
-      paths:
-        - path: /
-          pathType: Prefix
-  tls:
-    - secretName: ia-clair-tls
-      hosts:
-        - ia-clair.example.com
-
-resources:
-  limits:
-    cpu: 500m
-    memory: 512Mi
-  requests:
-    cpu: 250m
-    memory: 256Mi
+  enabled: false
 
 autoscaling:
   enabled: false
 
-persistence:
-  enabled: true
-  storageClass: ""
-  accessMode: ReadWriteOnce
-  size: 1Gi
-  mountPath: /app/data
-
 env:
-  AI_PROVIDER: "openai"
+  AI_PROVIDER: "gemini"
 
-secrets:
-  OPENAI_API_KEY: ""
-  GEMINI_API_KEY: ""
-  GEMINI_MODEL: "gemini-1.5-flash"
-
-nodeSelector: {}
-
-tolerations: []
-
-affinity:
-  podAntiAffinity:
-    preferredDuringSchedulingIgnoredDuringExecution:
-      - weight: 100
-        podAffinityTerm:
-          labelSelector:
-            matchExpressions:
-              - key: app.kubernetes.io/name
-                operator: In
-                values:
-                  - ia-clair
-          topologyKey: kubernetes.io/hostname
-
-livenessProbe:
-  httpGet:
-    path: /
-    port: http
-  initialDelaySeconds: 30
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 3
-
-readinessProbe:
-  httpGet:
-    path: /
-    port: http
-  initialDelaySeconds: 10
-  periodSeconds: 5
-  timeoutSeconds: 3
-  failureThreshold: 3
+secrets: {}
