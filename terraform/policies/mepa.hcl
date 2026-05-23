@@ -1,4 +1,4 @@
 # Roadmap App Policy
-path "kvv2/data/mepa/*" {
+path "kvv2/data/mepa-app/*" {
   capabilities = ["read"]
 }
