@@ -15,8 +15,3 @@ helmCharts:
     releaseName: cnpg
     namespace: cnpg-system
     valuesFile: values.yaml
-
-  - name: secure-route
-    releaseName: cnpg-routes
-    namespace: cnpg-system
-    valuesFile: values-secure-route.yaml
