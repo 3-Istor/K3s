@@ -75,6 +75,12 @@ resource "keycloak_user_groups" "team_groups" {
     ] : [
     keycloak_group.member.id
   ]
+
+  lifecycle {
+    ignore_changes = [
+      group_ids
+    ]
+  }
 }
 
 output "initial_passwords" {

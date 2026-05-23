@@ -355,3 +355,24 @@ resource "vault_kv_secret_v2" "roadmap_envoy_auth" {
     "client-secret" = keycloak_openid_client.openid_client.client_secret
   })
 }
+
+variable "mepa_gemini_api_key" {
+  type      = string
+  sensitive = true
+}
+
+resource "vault_kv_secret_v2" "mepa_config" {
+  mount = vault_mount.kvv2.path
+  name  = "mepa/config"
+  data_json = jsonencode({
+    "GEMINI_API_KEY" = var.mepa_gemini_api_key
+  })
+}
+
+resource "vault_kv_secret_v2" "mepa_envoy_auth" {
+  mount = vault_mount.kvv2.path
+  name  = "mepa/envoy-auth"
+  data_json = jsonencode({
+    "client-secret" = keycloak_openid_client.openid_client.client_secret
+  })
+}

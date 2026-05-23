@@ -1,0 +1,16 @@
+fullnameOverride: "mepa"
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/3-istor/mepa
+  tag: "latest"
+  pullPolicy: Always
+
+ingress:
+  enabled: false
+
+env:
+  AI_PROVIDER: "gemini"
+
+secrets: {}
