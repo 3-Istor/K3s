@@ -17,6 +17,9 @@ spec:
     - group: gateway.envoyproxy.io
       kind: SecurityPolicy
       namespace: roadmap
+    - group: gateway.envoyproxy.io
+      kind: SecurityPolicy
+      namespace: mepa-app
   to:
     - group: ""
       kind: Service
