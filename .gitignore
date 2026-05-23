@@ -4,3 +4,5 @@ k8s/**/charts/
 *.tfstate.*
 *.tfvars
 *.tfvars.json
+charts/
+!charts/secure-route
