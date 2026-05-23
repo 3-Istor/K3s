@@ -4,8 +4,8 @@ routes:
       - "mepa.3istor.com"
     rules:
       - backendRefs:
-          - name: mepa-app
-            port: 8000
+          - name: mepa
+            port: 80
     auth:
       enabled: true
       vault:
