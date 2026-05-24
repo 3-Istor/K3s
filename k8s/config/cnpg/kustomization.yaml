@@ -9,14 +9,9 @@ helmGlobals:
   chartHome: ../../../charts
 
 helmCharts:
-  - name: cnpg
+  - name: cloudnative-pg
     repo: https://cloudnative-pg.github.io/charts
     version: "0.28.2"
     releaseName: cnpg
     namespace: cnpg-system
     valuesFile: values.yaml
-
-  - name: secure-route
-    releaseName: cnpg-routes
-    namespace: cnpg-system
-    valuesFile: values-secure-route.yaml
