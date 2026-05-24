@@ -86,6 +86,22 @@ resource "vault_kv_secret_v2" "argocd_oidc" {
   })
 }
 
+# -----------------------------------------------------------------------------
+# ArgoCD GitHub App Repository Credentials
+# -----------------------------------------------------------------------------
+
+resource "vault_kv_secret_v2" "argocd_github_app" {
+  mount = vault_mount.kvv2.path
+  name  = "argocd/github-app"
+  data_json = jsonencode({
+    type                    = "git"
+    url                     = "https://github.com/3-Istor"
+    githubAppID             = var.github_app_id
+    githubAppInstallationID = var.github_app_installation_id
+    githubAppPrivateKey     = var.github_app_private_key
+  })
+}
+
 
 # -----------------------------------------------------------------------------
 # ArgoCD Image Updater (using ArgoCD namespace)Secrets

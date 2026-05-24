@@ -80,3 +80,23 @@ variable "cloudflare_account_id" {
   description = "Cloudflare Account ID"
   type        = string
 }
+
+# -----------------------------------------------------------------------------
+# GitHub App Variables for ArgoCD Repo Creds
+# -----------------------------------------------------------------------------
+
+variable "github_app_id" {
+  description = "The GitHub App ID for repository credentials"
+  type        = string
+}
+
+variable "github_app_installation_id" {
+  description = "The GitHub App Installation ID"
+  type        = string
+}
+
+variable "github_app_private_key" {
+  description = "The complete content of the GitHub App RSA Private Key (.pem file)"
+  type        = string
+  sensitive   = true
+}
