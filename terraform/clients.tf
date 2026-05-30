@@ -22,6 +22,7 @@ resource "keycloak_openid_client" "openid_client" {
     "https://cmp.${var.base_domain}/oauth2/callback",
     "https://cmp.${var.base_domain}/api/auth/callback/keycloak",
     "https://mepa.${var.base_domain}/oauth2/callback",
+    "https://qcm.${var.base_domain}/api/auth/callback/keycloak",
     "http://localhost:3000/api/auth/callback/keycloak",
     "http://localhost:3001/api/auth/callback/keycloak"
   ]
@@ -31,6 +32,7 @@ resource "keycloak_openid_client" "openid_client" {
     "https://roadmap.${var.base_domain}/",
     "https://cmp.${var.base_domain}/",
     "https://mepa.${var.base_domain}/",
+    "https://qcm.${var.base_domain}/",
     "http://localhost:3000/",
     "http://localhost:3001/"
   ]
@@ -40,6 +42,7 @@ resource "keycloak_openid_client" "openid_client" {
     "https://roadmap.${var.base_domain}",
     "https://cmp.${var.base_domain}",
     "https://mepa.${var.base_domain}",
+    "https://qcm.${var.base_domain}",
     "http://localhost:3000/",
     "http://localhost:3001"
   ]
