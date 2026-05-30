@@ -9,6 +9,8 @@ env:
     value: "production"
   - name: NEXT_PUBLIC_APP_URL
     value: "https://qcm.3istor.com"
+  - name: NEXTAUTH_URL
+    value: "https://qcm.3istor.com"
   - name: DATABASE_URL
     valueFrom:
       secretKeyRef:
