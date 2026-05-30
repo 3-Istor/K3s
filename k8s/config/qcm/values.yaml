@@ -20,7 +20,7 @@ env:
         name: qcm-secrets
         key: nextauth-secret
   - name: KEYCLOAK_CLIENT_ID
-    value: "qcm"
+    value: "3-istor-openid"
   - name: KEYCLOAK_CLIENT_SECRET
     valueFrom:
       secretKeyRef:
