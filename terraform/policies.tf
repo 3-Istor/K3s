@@ -117,3 +117,13 @@ resource "vault_policy" "mepa_policy" {
     mount_path = vault_mount.kvv2.path
   })
 }
+
+# -----------------------------------------------------------------------------
+# QCM Policies
+# -----------------------------------------------------------------------------
+resource "vault_policy" "qcm_policy" {
+  name = "qcm-policy"
+  policy = templatefile("${path.module}/policies/qcm.hcl", {
+    mount_path = vault_mount.kvv2.path
+  })
+}

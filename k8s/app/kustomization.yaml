@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - roadmap/
   - mepa-app/
+  - qcm/
 
   - cert-manager.yaml
   - demo-app.yaml

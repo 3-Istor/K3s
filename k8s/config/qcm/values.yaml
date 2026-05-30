@@ -1,0 +1,30 @@
+image:
+  repository: ghcr.io/3-istor/qcm
+  tag: "latest"
+  pullPolicy: Always
+ingress:
+  enabled: false
+env:
+  - name: NODE_ENV
+    value: "production"
+  - name: NEXT_PUBLIC_APP_URL
+    value: "https://qcm.3istor.com"
+  - name: DATABASE_URL
+    valueFrom:
+      secretKeyRef:
+        name: qcm-secrets
+        key: database-url
+  - name: NEXTAUTH_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: qcm-secrets
+        key: nextauth-secret
+  - name: KEYCLOAK_CLIENT_ID
+    value: "qcm"
+  - name: KEYCLOAK_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: qcm-secrets
+        key: client-secret
+  - name: KEYCLOAK_ISSUER
+    value: "https://auth.3istor.com/realms/3istor"

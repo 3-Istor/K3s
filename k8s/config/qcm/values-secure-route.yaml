@@ -1,0 +1,10 @@
+routes:
+  qcm:
+    hostnames:
+      - "qcm.3istor.com"
+    rules:
+      - backendRefs:
+          - name: qcm
+            port: 3000
+    auth:
+      enabled: false

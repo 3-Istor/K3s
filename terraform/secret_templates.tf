@@ -392,3 +392,27 @@ resource "vault_kv_secret_v2" "mepa_envoy_auth" {
     "client-secret" = keycloak_openid_client.openid_client.client_secret
   })
 }
+
+# -----------------------------------------------------------------------------
+# QCM Secrets
+# -----------------------------------------------------------------------------
+variable "qcm_db_password" {
+  type      = string
+  sensitive = true
+}
+
+variable "qcm_nextauth_secret" {
+  type      = string
+  sensitive = true
+}
+
+resource "vault_kv_secret_v2" "qcm_config" {
+  mount = vault_mount.kvv2.path
+  name  = "qcm/config"
+  data_json = jsonencode({
+    "database-url"      = "postgresql://qcm:${var.qcm_db_password}@qcm-postgres:5432/qcm?schema=public"
+    "database-password" = var.qcm_db_password
+    "nextauth-secret"   = var.qcm_nextauth_secret
+    "client-secret"     = keycloak_openid_client.openid_client.client_secret
+  })
+}

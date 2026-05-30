@@ -20,6 +20,9 @@ spec:
     - group: gateway.envoyproxy.io
       kind: SecurityPolicy
       namespace: mepa-app
+    - group: gateway.envoyproxy.io
+      kind: SecurityPolicy
+      namespace: qcm
   to:
     - group: ""
       kind: Service
