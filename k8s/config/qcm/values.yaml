@@ -15,18 +15,18 @@ env:
     valueFrom:
       secretKeyRef:
         name: qcm-secrets
-        key: database-url
+        key: DATABASE_URL
   - name: NEXTAUTH_SECRET
     valueFrom:
       secretKeyRef:
         name: qcm-secrets
-        key: nextauth-secret
+        key: NEXTAUTH_SECRET
   - name: KEYCLOAK_CLIENT_ID
     value: "3-istor-openid"
   - name: KEYCLOAK_CLIENT_SECRET
     valueFrom:
       secretKeyRef:
         name: qcm-secrets
-        key: client-secret
+        key: KEYCLOAK_CLIENT_SECRET
   - name: KEYCLOAK_ISSUER
     value: "https://auth.3istor.com/realms/3istor"
