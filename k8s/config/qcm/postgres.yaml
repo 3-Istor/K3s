@@ -51,7 +51,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: qcm-secrets
-                  key: database-password
+                  key: DATABASE_PASSWORD
           ports:
             - containerPort: 5432
           volumeMounts:

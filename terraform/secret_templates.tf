@@ -411,6 +411,7 @@ resource "vault_kv_secret_v2" "qcm_config" {
   name  = "qcm/config"
   data_json = jsonencode({
     "DATABASE_URL"           = "postgresql://qcm:${var.qcm_db_password}@qcm-postgres:5432/qcm?schema=public"
+    "DATABASE_PASSWORD"      = var.qcm_db_password
     "NEXTAUTH_SECRET"        = var.qcm_nextauth_secret
     "KEYCLOAK_CLIENT_SECRET" = keycloak_openid_client.openid_client.client_secret
     "client-secret"          = keycloak_openid_client.openid_client.client_secret
