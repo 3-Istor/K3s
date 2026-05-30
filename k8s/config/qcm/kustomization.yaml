@@ -14,7 +14,7 @@ helmGlobals:
 helmCharts:
   - name: qcm
     repo: oci://ghcr.io/3-istor/charts
-    version: 1.0.5
+    version: 1.0.6
     releaseName: qcm
     namespace: qcm
     valuesFile: values.yaml
