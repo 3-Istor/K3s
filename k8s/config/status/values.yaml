@@ -20,7 +20,45 @@ config:
     # ==========================================
     # 1. PHYSICAL INFRASTRUCTURE & NETWORK
     # ==========================================
-    - name: PAE Node 1 (Hypervisor)
+    - name: PAE Node 1
+      group: 1. Physical Infrastructure
+      # Inferred from your SSH config (K3s Main API Server host)
+      # Update this IP if PAE Node 1 is hosted on a different local IP
+      url: "icmp://192.168.1.110"
+      interval: 1m
+      conditions:
+        - "[CONNECTED] == true"
+      alerts:
+        - type: discord
+          failure-threshold: 3
+          success-threshold: 2
+          description: "🔴 PAE Node 1 is not responding to ping."
+
+    - name: PAE Node 2
+      group: 1. Physical Infrastructure
+      url: "icmp://192.168.1.81"
+      interval: 1m
+      conditions:
+        - "[CONNECTED] == true"
+      alerts:
+        - type: discord
+          failure-threshold: 3
+          success-threshold: 2
+          description: "🔴 PAE Node 2 (Runner Host) is not responding to ping."
+
+    - name: PAE Node 3
+      group: 1. Physical Infrastructure
+      url: "icmp://192.168.1.47"
+      interval: 1m
+      conditions:
+        - "[CONNECTED] == true"
+      alerts:
+        - type: discord
+          failure-threshold: 3
+          success-threshold: 2
+          description: "🔴 PAE Node 3 is not responding to ping."
+
+    - name: OpenStack Control Plane (VIP)
       group: 1. Physical Infrastructure
       url: "icmp://192.168.1.210"
       interval: 1m
@@ -30,7 +68,7 @@ config:
         - type: discord
           failure-threshold: 3
           success-threshold: 2
-          description: "🔴 The OpenStack hypervisor is not responding to ping."
+          description: "🔴 OpenStack Virtual IP (192.168.1.210) is not responding to ping."
 
     # AWS VPN commented out in case ping routing issues persist.
     - name: VPN Tunnel (AWS)
