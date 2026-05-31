@@ -1,0 +1,46 @@
+envFrom:
+  - secretRef:
+      name: status-secrets
+
+config:
+  alerting:
+    discord:
+      webhook-url: "${DISCORD_WEBHOOK_URL}"
+
+  endpoints:
+    # --- HARDWARE MONITORING (OpenStack Nodes) ---
+    - name: PAE Node 1 (Hypervisor)
+      group: Physical Infrastructure
+      url: "icmp://192.168.1.210"
+      interval: 1m
+      conditions:
+        - "[CONNECTED] == true"
+      alerts:
+        - type: discord
+          failure-threshold: 3
+          success-threshold: 2
+          description: "Alert: The OpenStack hypervisor is no longer responding to ICMP ping."
+
+    # --- NETWORK MONITORING (AWS VPN) ---
+    - name: VPN Tunnel (AWS)
+      group: Network
+      url: "icmp://10.0.0.101"
+      interval: 1m
+      conditions:
+        - "[CONNECTED] == true"
+      alerts:
+        - type: discord
+          failure-threshold: 3
+
+    # --- OPENSTACK SERVICES ---
+    - name: OpenStack Horizon (UI)
+      group: OpenStack Services
+      url: "http://192.168.1.210:80"
+      interval: 2m
+      conditions:
+        - "[STATUS] == 200"
+        - "[RESPONSE_TIME] < 1000"
+      alerts:
+        - type: discord
+          failure-threshold: 3
+          description: "The Horizon dashboard is unreachable or experiencing high latency."

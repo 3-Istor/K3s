@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gatus-config
+  namespace: status
+data:
+  config.yaml: |
+    alerting:
+      discord:
+        webhook-url: "${DISCORD_WEBHOOK_URL}" # Injected via environment variables
+
+    endpoints:
+      # --- 1. Physical OpenStack nodes ping monitoring ---
+      - name: PAE Node 1 (Hypervisor)
+        group: Infrastructure
+        url: "icmp://192.168.1.210" # Your node IP
+        interval: 1m
+        conditions:
+          - "[CONNECTED] == true"
+        alerts:
+          - type: discord
+            failure-threshold: 3 # Alert if it fails 3 consecutive times (3 min)
+            success-threshold: 2 # Resolved after 2 consecutive successful checks
+
+      # --- 2. OpenStack services HTTP monitoring ---
+      - name: OpenStack Horizon (UI)
+        group: Core Services
+        url: "http://192.168.1.210:80"
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+          - "[RESPONSE_TIME] < 1000" # Response time under 1 second
+        alerts:
+          - type: discord
+            failure-threshold: 3
+
+      # --- 3. Monitoring a specific VM through WireGuard ---
+      - name: VPN VM (AWS)
+        group: Networking
+        url: "icmp://10.0.0.101" # Local IP of your VPN VM
+        interval: 30s
+        conditions:
+          - "[CONNECTED] == true"
+        alerts:
+          - type: discord
+            failure-threshold: 2

@@ -21,3 +21,4 @@ resources:
   - kube-system.yaml
   - dev-sandbox.yaml
   - cnpg.yaml
+  - status.yaml

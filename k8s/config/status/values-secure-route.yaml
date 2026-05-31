@@ -1,0 +1,10 @@
+routes:
+  status-public:
+    hostnames:
+      - "status.3istor.com"
+    rules:
+      - backendRefs:
+          - name: gatus
+            port: 80
+    auth:
+      enabled: false

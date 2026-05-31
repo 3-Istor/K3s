@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: status
+
+resources:
+  - namespace.yaml
+  - secrets.yaml
+
+helmGlobals:
+  chartHome: ../../../charts
+
+helmCharts:
+  - name: gatus
+    repo: https://twin.github.io/helm-charts
+    version: 1.5.0
+    releaseName: gatus
+    namespace: status
+    valuesFile: values.yaml
+
+  - name: secure-route
+    releaseName: status-routes
+    namespace: status
+    valuesFile: values-secure-route.yaml

@@ -417,3 +417,20 @@ resource "vault_kv_secret_v2" "qcm_config" {
     "client-secret"          = keycloak_openid_client.openid_client.client_secret
   })
 }
+
+# -----------------------------------------------------------------------------
+# Status Secrets
+# -----------------------------------------------------------------------------
+variable "status_discord_webhook_url" {
+  type      = string
+  sensitive = true
+}
+
+resource "vault_kv_secret_v2" "status_secrets" {
+  mount = vault_mount.kvv2.path
+  name  = "status/config"
+  data_json = jsonencode({
+    "DISCORD_WEBHOOK_URL" = var.status_discord_webhook_url
+    "client-secret"       = keycloak_openid_client.openid_client.client_secret
+  })
+}

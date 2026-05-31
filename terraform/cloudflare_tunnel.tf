@@ -11,7 +11,8 @@ locals {
     "n8n",
     "roadmap",
     "mepa",
-    "qcm"
+    "qcm",
+    "status"
   ])
 
   tunnel_secret_b64 = base64encode(random_password.tunnel_secret.result)

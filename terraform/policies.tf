@@ -127,3 +127,12 @@ resource "vault_policy" "qcm_policy" {
     mount_path = vault_mount.kvv2.path
   })
 }
+
+
+# -----------------------------------------------------------------------------
+# Status Policies
+# -----------------------------------------------------------------------------
+resource "vault_policy" "status_policy" {
+  name   = "status-policy"
+  policy = templatefile("${path.module}/policies/status.hcl", {})
+}

@@ -174,3 +174,16 @@ resource "vault_kubernetes_auth_backend_role" "qcm_role" {
   token_ttl                        = 86400
   token_policies                   = [vault_policy.qcm_policy.name]
 }
+
+
+# -----------------------------------------------------------------------------
+# Status Roles
+# -----------------------------------------------------------------------------
+resource "vault_kubernetes_auth_backend_role" "status_role" {
+  backend                          = vault_auth_backend.kubernetes.path
+  role_name                        = "status-role"
+  bound_service_account_names      = ["vault-secrets-operator"]
+  bound_service_account_namespaces = ["vault-secrets-operator"]
+  token_ttl                        = 86400
+  token_policies                   = [vault_policy.status_policy.name]
+}
