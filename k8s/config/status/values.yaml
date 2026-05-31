@@ -1,16 +1,27 @@
+# ---------------------------------------------------------
+# Environment variables (Vault secret injection)
+# ---------------------------------------------------------
 envFrom:
   - secretRef:
       name: status-secrets
 
+# ---------------------------------------------------------
+# Gatus main configuration
+# ---------------------------------------------------------
 config:
+  # Alerting configuration
   alerting:
     discord:
+      # The environment variable is injected by status-secrets above
       webhook-url: "${DISCORD_WEBHOOK_URL}"
 
+  # List of services to monitor
   endpoints:
-    # --- HARDWARE MONITORING (OpenStack Nodes) ---
+    # ==========================================
+    # 1. PHYSICAL INFRASTRUCTURE & NETWORK
+    # ==========================================
     - name: PAE Node 1 (Hypervisor)
-      group: Physical Infrastructure
+      group: 1. Physical Infrastructure
       url: "icmp://192.168.1.210"
       interval: 1m
       conditions:
@@ -19,11 +30,11 @@ config:
         - type: discord
           failure-threshold: 3
           success-threshold: 2
-          description: "Alert: The OpenStack hypervisor is no longer responding to ICMP ping."
+          description: "🔴 The OpenStack hypervisor is not responding to ping."
 
-    # --- NETWORK MONITORING (AWS VPN) ---
+    # AWS VPN commented out in case ping routing issues persist.
     - name: VPN Tunnel (AWS)
-      group: Network
+      group: 1. Physical Infrastructure
       url: "icmp://10.0.0.101"
       interval: 1m
       conditions:
@@ -32,15 +43,125 @@ config:
         - type: discord
           failure-threshold: 3
 
-    # --- OPENSTACK SERVICES ---
-    - name: OpenStack Horizon (UI)
-      group: OpenStack Services
-      url: "http://192.168.1.210:80"
-      interval: 2m
+    # ==========================================
+    # 2. KUBERNETES CORE SERVICES (Public)
+    # ==========================================
+    - name: Keycloak (Auth)
+      group: 2. Core Services
+      url: "https://auth.3istor.com/health/ready"
+      interval: 1m
       conditions:
         - "[STATUS] == 200"
-        - "[RESPONSE_TIME] < 1000"
       alerts:
         - type: discord
           failure-threshold: 3
-          description: "The Horizon dashboard is unreachable or experiencing high latency."
+
+    - name: ArgoCD (GitOps)
+      group: 2. Core Services
+      url: "https://argocd.3istor.com"
+      interval: 1m
+      conditions:
+        - "[STATUS] == 200"
+      alerts:
+        - type: discord
+          failure-threshold: 3
+
+    - name: Vault (Secrets)
+      group: 2. Core Services
+      url: "https://vault.3istor.com/v1/sys/health"
+      interval: 1m
+      conditions:
+        # Vault returns 200 (Active) or 429/473 (Standby/Unsealed). All are healthy states.
+        - "[STATUS] == 200 || [STATUS] == 429 || [STATUS] == 473"
+      alerts:
+        - type: discord
+          failure-threshold: 3
+
+    - name: Garage S3 (Storage)
+      group: 2. Core Services
+      url: "https://s3.3istor.com"
+      interval: 1m
+      conditions:
+        # S3 API returns 403 Forbidden at root without credentials, confirming the API is up.
+        - "[STATUS] == 403 || [STATUS] == 200"
+      alerts:
+        - type: discord
+          failure-threshold: 3
+
+    # ==========================================
+    # 3. LOB APPLICATIONS (Public)
+    # ==========================================
+    - name: N8N (Automation)
+      group: 3. Applications
+      url: "https://n8n.3istor.com/healthz"
+      interval: 1m
+      conditions:
+        - "[STATUS] == 200"
+      alerts:
+        - type: discord
+          failure-threshold: 3
+
+    - name: QCM App
+      group: 3. Applications
+      url: "https://qcm.3istor.com"
+      interval: 1m
+      conditions:
+        - "[STATUS] == 200"
+      alerts:
+        - type: discord
+          failure-threshold: 3
+
+    # ==========================================
+    # 4. SECURED APPLICATIONS (Internal Verification)
+    # Bypasses Envoy & Keycloak using cluster-internal Kubernetes Services (.svc.cluster.local)
+    # ==========================================
+    - name: ARCL CMP (Frontend)
+      group: 4. Internal Applications (Direct)
+      url: "http://arcl-cmp-frontend.arcl-cmp.svc.cluster.local:3000"
+      interval: 1m
+      conditions:
+        - "[STATUS] == 200"
+      alerts:
+        - type: discord
+          failure-threshold: 3
+
+    - name: ARCL CMP (Backend API)
+      group: 4. Internal Applications (Direct)
+      url: "http://arcl-cmp-backend.arcl-cmp.svc.cluster.local:8000"
+      interval: 1m
+      conditions:
+        # An API backend at root often returns 404 Not Found, which still confirms the web server is running.
+        - "[STATUS] == 200 || [STATUS] == 404"
+      alerts:
+        - type: discord
+          failure-threshold: 3
+
+    - name: Roadmap
+      group: 4. Internal Applications (Direct)
+      url: "http://roadmap.roadmap.svc.cluster.local:3000"
+      interval: 1m
+      conditions:
+        - "[STATUS] == 200"
+      alerts:
+        - type: discord
+          failure-threshold: 3
+
+    - name: Mepa AI
+      group: 4. Internal Applications (Direct)
+      url: "http://mepa.mepa-app.svc.cluster.local:80"
+      interval: 1m
+      conditions:
+        - "[STATUS] == 200"
+      alerts:
+        - type: discord
+          failure-threshold: 3
+
+    - name: Demo App
+      group: 4. Internal Applications (Direct)
+      url: "http://kube-classes-svc.demo-app.svc.cluster.local:80"
+      interval: 1m
+      conditions:
+        - "[STATUS] == 200"
+      alerts:
+        - type: discord
+          failure-threshold: 3
