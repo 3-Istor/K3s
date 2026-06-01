@@ -16,7 +16,7 @@ image:
   repository: n8nio/n8n
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "2.19.2"
+  tag: "2.21.3"
 imagePullSecrets: []
 
 # The Name to use for the chart. Will be the prefix of all resources aka. The Chart.Name (default is 'n8n')
