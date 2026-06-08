@@ -7,6 +7,9 @@ metadata:
 spec:
   validationActions:
     - Audit # warning mode
+  matchConditions:
+    - name: exclude-system-namespaces
+      expression: "!([ 'kube-system', 'kyverno', 'cilium', 'longhorn-system', 'gateway-nfra' ].exists(ns, request.namespace == ns))"
   matchConstraints:
     resourceRules:
       - apiGroups:
