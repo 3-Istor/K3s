@@ -187,3 +187,24 @@ resource "vault_kubernetes_auth_backend_role" "status_role" {
   token_ttl                        = 86400
   token_policies                   = [vault_policy.status_policy.name]
 }
+
+# -----------------------------------------------------------------------------
+# GitHub Actions Roles
+# -----------------------------------------------------------------------------
+resource "vault_jwt_auth_backend_role" "github_actions_dockair" {
+  backend        = vault_jwt_auth_backend.github.path
+  role_name      = "github-actions-dockair"
+  token_policies = [vault_policy.github_actions_dockair.name]
+
+  role_type = "jwt"
+  token_ttl = 3600
+
+  bound_audiences = ["https://github.com/TheGostsniperfr"]
+
+  bound_claims_type = "glob"
+  bound_claims = {
+    sub = "repo:TheGostsniperfr/infra-dockair-sandbox:*"
+  }
+
+  user_claim = "actor"
+}

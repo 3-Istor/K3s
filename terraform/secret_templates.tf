@@ -434,3 +434,21 @@ resource "vault_kv_secret_v2" "status_secrets" {
     "client-secret"       = keycloak_openid_client.openid_client.client_secret
   })
 }
+
+# -----------------------------------------------------------------------------
+# Dockair Sandbox CI Secrets
+# -----------------------------------------------------------------------------
+resource "vault_kv_secret_v2" "dockair_ci_creds" {
+  mount = vault_mount.kvv2.path
+  name  = "dockair-sandbox/ci"
+
+  data_json = jsonencode({
+    os_username     = var.os_username
+    os_password     = var.os_password
+    os_project_name = var.os_project_name
+    os_auth_url     = var.os_auth_url
+
+    aws_access_key_id     = var.aws_access_key_id
+    aws_secret_access_key = var.aws_secret_key
+  })
+}

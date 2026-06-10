@@ -136,3 +136,13 @@ resource "vault_policy" "status_policy" {
   name   = "status-policy"
   policy = templatefile("${path.module}/policies/status.hcl", {})
 }
+
+# -----------------------------------------------------------------------------
+# GitHub Actions (Dockair CI) Policies
+# -----------------------------------------------------------------------------
+resource "vault_policy" "github_actions_dockair" {
+  name = "github-actions-dockair"
+  policy = templatefile("${path.module}/policies/github_actions_dockair.hcl", {
+    mount_path = vault_mount.kvv2.path
+  })
+}

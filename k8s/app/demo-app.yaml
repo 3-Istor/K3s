@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: demo-app
   namespace: argocd
+  labels:
+    dr-strategy: pilot-light
   annotations:
     argocd.argoproj.io/compare-options: ServerSideDiff=true,IncludeMutationWebhook=true
     # argocd-image-updater.argoproj.io/image-list: demo=ghcr.io/thegostsniperfr/kube-classes

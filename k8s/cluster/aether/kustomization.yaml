@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../app/
+
+# This patch is used to set the replica count to 0 for any application with the label "dr-strategy=pilot-light".
+# This allows us to easily switch to a pilot light strategy for disaster recovery by simply applying this patch.
+patches:
+  - target:
+      kind: Application
+      labelSelector: "dr-strategy=pilot-light"
+    patch: |-
+      apiVersion: argoproj.io/v1alpha1
+      kind: Application
+      metadata:
+        name: .*
+      spec:
+        source:
+          kustomize:
+            patches:
+              - target:
+                  kind: Deployment
+                patch: |-
+                  - op: replace
+                    path: /spec/replicas
+                    value: 0
