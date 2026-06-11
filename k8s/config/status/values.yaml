@@ -131,7 +131,7 @@ config:
     # ==========================================
     - name: N8N (Automation)
       group: 3. Applications
-      url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/n8n/n8n"
+      url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/n8n/n8n?port=5678"
       interval: 1m
       conditions:
         - "[STATUS] == 200"
@@ -141,7 +141,7 @@ config:
 
     - name: QCM App
       group: 3. Applications
-      url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/qcm/qcm"
+      url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/qcm/qcm?port=3000"
       interval: 1m
       conditions:
         - "[STATUS] == 200"
@@ -155,7 +155,7 @@ config:
     # ==========================================
     - name: ARCL CMP (Frontend)
       group: 4. Internal Applications (Direct)
-      url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/arcl-cmp/arcl-cmp-frontend"
+      url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/arcl-cmp/arcl-cmp-frontend?port=3000"
       interval: 1m
       conditions:
         - "[STATUS] == 200"
@@ -165,7 +165,7 @@ config:
 
     - name: ARCL CMP (Backend API)
       group: 4. Internal Applications (Direct)
-      url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/arcl-cmp/arcl-cmp-backend"
+      url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/arcl-cmp/arcl-cmp-backend?port=8000"
       interval: 1m
       conditions:
         - "[STATUS] == 200"
@@ -175,7 +175,7 @@ config:
 
     - name: Roadmap
       group: 4. Internal Applications (Direct)
-      url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/roadmap/roadmap"
+      url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/roadmap/roadmap?port=3000"
       interval: 1m
       conditions:
         - "[STATUS] == 200"
