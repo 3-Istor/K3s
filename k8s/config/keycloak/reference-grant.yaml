@@ -23,6 +23,9 @@ spec:
     - group: gateway.envoyproxy.io
       kind: SecurityPolicy
       namespace: qcm
+    - group: gateway.envoyproxy.io
+      kind: SecurityPolicy
+      namespace: offhours-guard
   to:
     - group: ""
       kind: Service
