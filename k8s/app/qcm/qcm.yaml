@@ -21,8 +21,6 @@ spec:
       kind: Deployment
       jsonPointers:
         - /spec/replicas
-      jqPathExpressions:
-        - .spec.replicas
   project: default
   source:
     repoURL: https://github.com/3-Istor/K3s.git
