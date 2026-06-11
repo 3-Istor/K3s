@@ -372,6 +372,17 @@ resource "vault_kv_secret_v2" "roadmap_envoy_auth" {
   })
 }
 
+# -----------------------------------------------------------------------------
+# Offhours-Guard Secrets
+# -----------------------------------------------------------------------------
+resource "vault_kv_secret_v2" "offhours_guard_envoy_auth" {
+  mount = vault_mount.kvv2.path
+  name  = "offhours-guard/envoy-auth"
+  data_json = jsonencode({
+    "client-secret" = keycloak_openid_client.openid_client.client_secret
+  })
+}
+
 variable "mepa_gemini_api_key" {
   type      = string
   sensitive = true
@@ -432,5 +443,24 @@ resource "vault_kv_secret_v2" "status_secrets" {
   data_json = jsonencode({
     "DISCORD_WEBHOOK_URL" = var.status_discord_webhook_url
     "client-secret"       = keycloak_openid_client.openid_client.client_secret
+  })
+}
+
+
+# -----------------------------------------------------------------------------
+# Dockair Sandbox CI Secrets
+# -----------------------------------------------------------------------------
+resource "vault_kv_secret_v2" "dockair_ci_creds" {
+  mount = vault_mount.kvv2.path
+  name  = "dockair-sandbox/ci"
+
+  data_json = jsonencode({
+    os_username     = var.os_username
+    os_password     = var.os_password
+    os_project_name = var.os_project_name
+    os_auth_url     = var.os_auth_url
+
+    aws_access_key_id     = var.aws_access_key_id
+    aws_secret_access_key = var.aws_secret_key
   })
 }

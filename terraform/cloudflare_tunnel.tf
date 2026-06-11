@@ -10,6 +10,7 @@ locals {
     "avatars-s3",
     "n8n",
     "roadmap",
+    "offhours-guard",
     "mepa",
     "qcm",
     "status"

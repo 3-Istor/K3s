@@ -6,6 +6,7 @@ namespace: mepa-app
 resources:
   - namespace.yaml
   - secrets.yaml
+  - offhours-guard.yaml
 
 helmGlobals:
   chartHome: ../../../charts

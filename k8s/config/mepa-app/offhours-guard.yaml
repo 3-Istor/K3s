@@ -1,0 +1,11 @@
+apiVersion: guard.3istor.com/v1alpha1
+kind: OffhoursSchedule
+metadata:
+  name: mepa-schedule
+  namespace: mepa-app
+spec:
+  targetRefs:
+    - name: mepa
+  sleepAt: "0 1 * * *"
+  wakeAt: "0 7 * * *"
+  timezone: "Europe/Paris"

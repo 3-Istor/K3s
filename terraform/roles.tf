@@ -152,6 +152,18 @@ resource "vault_kubernetes_auth_backend_role" "roadmap_role" {
 }
 
 # -----------------------------------------------------------------------------
+# Offhours-Guard Roles
+# -----------------------------------------------------------------------------
+resource "vault_kubernetes_auth_backend_role" "offhours_guard_role" {
+  backend                          = vault_auth_backend.kubernetes.path
+  role_name                        = "offhours-guard-role"
+  bound_service_account_names      = ["vault-secrets-operator"]
+  bound_service_account_namespaces = ["vault-secrets-operator"]
+  token_ttl                        = 86400
+  token_policies                   = [vault_policy.offhours_guard_policy.name]
+}
+
+# -----------------------------------------------------------------------------
 # MEPA Roles
 # -----------------------------------------------------------------------------
 resource "vault_kubernetes_auth_backend_role" "mepa_role" {
@@ -186,4 +198,26 @@ resource "vault_kubernetes_auth_backend_role" "status_role" {
   bound_service_account_namespaces = ["vault-secrets-operator"]
   token_ttl                        = 86400
   token_policies                   = [vault_policy.status_policy.name]
+}
+
+
+# -----------------------------------------------------------------------------
+# GitHub Actions Roles
+# -----------------------------------------------------------------------------
+resource "vault_jwt_auth_backend_role" "github_actions_dockair" {
+  backend        = vault_jwt_auth_backend.github.path
+  role_name      = "github-actions-dockair"
+  token_policies = [vault_policy.github_actions_dockair.name]
+
+  role_type = "jwt"
+  token_ttl = 3600
+
+  bound_audiences = ["https://github.com/TheGostsniperfr"]
+
+  bound_claims_type = "glob"
+  bound_claims = {
+    sub = "repo:TheGostsniperfr/infra-dockair-sandbox:*"
+  }
+
+  user_claim = "actor"
 }

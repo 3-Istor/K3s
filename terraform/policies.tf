@@ -109,6 +109,16 @@ resource "vault_policy" "roadmap_policy" {
 }
 
 # -----------------------------------------------------------------------------
+# Offhours Guard Policies
+# -----------------------------------------------------------------------------
+resource "vault_policy" "offhours_guard_policy" {
+  name = "offhours-guard-policy"
+  policy = templatefile("${path.module}/policies/offhours_guard.hcl", {
+    mount_path = vault_mount.kvv2.path
+  })
+}
+
+# -----------------------------------------------------------------------------
 # Mepa Policies
 # -----------------------------------------------------------------------------
 resource "vault_policy" "mepa_policy" {
@@ -135,4 +145,14 @@ resource "vault_policy" "qcm_policy" {
 resource "vault_policy" "status_policy" {
   name   = "status-policy"
   policy = templatefile("${path.module}/policies/status.hcl", {})
+}
+
+# -----------------------------------------------------------------------------
+# GitHub Actions (Dockair CI) Policies
+# -----------------------------------------------------------------------------
+resource "vault_policy" "github_actions_dockair" {
+  name = "github-actions-dockair"
+  policy = templatefile("${path.module}/policies/github_actions_dockair.hcl", {
+    mount_path = vault_mount.kvv2.path
+  })
 }

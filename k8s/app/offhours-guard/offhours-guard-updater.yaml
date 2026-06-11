@@ -1,0 +1,28 @@
+apiVersion: argocd-image-updater.argoproj.io/v1alpha1
+kind: ImageUpdater
+metadata:
+  name: offhours-guard-updater
+  namespace: argocd
+spec:
+  applicationRefs:
+    - namePattern: "offhours-guard"
+      images:
+        - alias: "offhours-guard"
+          imageName: "ghcr.io/thegostsniperfr/offhours-guard"
+
+          manifestTargets:
+            helm:
+              name: "image.repository"
+              tag: "image.tag"
+
+          commonUpdateSettings:
+            updateStrategy: "newest-build"
+            allowTags: "regexp:^sha-[a-f0-9]+$"
+
+      writeBackConfig:
+        method: "git:secret:argocd/git-creds"
+        gitConfig:
+          branch: "main"
+          writeBackTarget: "helmvalues:/k8s/config/offhours-guard/offhours-guard-values.yaml"
+          pullRequest:
+            github: {}

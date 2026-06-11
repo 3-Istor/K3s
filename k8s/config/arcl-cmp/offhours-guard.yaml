@@ -1,0 +1,12 @@
+apiVersion: guard.3istor.com/v1alpha1
+kind: OffhoursSchedule
+metadata:
+  name: arcl-cmp-schedule
+  namespace: arcl-cmp
+spec:
+  targetRefs:
+    - name: arcl-cmp-backend
+    - name: arcl-cmp-frontend
+  sleepAt: "0 1 * * *"
+  wakeAt: "0 7 * * *"
+  timezone: "Europe/Paris"

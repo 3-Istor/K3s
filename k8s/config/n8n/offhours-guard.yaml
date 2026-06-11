@@ -1,0 +1,12 @@
+apiVersion: guard.3istor.com/v1alpha1
+kind: OffhoursSchedule
+metadata:
+  name: n8n-schedule
+  namespace: n8n
+spec:
+  targetRefs:
+    - name: n8n
+    - name: n8n-postgres
+  sleepAt: "0 1 * * *"
+  wakeAt: "0 7 * * *"
+  timezone: "Europe/Paris"

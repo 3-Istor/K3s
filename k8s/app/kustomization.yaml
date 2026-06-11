@@ -5,6 +5,7 @@ resources:
   - roadmap/
   - mepa-app/
   - qcm/
+  - offhours-guard/
 
   - cert-manager.yaml
   - demo-app.yaml

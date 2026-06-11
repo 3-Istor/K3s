@@ -1,0 +1,11 @@
+apiVersion: guard.3istor.com/v1alpha1
+kind: OffhoursSchedule
+metadata:
+  name: dev-sandbox-schedule
+  namespace: dev-sandbox
+spec:
+  targetRefs:
+    - name: app
+  sleepAt: "0 1 * * *"
+  wakeAt: "0 7 * * *"
+  timezone: "Europe/Paris"

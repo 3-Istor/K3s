@@ -1,0 +1,12 @@
+apiVersion: guard.3istor.com/v1alpha1
+kind: OffhoursSchedule
+metadata:
+  name: qcm-schedule
+  namespace: qcm
+spec:
+  targetRefs:
+    - name: qcm
+    - name: qcm-postgres
+  sleepAt: "0 1 * * *"
+  wakeAt: "0 7 * * *"
+  timezone: "Europe/Paris"

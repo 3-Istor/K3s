@@ -7,6 +7,7 @@ resources:
   - namespace.yaml
   - postgres.yaml
   - secrets.yaml
+  - offhours-guard.yaml
 
 helmGlobals:
   chartHome: ../../../charts
