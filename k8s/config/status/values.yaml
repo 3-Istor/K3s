@@ -131,7 +131,7 @@ config:
     # ==========================================
     - name: N8N (Automation)
       group: 3. Applications
-      url: "https://n8n.3istor.com/healthz"
+      url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/n8n/n8n"
       interval: 1m
       conditions:
         - "[STATUS] == 200"
@@ -141,7 +141,7 @@ config:
 
     - name: QCM App
       group: 3. Applications
-      url: "https://qcm.3istor.com"
+      url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/qcm/qcm"
       interval: 1m
       conditions:
         - "[STATUS] == 200"
@@ -155,7 +155,7 @@ config:
     # ==========================================
     - name: ARCL CMP (Frontend)
       group: 4. Internal Applications (Direct)
-      url: "http://arcl-cmp-frontend.arcl-cmp.svc.cluster.local:3000"
+      url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/arcl-cmp/arcl-cmp-frontend"
       interval: 1m
       conditions:
         - "[STATUS] == 200"
@@ -165,18 +165,17 @@ config:
 
     - name: ARCL CMP (Backend API)
       group: 4. Internal Applications (Direct)
-      url: "http://arcl-cmp-backend.arcl-cmp.svc.cluster.local:8000"
+      url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/arcl-cmp/arcl-cmp-backend"
       interval: 1m
       conditions:
-        # An API backend at root often returns 404 Not Found, which still confirms the web server is running.
-        - "[STATUS] == 200 || [STATUS] == 404"
+        - "[STATUS] == 200"
       alerts:
         - type: discord
           failure-threshold: 3
 
     - name: Roadmap
       group: 4. Internal Applications (Direct)
-      url: "http://roadmap.roadmap.svc.cluster.local:3000"
+      url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/roadmap/roadmap"
       interval: 1m
       conditions:
         - "[STATUS] == 200"
@@ -186,7 +185,7 @@ config:
 
     - name: Mepa AI
       group: 4. Internal Applications (Direct)
-      url: "http://mepa.mepa-app.svc.cluster.local:80"
+      url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/mepa-app/mepa"
       interval: 1m
       conditions:
         - "[STATUS] == 200"
