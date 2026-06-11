@@ -1,4 +1,4 @@
 image:
   repository: ghcr.io/thegostsniperfr/offhours-guard
-  tag: "sha-7143fb7"
+  tag: "sha-c003d9a"
   pullPolicy: Always
