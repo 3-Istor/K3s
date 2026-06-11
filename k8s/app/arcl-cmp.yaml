@@ -20,6 +20,12 @@ spec:
     syncOptions:
       - ServerSideApply=true
       - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
   project: default
   source:
     repoURL: https://github.com/3-Istor/K3s.git
