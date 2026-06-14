@@ -2,7 +2,7 @@ replicaCount: 1
 image:
   repository: ghcr.io/thegostsniperfr/linmap-bot
   pullPolicy: Always
-  tag: "sha-67d9075"
+  tag: "sha-9a3221d"
 config:
   logLevel: "INFO"
   linearOrganizationSlug: "sigl-ubsi"
