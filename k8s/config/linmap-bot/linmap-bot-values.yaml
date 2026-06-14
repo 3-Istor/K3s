@@ -10,7 +10,7 @@ config:
   gdriveFolderId: "1Lz7dnyHZkwiEk3FRG6aCqz0JrSGd8khG"
 resources:
   limits:
-    memory: 256Mi
+    memory: 512Mi
   requests:
-    cpu: 50m
+    cpu: 100m
     memory: 256Mi
