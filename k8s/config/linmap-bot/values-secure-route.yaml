@@ -1,0 +1,10 @@
+routes:
+  linmap-bot:
+    hostnames:
+      - "linmap.3istor.com"
+    rules:
+      - backendRefs:
+          - name: linmap-bot-api
+            port: 8000
+    auth:
+      enabled: false

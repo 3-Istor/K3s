@@ -6,6 +6,7 @@ resources:
   - mepa-app/
   - qcm/
   - offhours-guard/
+  - linmap-bot/
 
   - cert-manager.yaml
   - demo-app.yaml

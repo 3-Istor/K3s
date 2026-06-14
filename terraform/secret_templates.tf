@@ -464,3 +464,31 @@ resource "vault_kv_secret_v2" "dockair_ci_creds" {
     aws_secret_access_key = var.aws_secret_key
   })
 }
+
+# -----------------------------------------------------------------------------
+# Linmap-Bot Secrets
+# -----------------------------------------------------------------------------
+variable "linmap_linear_api_key" {
+  type = string
+  sensitive = true
+}
+
+variable "linmap_discord_token" {
+  type = string
+  sensitive = true
+}
+
+variable "linmap_gdrive_credentials_json" {
+  type = string
+  sensitive = true
+}
+
+resource "vault_kv_secret_v2" "linmap_bot_config" {
+  mount = vault_mount.kvv2.path
+  name  = "linmap-bot/config"
+  data_json = jsonencode({
+    "LINEAR_API_KEY"                      = var.linmap_linear_api_key
+    "DISCORD_TOKEN"                       = var.linmap_discord_token
+    "GOOGLE_APPLICATION_CREDENTIALS_JSON" = var.linmap_gdrive_credentials_json
+  })
+}

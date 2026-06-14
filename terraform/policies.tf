@@ -156,3 +156,13 @@ resource "vault_policy" "github_actions_dockair" {
     mount_path = vault_mount.kvv2.path
   })
 }
+
+# -----------------------------------------------------------------------------
+# Linmap-Bot Policies
+# -----------------------------------------------------------------------------
+resource "vault_policy" "linmap_bot_policy" {
+  name = "linmap-bot-policy"
+  policy = templatefile("${path.module}/policies/linmap_bot.hcl", {
+    mount_path = vault_mount.kvv2.path
+  })
+}

@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: linmap-bot
+
+resources:
+  - namespace.yaml
+  - secrets.yaml
+  - offhours-guard.yaml
+
+helmGlobals:
+  chartHome: ../../../charts
+
+helmCharts:
+  - name: linmap-bot
+    repo: oci://ghcr.io/thegostsniperfr/charts
+    version: 1.0.0
+    releaseName: linmap-bot
+    namespace: linmap-bot
+    valuesFile: linmap-bot-values.yaml
+
+  - name: secure-route
+    releaseName: linmap-bot-routes
+    namespace: linmap-bot
+    valuesFile: values-secure-route.yaml

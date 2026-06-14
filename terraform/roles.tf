@@ -221,3 +221,15 @@ resource "vault_jwt_auth_backend_role" "github_actions_dockair" {
 
   user_claim = "actor"
 }
+
+# -----------------------------------------------------------------------------
+# Linmap-Bot Roles
+# -----------------------------------------------------------------------------
+resource "vault_kubernetes_auth_backend_role" "linmap_bot_role" {
+  backend                          = vault_auth_backend.kubernetes.path
+  role_name                        = "linmap-bot-role"
+  bound_service_account_names      = ["vault-secrets-operator"]
+  bound_service_account_namespaces = ["vault-secrets-operator"]
+  token_ttl                        = 86400
+  token_policies                   = [vault_policy.linmap_bot_policy.name]
+}
