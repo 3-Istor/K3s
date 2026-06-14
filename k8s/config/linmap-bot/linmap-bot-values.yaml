@@ -1,16 +1,13 @@
 replicaCount: 1
-
 image:
   repository: ghcr.io/thegostsniperfr/linmap-bot
   pullPolicy: Always
-  tag: "latest"
-
+  tag: "sha-9a3221d"
 config:
   logLevel: "INFO"
   linearOrganizationSlug: "sigl-ubsi"
   discordChannelId: "1515339302274597044"
   gdriveFolderId: "1Lz7dnyHZkwiEk3FRG6aCqz0JrSGd8khG"
-
 resources:
   limits:
     memory: 256Mi
