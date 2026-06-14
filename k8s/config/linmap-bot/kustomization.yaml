@@ -14,7 +14,7 @@ helmGlobals:
 helmCharts:
   - name: linmap-bot
     repo: oci://ghcr.io/thegostsniperfr/charts
-    version: 1.0.0
+    version: 1.0.2
     releaseName: linmap-bot
     namespace: linmap-bot
     valuesFile: linmap-bot-values.yaml
