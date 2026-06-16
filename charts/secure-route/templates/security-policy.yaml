@@ -16,18 +16,20 @@ spec:
       name: "{{ $routeName }}-route"
 
   {{- if $authEnabled }}
+  {{- $realm := default $.Values.global.keycloakRealm $routeConfig.auth.realm }}
+  {{- $clientId := default $.Values.global.authClientId $routeConfig.auth.clientId }}
   oidc:
     provider:
-      issuer: "https://auth.{{ $.Values.global.baseDomain }}/realms/{{ $.Values.global.keycloakRealm }}"
-      authorizationEndpoint: "https://auth.{{ $.Values.global.baseDomain }}/realms/{{ $.Values.global.keycloakRealm }}/protocol/openid-connect/auth"
-      tokenEndpoint: "https://auth.{{ $.Values.global.baseDomain }}/realms/{{ $.Values.global.keycloakRealm }}/protocol/openid-connect/token"
+      issuer: "https://auth.{{ $.Values.global.baseDomain }}/realms/{{ $realm }}"
+      authorizationEndpoint: "https://auth.{{ $.Values.global.baseDomain }}/realms/{{ $realm }}/protocol/openid-connect/auth"
+      tokenEndpoint: "https://auth.{{ $.Values.global.baseDomain }}/realms/{{ $realm }}/protocol/openid-connect/token"
       backendRefs:
         - group: ""
           kind: Service
           name: keycloakx-http
           namespace: keycloak
           port: 80
-    clientID: "{{ $.Values.global.authClientId }}"
+    clientID: "{{ $clientId }}"
     clientSecret:
       name: "{{ $routeName }}-envoy-auth-secret"
 
