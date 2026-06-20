@@ -43,18 +43,10 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "k3s_tunnel_config" {
   tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.k3s_tunnel.id
 
   config = {
-    ingress = concat(
-      [
-        for svc in local.tunnel_services : {
-          hostname = "${svc}.${var.domain_name}"
-          service  = "http://envoy-gateway-infra-shared-gateway-ac1e5388.envoy-gateway-system.svc.cluster.local:80"
-        }
-      ],
-      [
-        {
-          service = "http_status:404"
-        }
-      ]
-    )
+    ingress = [
+      {
+        service = "http://envoy-gateway-infra-shared-gateway-ac1e5388.envoy-gateway-system.svc.cluster.local:80"
+      }
+    ]
   }
 }
