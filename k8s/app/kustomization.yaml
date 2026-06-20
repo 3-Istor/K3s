@@ -24,3 +24,4 @@ resources:
   - dev-sandbox.yaml
   - cnpg.yaml
   - status.yaml
+  - cnp-projects-root.yaml
