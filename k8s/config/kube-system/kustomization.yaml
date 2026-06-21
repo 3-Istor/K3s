@@ -5,6 +5,7 @@ namespace: kube-system
 
 resources:
   - rbac.yaml
+  - sysctl-tuner.yaml
 
 helmCharts:
   - name: cilium

@@ -1,0 +1,49 @@
+# k8s/config/kube-system/sysctl-tuner.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-sysctl-tuner
+  namespace: kube-system
+  labels:
+    app: node-sysctl-tuner
+spec:
+  selector:
+    matchLabels:
+      app: node-sysctl-tuner
+  template:
+    metadata:
+      labels:
+        app: node-sysctl-tuner
+    spec:
+      hostPID: true
+      hostNetwork: true
+
+      initContainers:
+        - name: sysctl-tuner
+          image: alpine:3.19
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "16Mi"
+            limits:
+              cpu: "50m"
+              memory: "16Mi"
+          command:
+            - sh
+            - -c
+            - |
+              sysctl -w fs.inotify.max_user_watches=524288
+              sysctl -w fs.inotify.max_user_instances=512
+
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause:3.9
+          resources:
+            requests:
+              cpu: "2m"
+              memory: "4Mi"
+            limits:
+              cpu: "10m"
+              memory: "4Mi"
