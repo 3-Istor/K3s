@@ -388,11 +388,17 @@ variable "mepa_gemini_api_key" {
   sensitive = true
 }
 
+variable "mepa_flask_secret_key" {
+  type      = string
+  sensitive = true
+}
+
 resource "vault_kv_secret_v2" "mepa_config" {
   mount = vault_mount.kvv2.path
   name  = "mepa-app/config"
   data_json = jsonencode({
-    "GEMINI_API_KEY" = var.mepa_gemini_api_key
+    "GEMINI_API_KEY"   = var.mepa_gemini_api_key
+    "FLASK_SECRET_KEY" = var.mepa_flask_secret_key
   })
 }
 
@@ -469,17 +475,17 @@ resource "vault_kv_secret_v2" "dockair_ci_creds" {
 # Linmap-Bot Secrets
 # -----------------------------------------------------------------------------
 variable "linmap_linear_api_key" {
-  type = string
+  type      = string
   sensitive = true
 }
 
 variable "linmap_discord_token" {
-  type = string
+  type      = string
   sensitive = true
 }
 
 variable "linmap_gdrive_credentials_json" {
-  type = string
+  type      = string
   sensitive = true
 }
 
