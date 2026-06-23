@@ -2,7 +2,7 @@ fullnameOverride: "mepa"
 replicaCount: 1
 image:
   repository: ghcr.io/3-istor/mepa
-  tag: "sha-49822d6"
+  tag: "sha-90a87dd"
   pullPolicy: Always
 ingress:
   enabled: false
