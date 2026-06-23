@@ -7,7 +7,7 @@ routes:
           - name: mepa
             port: 80
     auth:
-      enabled: true
+      enabled: false
       vault:
         path: "kvv2/mepa-app/envoy-auth"
         role: "mepa-role"
