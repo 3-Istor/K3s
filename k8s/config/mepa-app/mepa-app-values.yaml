@@ -18,31 +18,28 @@ persistence:
   mountPath: "/app/data"
 
 env:
-  - name: GEMINI_MODEL
-    value: "gemini-2.5-flash-lite"
-  - name: PROMPT_ATTEMPT_LIMIT
-    value: "5"
-  - name: TRUST_PROXY
-    value: "true"
-  - name: SESSION_COOKIE_SECURE
-    value: "true"
-  - name: FLASK_DEBUG
-    value: "false"
-  - name: DATABASE_PATH
-    value: "/app/data/mepa.sqlite"
-  - name: LOCAL_VIDEO_PATH
-    value: "/app/video-introduction-ia.mp4"
-  - name: HOST
-    value: "0.0.0.0"
-  - name: PORT
-    value: "8000"
-  - name: GEMINI_API_KEY
-    valueFrom:
-      secretKeyRef:
-        name: mepa-app-secrets
-        key: GEMINI_API_KEY
+  AI_PROVIDER: "gemini"
+  GEMINI_MODEL: "gemini-2.5-flash-lite"
+  PROMPT_ATTEMPT_LIMIT: "5"
+  TRUST_PROXY: "true"
+  SESSION_COOKIE_SECURE: "true"
+  FLASK_DEBUG: "false"
+  DATABASE_PATH: "/app/data/mepa.sqlite"
+  LOCAL_VIDEO_PATH: "/app/video-introduction-ia.mp4"
+  HOST: "0.0.0.0"
+  PORT: "8000"
+
+secrets:
+  create: false
+
+extraEnv:
   - name: SECRET_KEY
     valueFrom:
       secretKeyRef:
         name: mepa-app-secrets
         key: FLASK_SECRET_KEY
+  - name: GEMINI_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: mepa-app-secrets
+        key: GEMINI_API_KEY

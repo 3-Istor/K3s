@@ -14,7 +14,7 @@ helmGlobals:
 helmCharts:
   - name: ia-clair
     repo: oci://ghcr.io/3-istor/charts
-    version: 0.1.1
+    version: 0.1.2
     releaseName: mepa-app
     namespace: mepa-app
     valuesFile: mepa-app-values.yaml
