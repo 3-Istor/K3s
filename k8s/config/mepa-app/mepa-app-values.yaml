@@ -43,3 +43,11 @@ extraEnv:
       secretKeyRef:
         name: mepa-app-secrets
         key: GEMINI_API_KEY
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 512Mi
