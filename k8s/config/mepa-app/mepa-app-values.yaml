@@ -31,7 +31,7 @@ env:
   - name: DATABASE_PATH
     value: "/app/data/mepa.sqlite"
   - name: LOCAL_VIDEO_PATH
-    value: "/app/Video intro a l'IA.mp4"
+    value: "/app/video-introduction-ia.mp4"
   - name: HOST
     value: "0.0.0.0"
   - name: PORT
