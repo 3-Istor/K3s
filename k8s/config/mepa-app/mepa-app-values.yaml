@@ -4,8 +4,10 @@ image:
   repository: ghcr.io/3-istor/mepa
   tag: "sha-2ee686c"
   pullPolicy: Always
+
 ingress:
   enabled: false
+
 autoscaling:
   enabled: false
 
@@ -16,8 +18,6 @@ persistence:
   mountPath: "/app/data"
 
 env:
-  - name: AI_PROVIDER
-    value: "gemini"
   - name: GEMINI_MODEL
     value: "gemini-2.5-flash-lite"
   - name: PROMPT_ATTEMPT_LIMIT
@@ -29,10 +29,13 @@ env:
   - name: FLASK_DEBUG
     value: "false"
   - name: DATABASE_PATH
-    value: "data/mepa.sqlite"
+    value: "/app/data/mepa.sqlite"
   - name: LOCAL_VIDEO_PATH
-    value: "data/Video intro a l'IA.mp4"
-
+    value: "/app/Video intro a l'IA.mp4"
+  - name: HOST
+    value: "0.0.0.0"
+  - name: PORT
+    value: "8000"
   - name: GEMINI_API_KEY
     valueFrom:
       secretKeyRef:
@@ -43,5 +46,3 @@ env:
       secretKeyRef:
         name: mepa-app-secrets
         key: FLASK_SECRET_KEY
-
-secrets: {}
