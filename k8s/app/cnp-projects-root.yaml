@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/3-Istor/cnp-projects.git
-    targetRevision: HEAD
+    targetRevision: main
     path: projects
   destination:
     server: https://kubernetes.default.svc
