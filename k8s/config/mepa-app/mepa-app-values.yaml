@@ -2,21 +2,17 @@ fullnameOverride: "mepa"
 replicaCount: 1
 image:
   repository: ghcr.io/3-istor/mepa
-  tag: "sha-d536407"
+  tag: "sha-e13bd98"
   pullPolicy: Always
-
 ingress:
   enabled: false
-
 autoscaling:
   enabled: false
-
 persistence:
   enabled: true
   storageClass: "local-path"
   size: "1Gi"
   mountPath: "/app/data"
-
 env:
   AI_PROVIDER: "gemini"
   GEMINI_MODEL: "gemini-2.5-flash-lite"
@@ -28,22 +24,19 @@ env:
   LOCAL_VIDEO_PATH: "/app/video-introduction-ia.mp4"
   HOST: "0.0.0.0"
   PORT: "8000"
-
 secrets:
   create: false
-
 extraEnv:
-  - name: SECRET_KEY
-    valueFrom:
-      secretKeyRef:
-        name: mepa-app-secrets
-        key: FLASK_SECRET_KEY
-  - name: GEMINI_API_KEY
-    valueFrom:
-      secretKeyRef:
-        name: mepa-app-secrets
-        key: GEMINI_API_KEY
-
+- name: SECRET_KEY
+  valueFrom:
+    secretKeyRef:
+      name: mepa-app-secrets
+      key: FLASK_SECRET_KEY
+- name: GEMINI_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: mepa-app-secrets
+      key: GEMINI_API_KEY
 resources:
   limits:
     cpu: 500m
