@@ -131,7 +131,7 @@ main:
   #      readOnly: true
 
   # Number of desired pods. More than one pod is supported in n8n enterprise.
-  replicaCount: 1
+  replicaCount: 0
 
   # here you can specify the deployment strategy as Recreate or RollingUpdate with optional maxSurge and maxUnavailable
   # If these options are not set, default values are 25%
