@@ -50,6 +50,140 @@ persistence:
 env:
   backend:
     DATABASE_URL: "sqlite:////app/db/arcl.db"
+    TF_BACKEND_S3_ENABLED: "true"
+    KEYCLOAK_URL: "https://auth.3istor.com"
+    KEYCLOAK_CLIENT_ID: "3-istor-openid"
+    VAULT_URL: "http://vault.vault.svc.cluster.local:8200"
+
+extraEnv:
+  # --- OpenStack ---
+  - name: OS_AUTH_URL
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: os-auth-url
+  - name: OS_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: os-username
+  - name: OS_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: os-password
+  - name: OS_PROJECT_NAME
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: os-project-name
+  - name: OS_PROJECT_DOMAIN_NAME
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: os-project-domain-name
+  - name: OS_USER_DOMAIN_NAME
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: os-user-domain-name
+  - name: OS_ENDPOINT_TYPE
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: os-endpoint-type
+
+  # --- AWS ---
+  - name: AWS_ACCESS_KEY_ID
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: aws-access-key-id
+  - name: AWS_SECRET_ACCESS_KEY
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: aws-secret-access-key
+  - name: AWS_DEFAULT_REGION
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: aws-region
+
+  # --- Avatars S3 ---
+  - name: AVATARS_S3_ACCESS_KEY_ID
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: avatars-s3-access-key-id
+  - name: AVATARS_S3_SECRET_ACCESS_KEY
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: avatars-s3-secret-access-key
+  - name: AVATARS_S3_ENDPOINT
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: avatars-s3-endpoint
+  - name: AVATARS_S3_BUCKET
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: avatars-s3-bucket
+  - name: AVATARS_S3_REGION
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: avatars-s3-region
+  - name: AVATARS_PUBLIC_URL_BASE
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: avatars-s3-public-url-base
+
+  # --- Cloudflare & Alerting ---
+  - name: CLOUDFLARE_API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: cloudflare-api-token
+  - name: CLOUDFLARE_ZONE_ID
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: cloudflare-zone-id
+  - name: DISCORD_WEBHOOK_URL
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: discord-webhook-url
+
+  - name: GITHUB_APP_PRIVATE_KEY
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: github-app-private-key
+  - name: GITHUB_INSTALLATION_ID
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: github-installation-id
+  - name: KEYCLOAK_ADMIN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: keycloak-admin-password
+  - name: VAULT_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: vault-token
 
 secrets:
   create: false
+
+backend:
+  serviceAccount:
+    create: false
+    name: "cmp-backend-sa"

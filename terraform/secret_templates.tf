@@ -258,6 +258,10 @@ resource "vault_kv_secret_v2" "arcl_cmp_creds" {
     "cloudflare-api-token"         = var.cloudflare_api_token_secret_var
     "cloudflare-zone-id"           = var.cloudflare_zone_id
     "discord-webhook-url"          = var.discord_webhook_url
+    "github-app-private-key"       = var.github_app_private_key
+    "github-installation-id"       = var.github_app_installation_id
+    "keycloak-admin-password"      = var.keycloak_admin_password
+    "vault-token"                  = var.vault_token
   })
 }
 
