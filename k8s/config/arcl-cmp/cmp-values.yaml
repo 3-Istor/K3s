@@ -56,12 +56,17 @@ env:
     VAULT_URL: "http://vault.vault.svc.cluster.local:8200"
 
 extraEnv:
-  # --- OpenStack ---
+  # --- OpenStack SDK ---
   - name: OS_AUTH_URL
     valueFrom:
       secretKeyRef:
         name: arcl-cmp-secret
         key: os-auth-url
+  - name: OS_PROJECT_NAME
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: os-project-name
   - name: OS_USERNAME
     valueFrom:
       secretKeyRef:
@@ -72,28 +77,23 @@ extraEnv:
       secretKeyRef:
         name: arcl-cmp-secret
         key: os-password
-  - name: OS_PROJECT_NAME
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: os-project-name
-  - name: OS_PROJECT_DOMAIN_NAME
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: os-project-domain-name
   - name: OS_USER_DOMAIN_NAME
     valueFrom:
       secretKeyRef:
         name: arcl-cmp-secret
         key: os-user-domain-name
+  - name: OS_PROJECT_DOMAIN_NAME
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: os-project-domain-name
   - name: OS_ENDPOINT_TYPE
     valueFrom:
       secretKeyRef:
         name: arcl-cmp-secret
         key: os-endpoint-type
 
-  # --- AWS ---
+  # --- AWS SDK & Terraform S3 Backend ---
   - name: AWS_ACCESS_KEY_ID
     valueFrom:
       secretKeyRef:
@@ -109,8 +109,33 @@ extraEnv:
       secretKeyRef:
         name: arcl-cmp-secret
         key: aws-region
+  - name: TF_BACKEND_AWS_ACCESS_KEY_ID
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: aws-access-key-id
+  - name: TF_BACKEND_AWS_SECRET_ACCESS_KEY
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: aws-secret-access-key
+  - name: TF_BACKEND_AWS_REGION
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: aws-region
+  - name: TF_BACKEND_S3_BUCKET
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: aws-s3-bucket
+  - name: TF_BACKEND_S3_KEY_PREFIX
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: aws-s3-key-prefix
 
-  # --- Avatars S3 ---
+  # --- Avatars S3 Compatible Storage ---
   - name: AVATARS_S3_ACCESS_KEY_ID
     valueFrom:
       secretKeyRef:
@@ -142,7 +167,7 @@ extraEnv:
         name: arcl-cmp-secret
         key: avatars-s3-public-url-base
 
-  # --- Cloudflare & Alerting ---
+  # --- Cloudflare API & Account ---
   - name: CLOUDFLARE_API_TOKEN
     valueFrom:
       secretKeyRef:
@@ -153,12 +178,37 @@ extraEnv:
       secretKeyRef:
         name: arcl-cmp-secret
         key: cloudflare-zone-id
-  - name: DISCORD_WEBHOOK_URL
+  - name: CLOUDFLARE_ACCOUNT_ID
     valueFrom:
       secretKeyRef:
         name: arcl-cmp-secret
-        key: discord-webhook-url
+        key: cloudflare-account-id
 
+  # --- Keycloak Admin client ---
+  - name: KEYCLOAK_ADMIN_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: keycloak-admin-username
+  - name: KEYCLOAK_ADMIN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: keycloak-admin-password
+
+  # --- HashiCorp Vault Client ---
+  - name: VAULT_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: vault-token
+
+  # --- GitHub Integration & Registry (GHCR) ---
+  - name: GITHUB_APP_ID
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: github-app-id
   - name: GITHUB_APP_PRIVATE_KEY
     valueFrom:
       secretKeyRef:
@@ -169,16 +219,23 @@ extraEnv:
       secretKeyRef:
         name: arcl-cmp-secret
         key: github-installation-id
-  - name: KEYCLOAK_ADMIN_PASSWORD
+  - name: GITHUB_REGISTRY_USERNAME
     valueFrom:
       secretKeyRef:
         name: arcl-cmp-secret
-        key: keycloak-admin-password
-  - name: VAULT_TOKEN
+        key: github-registry-username
+  - name: GITHUB_REGISTRY_TOKEN
     valueFrom:
       secretKeyRef:
         name: arcl-cmp-secret
-        key: vault-token
+        key: github-registry-token
+
+  # --- Alerting ---
+  - name: DISCORD_WEBHOOK_URL
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: discord-webhook-url
 
 secrets:
   create: false
