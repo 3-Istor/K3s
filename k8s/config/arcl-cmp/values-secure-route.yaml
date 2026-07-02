@@ -28,7 +28,7 @@ routes:
           - name: arcl-cmp-frontend
             port: 3000
     auth:
-      enabled: true
+      enabled: false
       vault:
         path: "kvv2/arcl-cmp/envoy-auth"
         role: "arcl-cmp-role"
