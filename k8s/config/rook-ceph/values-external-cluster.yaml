@@ -16,9 +16,8 @@ cephClusterSpec:
   dataDirHostPath: /var/lib/rook
 
 cephBlockPools:
-  - name: replicapool
+  - name: volumes # Matches the RBD_POOL_NAME (volumes) directly to avoid duplicate keys in Helm rendering
     spec:
-      # Matches the RBD_POOL_NAME (volumes)
       failureDomain: host
       replicated:
         size: 1
@@ -29,7 +28,6 @@ cephBlockPools:
       reclaimPolicy: Delete
       allowVolumeExpansion: true
       parameters:
-        pool: "volumes" # Mapped to the RBD_POOL_NAME
         imageFormat: "2"
         imageFeatures: layering
         csi.storage.k8s.io/provisioner-secret-name: rook-csi-rbd-provisioner
