@@ -278,7 +278,6 @@ resource "vault_kv_secret_v2" "arcl_cmp_envoy_auth" {
   })
 }
 
-
 variable "nextauth_secret" {
   type      = string
   sensitive = true
