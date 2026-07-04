@@ -1,0 +1,19 @@
+replicas: 1
+
+adminPassword: "${GRAFANA_ADMIN_PASSWORD}"
+envFromSecret: observability-secrets
+
+persistence:
+  enabled: true
+  storageClassName: "ceph-block"
+  size: 2Gi
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+# We don't provision datasources automatically because you will create them per Grafana Organization (Client A, Client B) manually to enforce multi-tenancy.

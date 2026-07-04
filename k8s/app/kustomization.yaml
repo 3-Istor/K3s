@@ -25,3 +25,5 @@ resources:
   - cnpg.yaml
   - status.yaml
   - cnp-projects-root.yaml
+  - rook-ceph.yaml
+  - observability.yaml

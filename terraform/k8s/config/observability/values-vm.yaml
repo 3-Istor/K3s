@@ -1,0 +1,37 @@
+vmstorage:
+  replicaCount: 1
+  resources:
+    requests:
+      memory: "250Mi"
+      cpu: "50m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+  storageDataPath: "/storage"
+  persistentVolume:
+    enabled: true
+    storageClassName: "ceph-block"
+    size: "10Gi"
+
+vminsert:
+  replicaCount: 1
+  resources:
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+vmselect:
+  replicaCount: 1
+  resources:
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# VMAuth acts as the multi-tenant router
+vmauth:
+  enabled: true
+  replicaCount: 1
+  resources:
+    limits:
+      memory: "128Mi"
+      cpu: "100m"

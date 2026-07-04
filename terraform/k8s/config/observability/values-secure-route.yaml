@@ -1,0 +1,12 @@
+routes:
+  grafana:
+    targetService:
+      name: "grafana"
+      port: 80
+    ingress:
+      hostname: "grafana.3istor.com"
+    auth:
+      enabled: true
+      vault:
+        path: "kvv2/observability/envoy-auth"
+        role: "observability-role"

@@ -1,0 +1,48 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: observability
+
+resources:
+  - namespace.yaml
+  - secrets.yaml
+
+helmGlobals:
+  chartHome: ../../../charts
+
+helmCharts:
+  - name: secure-route
+    releaseName: observability-routes
+    namespace: observability
+    valuesFile: values-secure-route.yaml
+
+  # Loki (Logs)
+  - name: loki
+    repo: https://grafana.github.io/helm-charts
+    version: 7.0.0
+    releaseName: loki
+    namespace: observability
+    valuesFile: values-loki.yaml
+
+  # VictoriaMetrics (Metrics)
+  - name: victoria-metrics-cluster
+    repo: https://victoriametrics.github.io/helm-charts/
+    version: 0.45.0
+    releaseName: vm
+    namespace: observability
+    valuesFile: values-vm.yaml
+
+  # Grafana (Visualisation)
+  - name: grafana
+    repo: https://grafana.github.io/helm-charts
+    version: 10.5.15
+    releaseName: grafana
+    namespace: observability
+    valuesFile: values-grafana.yaml
+
+  # Alloy (Logs and Metrics Aggregation)
+  - name: alloy
+    repo: https://grafana.github.io/helm-charts
+    version: 1.10.0
+    releaseName: alloy
+    namespace: observability
+    valuesFile: values-alloy.yaml

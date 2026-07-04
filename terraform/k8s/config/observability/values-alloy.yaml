@@ -1,0 +1,39 @@
+alloy:
+  configMap:
+    create: true
+    content: |-
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+
+      loki.source.kubernetes "local_logs" {
+        targets    = discovery.kubernetes.pods.targets
+        forward_to = [loki.process.add_tenant.receiver]
+      }
+
+      loki.process "add_tenant" {
+        stage.match {
+          selector = "{namespace=~\"project-.*|demo-app|n8n\"}"
+          stage.tenant {
+            label = "namespace"
+          }
+        }
+        forward_to = [loki.write.local_loki.receiver]
+      }
+
+      loki.write "local_loki" {
+        endpoint {
+          url = "http://loki.observability.svc.cluster.local:3100/loki/api/v1/push"
+        }
+      }
+
+      prometheus.scrape "local_metrics" {
+        targets    = discovery.kubernetes.pods.targets
+        forward_to = [prometheus.remote_write.vmauth.receiver]
+      }
+
+      prometheus.remote_write "vmauth" {
+        endpoint {
+          url = "http://vm-vmauth.observability.svc.cluster.local:8427/api/v1/write"
+        }
+      }

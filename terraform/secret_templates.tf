@@ -507,3 +507,109 @@ resource "vault_kv_secret_v2" "linmap_bot_config" {
     "GOOGLE_APPLICATION_CREDENTIALS_JSON" = var.linmap_gdrive_credentials_json
   })
 }
+
+# -----------------------------------------------------------------------------
+# Observability Secrets
+# -----------------------------------------------------------------------------
+variable "obs_s3_access_key" {
+  type      = string
+  sensitive = true
+}
+variable "obs_s3_secret_key" {
+  type      = string
+  sensitive = true
+}
+variable "grafana_admin_password" {
+  type      = string
+  sensitive = true
+}
+
+resource "vault_kv_secret_v2" "observability_config" {
+  mount = vault_mount.kvv2.path
+  name  = "observability/config"
+  data_json = jsonencode({
+    "S3_ACCESS_KEY"          = var.obs_s3_access_key
+    "S3_SECRET_KEY"          = var.obs_s3_secret_key
+    "GRAFANA_ADMIN_PASSWORD" = var.grafana_admin_password
+  })
+}
+
+resource "vault_kv_secret_v2" "observability_envoy_auth" {
+  mount = vault_mount.kvv2.path
+  name  = "observability/envoy-auth"
+  data_json = jsonencode({
+    "client-secret" = keycloak_openid_client.openid_client.client_secret
+  })
+}
+
+# -----------------------------------------------------------------------------
+# Rook Ceph Secrets
+# -----------------------------------------------------------------------------
+variable "ceph_fsid" {
+  type        = string
+  description = "The FSID of the external Ceph cluster"
+}
+
+variable "ceph_mon_data" {
+  type        = string
+  description = "Monitor endpoints (e.g., pae-node-1=192.168.1.110:6789)"
+}
+
+variable "ceph_external_user_secret" {
+  type        = string
+  sensitive   = true
+  description = "The ROOK_EXTERNAL_USER_SECRET CephX key"
+}
+
+variable "ceph_csi_rbd_node_secret" {
+  type        = string
+  sensitive   = true
+  description = "The CSI_RBD_NODE_SECRET CephX key"
+}
+
+variable "ceph_csi_rbd_provisioner_secret" {
+  type        = string
+  sensitive   = true
+  description = "The CSI_RBD_PROVISIONER_SECRET CephX key"
+}
+
+
+# Mon Admin Secret
+resource "vault_kv_secret_v2" "rook_ceph_mon" {
+  mount = vault_mount.kvv2.path
+  name  = "rook-ceph/mon-secret"
+  data_json = jsonencode({
+    "admin-secret"  = var.ceph_external_user_secret
+    "ceph-username" = "client.healthchecker"
+  })
+}
+
+# CSI RBD Node Secret
+resource "vault_kv_secret_v2" "rook_csi_rbd_node" {
+  mount = vault_mount.kvv2.path
+  name  = "rook-ceph/csi-node"
+  data_json = jsonencode({
+    "userID"  = "client.healthchecker"
+    "userKey" = var.ceph_csi_rbd_node_secret
+  })
+}
+
+# CSI RBD Provisioner Secret
+resource "vault_kv_secret_v2" "rook_csi_rbd_provisioner" {
+  mount = vault_mount.kvv2.path
+  name  = "rook-ceph/csi-provisioner"
+  data_json = jsonencode({
+    "userID"  = "client.healthchecker"
+    "userKey" = var.ceph_csi_rbd_provisioner_secret
+  })
+}
+
+# Global configurations (FSID, Pool Names)
+resource "vault_kv_secret_v2" "rook_ceph_globals" {
+  mount = vault_mount.kvv2.path
+  name  = "rook-ceph/globals"
+  data_json = jsonencode({
+    "fsid"     = var.ceph_fsid
+    "mon-data" = var.ceph_mon_data
+  })
+}

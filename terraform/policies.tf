@@ -166,3 +166,23 @@ resource "vault_policy" "linmap_bot_policy" {
     mount_path = vault_mount.kvv2.path
   })
 }
+
+# -----------------------------------------------------------------------------
+# Observability Policies
+# -----------------------------------------------------------------------------
+resource "vault_policy" "observability_policy" {
+  name = "observability-policy"
+  policy = templatefile("${path.module}/policies/observability.hcl", {
+    mount_path = vault_mount.kvv2.path
+  })
+}
+
+# -----------------------------------------------------------------------------
+# Rook Ceph Policies
+# -----------------------------------------------------------------------------
+resource "vault_policy" "rook_ceph_policy" {
+  name = "rook-ceph-policy"
+  policy = templatefile("${path.module}/policies/rook_ceph.hcl", {
+    mount_path = vault_mount.kvv2.path
+  })
+}
