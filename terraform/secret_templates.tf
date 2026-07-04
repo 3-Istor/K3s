@@ -578,8 +578,12 @@ resource "vault_kv_secret_v2" "rook_ceph_mon" {
   mount = vault_mount.kvv2.path
   name  = "rook-ceph/mon-secret"
   data_json = jsonencode({
+    "cluster-name"  = "rook-ceph"
+    "fsid"          = var.ceph_fsid
     "admin-secret"  = var.ceph_external_user_secret
+    "mon-secret"    = var.ceph_external_user_secret
     "ceph-username" = "client.healthchecker"
+    "ceph-secret"   = var.ceph_external_user_secret
   })
 }
 
