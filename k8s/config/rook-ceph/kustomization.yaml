@@ -20,8 +20,8 @@ helmCharts:
     includeCRDs: true
 
   - name: ceph-csi-drivers
-    repo: https://charts.rook.io/release
-    version: 1.20.1
+    repo: https://ceph.github.io/ceph-csi-operator
+    version: 1.0.1
     releaseName: ceph-csi-drivers
     namespace: rook-ceph
     valuesFile: csi-drivers-values.yaml
