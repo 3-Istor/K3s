@@ -6,6 +6,9 @@ cephClusterSpec:
   external:
     enable: true
 
+  crashCollector:
+    disable: true
+
   # wget https://raw.githubusercontent.com/rook/rook/master/deploy/examples/create-external-cluster-resources.py
 
   # sudo cephadm shell   -v /home/pae-node-1:/mnt \
