@@ -3,6 +3,27 @@ replicas: 1
 adminPassword: "${GRAFANA_ADMIN_PASSWORD}"
 envFromSecret: observability-secrets
 
+extraEnv:
+  - name: GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: observability-secrets
+        key: OIDC_CLIENT_SECRET
+
+grafana.ini:
+  server:
+    root_url: "https://grafana.3istor.com"
+  auth.generic_oauth:
+    enabled: true
+    name: "3Istor ID"
+    allow_sign_up: true
+    client_id: "3-istor-openid"
+    scopes: "openid profile email roles groups"
+    auth_url: "https://auth.3istor.com/realms/3istor/protocol/openid-connect/auth"
+    token_url: "https://auth.3istor.com/realms/3istor/protocol/openid-connect/token"
+    api_url: "https://auth.3istor.com/realms/3istor/protocol/openid-connect/userinfo"
+    role_attribute_path: "contains(groups[*], 'infra') && 'Admin' || contains(groups[*], 'member') && 'Viewer'"
+
 persistence:
   enabled: true
   storageClassName: "ceph-block"

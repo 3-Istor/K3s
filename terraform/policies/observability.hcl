@@ -1,3 +1,3 @@
-path "{mount_path}/data/observability/*" {
+path "${mount_path}/data/observability/*" {
   capabilities = ["read"]
 }

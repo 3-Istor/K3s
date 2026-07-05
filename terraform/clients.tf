@@ -25,7 +25,8 @@ resource "keycloak_openid_client" "openid_client" {
     "https://mepa.${var.base_domain}/oauth2/callback",
     "https://qcm.${var.base_domain}/api/auth/callback/keycloak",
     "http://localhost:3000/api/auth/callback/keycloak",
-    "http://localhost:3001/api/auth/callback/keycloak"
+    "http://localhost:3001/api/auth/callback/keycloak",
+    "https://grafana.${var.base_domain}/login/generic_oauth"
   ]
 
   valid_post_logout_redirect_uris = [
@@ -36,7 +37,9 @@ resource "keycloak_openid_client" "openid_client" {
     "https://mepa.${var.base_domain}/",
     "https://qcm.${var.base_domain}/",
     "http://localhost:3000/",
-    "http://localhost:3001/"
+    "http://localhost:3001/",
+    "https://grafana.${var.base_domain}/",
+    "https://grafana.${var.base_domain}"
   ]
 
   web_origins = [

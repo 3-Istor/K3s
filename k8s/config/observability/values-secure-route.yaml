@@ -6,7 +6,7 @@ routes:
     ingress:
       hostname: "grafana.3istor.com"
     auth:
-      enabled: true
+      enabled: false
       vault:
         path: "kvv2/observability/envoy-auth"
         role: "observability-role"
