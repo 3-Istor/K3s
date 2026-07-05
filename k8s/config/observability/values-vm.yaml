@@ -40,10 +40,11 @@ vmauth:
     unauthorized_user:
       url_map:
         - src_paths:
-            - "/select/"
+            - "/select/[^/]+/prometheus(.*)"
           url_prefix:
-            - "http://vm-victoria-metrics-cluster-vmselect:8481/select/"
+            - "http://vm-victoria-metrics-cluster-vmselect:8481/select/0/prometheus$1"
+
         - src_paths:
-            - "/insert/"
+            - "/insert/[^/]+/prometheus/api/v1/write"
           url_prefix:
-            - "http://vm-victoria-metrics-cluster-vminsert:8480/insert/"
+            - "http://vm-victoria-metrics-cluster-vminsert:8480/insert/0/prometheus/api/v1/write"
