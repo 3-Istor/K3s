@@ -1,16 +1,10 @@
 replicas: 1
 
-adminPassword: "${GRAFANA_ADMIN_PASSWORD}"
 envFromSecret: observability-secrets
 
-extraEnv:
-  - name: GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET
-    valueFrom:
-      secretKeyRef:
-        name: observability-secrets
-        key: OIDC_CLIENT_SECRET
-
 grafana.ini:
+  security:
+    admin_password: $__env{GRAFANA_ADMIN_PASSWORD}
   server:
     root_url: "https://grafana.3istor.com"
   auth.generic_oauth:
@@ -18,6 +12,7 @@ grafana.ini:
     name: "3Istor ID"
     allow_sign_up: true
     client_id: "3-istor-openid"
+    client_secret: $__env{OIDC_CLIENT_SECRET}
     scopes: "openid profile email roles groups"
     auth_url: "https://auth.3istor.com/realms/3istor/protocol/openid-connect/auth"
     token_url: "https://auth.3istor.com/realms/3istor/protocol/openid-connect/token"
