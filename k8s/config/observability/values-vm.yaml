@@ -2,7 +2,7 @@ vmstorage:
   replicaCount: 1
   resources:
     requests:
-      memory: "256Mi"
+      memory: "1Gi"
       cpu: "50m"
     limits:
       memory: "1Gi"
@@ -35,3 +35,15 @@ vmauth:
     limits:
       memory: "128Mi"
       cpu: "100m"
+
+  config:
+    unauthorized_user:
+      url_map:
+        - src_paths:
+            - "/select/.*"
+          url_prefix:
+            - "http://vm-victoria-metrics-cluster-vmselect:8481/select/"
+        - src_paths:
+            - "/insert/.*"
+          url_prefix:
+            - "http://vm-victoria-metrics-cluster-vminsert:8480/insert/"
