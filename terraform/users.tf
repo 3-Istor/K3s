@@ -133,3 +133,45 @@ output "client_test_password" {
   value     = random_password.client_test.result
   sensitive = true
 }
+
+# =============================================================================
+# Manager / Tenant Test Account
+# =============================================================================
+
+# Generates a random password so nothing is hardcoded in plain text
+resource "random_password" "manager_test" {
+  length  = 16
+  special = true
+}
+
+resource "keycloak_user" "manager_test" {
+  realm_id       = keycloak_realm.kube_lab.id
+  username       = "manager.test"
+  email          = "manager.test@epita.fr"
+  first_name     = "Manager"
+  last_name      = "Test"
+  enabled        = true
+  email_verified = true
+
+  # Forces password change and MFA setup on first login
+  required_actions = ["UPDATE_PASSWORD", "CONFIGURE_TOTP"]
+
+  initial_password {
+    value     = random_password.manager_test.result
+    temporary = true
+  }
+
+  lifecycle {
+    ignore_changes = [
+      required_actions,
+      initial_password,
+      attributes
+    ]
+  }
+}
+
+# Output to retrieve the generated password securely
+output "manager_test_password" {
+  value     = random_password.manager_test.result
+  sensitive = true
+}
