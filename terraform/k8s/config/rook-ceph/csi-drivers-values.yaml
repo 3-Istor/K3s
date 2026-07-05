@@ -1,0 +1,11 @@
+drivers:
+  rbd:
+    name: rook-ceph.rbd.csi.ceph.com
+    enabled: true
+  cephfs:
+    name: rook-ceph.cephfs.csi.ceph.com
+    enabled: true
+  nfs:
+    enabled: false
+  nvmeof:
+    enabled: false

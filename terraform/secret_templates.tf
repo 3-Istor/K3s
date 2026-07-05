@@ -592,7 +592,7 @@ resource "vault_kv_secret_v2" "rook_csi_rbd_node" {
   mount = vault_mount.kvv2.path
   name  = "rook-ceph/csi-node"
   data_json = jsonencode({
-    "userID"  = "client.healthchecker"
+    "userID"  = "csi-rbd-node"
     "userKey" = var.ceph_csi_rbd_node_secret
   })
 }
@@ -602,7 +602,7 @@ resource "vault_kv_secret_v2" "rook_csi_rbd_provisioner" {
   mount = vault_mount.kvv2.path
   name  = "rook-ceph/csi-provisioner"
   data_json = jsonencode({
-    "userID"  = "client.healthchecker"
+    "userID"  = "csi-rbd-provisioner"
     "userKey" = var.ceph_csi_rbd_provisioner_secret
   })
 }
