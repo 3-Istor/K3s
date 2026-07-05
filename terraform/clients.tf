@@ -38,8 +38,7 @@ resource "keycloak_openid_client" "openid_client" {
     "https://qcm.${var.base_domain}/",
     "http://localhost:3000/",
     "http://localhost:3001/",
-    "https://grafana.${var.base_domain}/",
-    "https://grafana.${var.base_domain}"
+    "https://grafana.${var.base_domain}/"
   ]
 
   web_origins = [
@@ -50,7 +49,8 @@ resource "keycloak_openid_client" "openid_client" {
     "https://mepa.${var.base_domain}",
     "https://qcm.${var.base_domain}",
     "http://localhost:3000/",
-    "http://localhost:3001"
+    "http://localhost:3001",
+    "https://grafana.${var.base_domain}/"
   ]
 
   authentication_flow_binding_overrides {
