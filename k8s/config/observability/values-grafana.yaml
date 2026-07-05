@@ -20,8 +20,8 @@ grafana.ini:
     client_id: "3-istor-openid"
     scopes: "openid profile email roles groups"
     auth_url: "https://auth.3istor.com/realms/3istor/protocol/openid-connect/auth"
-    token_url: "https://auth.3istor.com/realms/3istor/protocol/openid-connect/token"
-    api_url: "https://auth.3istor.com/realms/3istor/protocol/openid-connect/userinfo"
+    token_url: "http://keycloakx-http.keycloak.svc.cluster.local/realms/3istor/protocol/openid-connect/token"
+    api_url: "http://keycloakx-http.keycloak.svc.cluster.local/realms/3istor/protocol/openid-connect/userinfo"
     role_attribute_path: "contains(groups[*], 'infra') && 'Admin' || contains(groups[*], 'member') && 'Viewer'"
 
 persistence:
