@@ -23,7 +23,7 @@ alloy:
         stage.match {
           selector = "{namespace=~\"project-.*|demo-app|n8n\"}"
           stage.tenant {
-            label = "namespace"
+            label = "tenant"
           }
         }
         forward_to = [loki.write.local_loki.receiver]
