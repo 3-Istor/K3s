@@ -6,8 +6,7 @@ metadata:
     storageclass.kubernetes.io/is-default-class: "true"
 provisioner: rook-ceph.rbd.csi.ceph.com
 parameters:
-  clusterID: "5dadab07-1596-11f1-9461-1c697a04fcdc"
-
+  clusterID: "rook-ceph"
   pool: "volumes"
 
   imageFormat: "2"
