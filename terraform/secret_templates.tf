@@ -267,6 +267,8 @@ resource "vault_kv_secret_v2" "arcl_cmp_creds" {
     "keycloak-admin-username"      = var.keycloak_admin_username
     "keycloak-admin-password"      = var.keycloak_admin_password
     "vault-token"                  = var.vault_token
+    "grafana-admin-password"       = var.grafana_admin_password
+    "keycloak-client-secret"       = keycloak_openid_client.openid_client.client_secret
   })
 }
 

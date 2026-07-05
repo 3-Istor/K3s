@@ -237,6 +237,18 @@ extraEnv:
         name: arcl-cmp-secret
         key: discord-webhook-url
 
+  - name: GRAFANA_ADMIN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: grafana-admin-password
+
+  - name: KEYCLOAK_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: keycloak-client-secret
+
 secrets:
   create: false
 
