@@ -40,10 +40,10 @@ vmauth:
     unauthorized_user:
       url_map:
         - src_paths:
-            - "/select/.*"
+            - "/select/"
           url_prefix:
             - "http://vm-victoria-metrics-cluster-vmselect:8481/select/"
         - src_paths:
-            - "/insert/.*"
+            - "/insert/"
           url_prefix:
             - "http://vm-victoria-metrics-cluster-vminsert:8480/insert/"
