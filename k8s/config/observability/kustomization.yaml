@@ -5,6 +5,7 @@ namespace: observability
 resources:
   - namespace.yaml
   - secrets.yaml
+  - gateway-api-state-metrics.yaml
 
 helmGlobals:
   chartHome: ../../../charts
