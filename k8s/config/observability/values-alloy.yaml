@@ -50,6 +50,6 @@ alloy:
 
       prometheus.remote_write "vmauth" {
         endpoint {
-          url = "http://vm-vmauth.observability.svc.cluster.local:8427/api/v1/write"
+          url = "http://vm-victoria-metrics-cluster-vminsert.observability.svc.cluster.local:8480/insert/0/prometheus/api/v1/write"
         }
       }
