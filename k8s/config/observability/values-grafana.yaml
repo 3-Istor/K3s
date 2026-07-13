@@ -1,5 +1,8 @@
 replicas: 1
 
+deploymentStrategy:
+  type: Recreate
+
 envFromSecret: observability-secrets
 
 grafana.ini:
