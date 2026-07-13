@@ -36,6 +36,16 @@ resources:
     memory: 256Mi
 
 # We don't provision datasources automatically because you will create them per Grafana Organization (Client A, Client B) manually to enforce multi-tenancy.
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        uid: prometheus
+        url: "http://vm-victoria-metrics-cluster-vmselect.observability.svc.cluster.local:8481/select/0/prometheus"
+        access: proxy
+        isDefault: true
 
 # Configure dashboard providers.
 # ref: http://docs.grafana.org/administration/provisioning/#dashboards
