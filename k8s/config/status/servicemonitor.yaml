@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: gatus-monitor
+  namespace: status
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gatus
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s

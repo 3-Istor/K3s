@@ -40,6 +40,14 @@ alloy:
         forward_to = [prometheus.remote_write.vmauth.receiver]
       }
 
+      prometheus.operator.podmonitors "local_pods" {
+        forward_to = [prometheus.remote_write.vmauth.receiver]
+      }
+
+      prometheus.operator.servicemonitors "local_services" {
+        forward_to = [prometheus.remote_write.vmauth.receiver]
+      }
+
       prometheus.remote_write "vmauth" {
         endpoint {
           url = "http://vm-vmauth.observability.svc.cluster.local:8427/api/v1/write"

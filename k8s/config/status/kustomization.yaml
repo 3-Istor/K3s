@@ -5,6 +5,7 @@ namespace: status
 resources:
   - namespace.yaml
   - secrets.yaml
+  - servicemonitor.yaml
 
 helmGlobals:
   chartHome: ../../../charts
