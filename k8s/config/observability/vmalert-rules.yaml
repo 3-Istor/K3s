@@ -5,7 +5,7 @@ metadata:
   name: vmalert-rules
   namespace: observability
 data:
-  app-golden-signals.yaml: |
+  alert-rules.yaml: |
     groups:
       - name: app-golden-signals.rules
         rules:
