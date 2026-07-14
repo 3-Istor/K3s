@@ -63,6 +63,7 @@ dashboardProviders:
         allowUiUpdates: true
         options:
           path: /var/lib/grafana/dashboards/default
+
       - name: "envoy-gateway"
         orgId: 1
         folder: "Envoy Gateway"
@@ -72,18 +73,61 @@ dashboardProviders:
         options:
           path: /var/lib/grafana/dashboards/envoy-gateway
 
+      - name: "kubernetes"
+        orgId: 1
+        folder: "Kubernetes"
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/kubernetes
+
+      - name: "infrastructure"
+        orgId: 1
+        folder: "Infrastructure"
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/infrastructure
+
 dashboards:
   envoy-gateway:
     # Doc: https://gateway.envoyproxy.io/docs/tasks/observability/gateway-api-metrics/#dashboards
+    # Grafana Links: https://grafana.com/grafana/dashboards/<gnetId>
     gateway-api-state:
       gnetId: 19433
-      revision: 1
+      revision: 2
       datasource: Prometheus
     gateway-http-metrics:
       gnetId: 19432
-      revision: 1
+      revision: 2
       datasource: Prometheus
     envoy-proxy-metrics:
       gnetId: 19434
-      revision: 1
+      revision: 2
+      datasource: Prometheus
+
+  kubernetes:
+    k8s-cluster:
+      gnetId: 15757
+      revision: 43
+      datasource: Prometheus
+    k8s-namespaces:
+      gnetId: 15758
+      revision: 46
+      datasource: Prometheus
+    k8s-nodes:
+      gnetId: 15759
+      revision: 40
+      datasource: Prometheus
+    k8s-pods:
+      gnetId: 15760
+      revision: 39
+      datasource: Prometheus
+
+  infrastructure:
+    node-exporter-full:
+      gnetId: 1860
+      revision: 45
       datasource: Prometheus
