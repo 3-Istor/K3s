@@ -128,9 +128,9 @@ data:
           - alert: GatusEndpointDown
             expr: |
               sum(increase(gatus_results_total{success="false"}[5m])) by (name, group) >= 3
-          for: 1m
-          labels:
-            severity: critical
-          annotations:
-            summary: "Endpoint {{ $labels.name }} (group {{ $labels.group }}) is failing"
-            description: "Gatus has recorded at least 3 failed checks over the last 5 minutes for {{ $labels.name }}."
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Endpoint {{ $labels.name }} (group {{ $labels.group }}) is failing"
+              description: "Gatus has recorded at least 3 failed checks over the last 5 minutes for {{ $labels.name }}."
