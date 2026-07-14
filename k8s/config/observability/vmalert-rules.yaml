@@ -9,6 +9,16 @@ data:
     groups:
       - name: app-golden-signals.rules
         rules:
+          - alert: TestDiscordAlert
+            expr: vector(1)
+            for: 0m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Test: Discord Alerting Pipeline is working!"
+              description: "Brian's Test"
+      - name: app-golden-signals.rules
+        rules:
           # =====================================================================
           # 1. POD HEALTH & SATURATION (USE Method via cAdvisor & KSM)
           # =====================================================================

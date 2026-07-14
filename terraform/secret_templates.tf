@@ -533,6 +533,7 @@ resource "vault_kv_secret_v2" "observability_config" {
     "S3_SECRET_KEY"          = var.obs_s3_secret_key
     "GRAFANA_ADMIN_PASSWORD" = var.grafana_admin_password
     "OIDC_CLIENT_SECRET"     = keycloak_openid_client.openid_client.client_secret
+    "DISCORD_WEBHOOK_URL"    = var.discord_webhook_url
   })
 }
 
