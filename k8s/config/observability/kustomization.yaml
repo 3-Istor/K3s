@@ -6,6 +6,7 @@ resources:
   - namespace.yaml
   - secrets.yaml
   - gateway-api-state-metrics.yaml
+  - vmalert-rules.yaml
 
 helmGlobals:
   chartHome: ../../../charts

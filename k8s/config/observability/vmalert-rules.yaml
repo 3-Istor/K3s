@@ -1,0 +1,126 @@
+# FILE: vmalert-rules.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vmalert-rules
+  namespace: observability
+data:
+  app-golden-signals.yaml: |
+    groups:
+      - name: app-golden-signals.rules
+        rules:
+          # =====================================================================
+          # 1. POD HEALTH & SATURATION (USE Method via cAdvisor & KSM)
+          # =====================================================================
+
+          # Early Warning: Memory close to limit (OOMKill Risk)
+          - alert: AppPodMemoryCloseToLimit
+            expr: |
+              (
+                container_memory_working_set_bytes{container!="", namespace!~"kube-system|observability|kyverno|envoy-gateway-system|cert-manager|rook-ceph|argocd"}
+                / on(container, pod, namespace)
+                kube_pod_container_resource_limits{resource="memory"}
+              ) > 0.85
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Container {{ $labels.container }} ({{ $labels.namespace }}) is close to its memory limit"
+              description: "Memory usage is at {{ $value | humanizePercentage }} of its limit in pod {{ $labels.pod }}."
+
+          # Critical: Container was OOMKilled (Out Of Memory)
+          - alert: AppContainerOOMKilled
+            expr: |
+              kube_pod_container_status_terminated_reason{reason="OOMKilled", namespace!~"kube-system|observability|kyverno|envoy-gateway-system|cert-manager|rook-ceph|argocd"} == 1
+            for: 0m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Container {{ $labels.container }} ({{ $labels.namespace }}) was OOMKilled"
+              description: "The container {{ $labels.container }} in pod {{ $labels.pod }} was terminated due to memory exhaustion."
+
+          # Early Warning: High CPU Throttling (Hidden CPU Saturation causing slow response times)
+          - alert: AppPodCPUThrottlingHigh
+            expr: |
+              (
+                sum(increase(container_cpu_cfs_throttled_periods_total{container!="", namespace!~"kube-system|observability|kyverno|envoy-gateway-system|cert-manager|rook-ceph|argocd"}[5m])) by (container, pod, namespace)
+                /
+                sum(increase(container_cpu_cfs_periods_total{container!=""}[5m])) by (container, pod, namespace)
+              ) > 0.25
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Container {{ $labels.container }} ({{ $labels.namespace }}) is experiencing heavy CPU throttling"
+              description: "CPU is throttled for {{ $value | humanizePercentage }} of execution periods in pod {{ $labels.pod }}."
+
+          # Reactive Alert: Frequent Pod Restarts (Signals a CrashLoop or unhandled exceptions)
+          - alert: AppPodRestartsHigh
+            expr: |
+              increase(kube_pod_container_status_restarts_total{namespace!~"kube-system|observability|kyverno|envoy-gateway-system|cert-manager|rook-ceph|argocd"}[1h]) > 2
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Pod {{ $labels.pod }} ({{ $labels.namespace }}) is restarting frequently"
+              description: "Pod {{ $labels.pod }} has restarted {{ $value }} times over the last hour."
+
+          # =====================================================================
+          # 2. PERSISTENT STORAGE (USE Method via Kubelet)
+          # =====================================================================
+
+          # Early Warning: Rook-Ceph PVC nearly full (Database, uploads, etc.)
+          - alert: AppPVCFillingUp
+            expr: |
+              (
+                kubelet_volume_stats_available_bytes{namespace!~"kube-system|observability|kyverno|envoy-gateway-system|cert-manager|rook-ceph|argocd"}
+                /
+                kubelet_volume_stats_capacity_bytes{}
+              ) < 0.15
+            for: 15m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Volume {{ $labels.persistentvolumeclaim }} ({{ $labels.namespace }}) is almost full"
+              description: "Less than 15% of storage capacity (currently {{ $value | humanizePercentage }}) is left on the PVC."
+
+          # =====================================================================
+          # 3. TRAFFIC & USER EXPERIENCE (RED / Blackbox Method via Envoy & Gatus)
+          # =====================================================================
+
+          # Alert: High HTTP 5xx rate on Gateway (RED - Errors)
+          - alert: GatewayHighHTTP5xxRate
+            expr: |
+              (
+                sum(rate(envoy_http_downstream_rq_xx{envoy_response_code_class="5"}[5m]))
+                /
+                sum(rate(envoy_http_downstream_rq{}[5m]))
+              ) > 0.05
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "High HTTP 5xx error rate on Envoy Gateway"
+              description: "Envoy Gateway reports a 5xx error rate of {{ $value | humanizePercentage }} over the last 5 minutes."
+
+          # Alert: Connection failures from Envoy Gateway to Backend services
+          - alert: GatewayUpstreamConnectionFailures
+            expr: |
+              sum(rate(envoy_cluster_upstream_cx_connect_fail{}[5m])) by (envoy_cluster_name) > 0
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Envoy Gateway failed to connect to upstream {{ $labels.envoy_cluster_name }}"
+              description: "Envoy Gateway is experiencing network connection failures to upstream application cluster {{ $labels.envoy_cluster_name }}."
+
+          # Blackbox Alert: Downtime detected by Gatus
+          - alert: GatusEndpointDown
+            expr: |
+              sum(increase(gatus_results_total{success="false"}[5m])) by (name, group) >= 3
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Endpoint {{ $labels.name }} (group {{ $labels.group }}) is failing"
+            description: "Gatus has recorded at least 3 failed checks over the last 5 minutes for {{ $labels.name }}."
