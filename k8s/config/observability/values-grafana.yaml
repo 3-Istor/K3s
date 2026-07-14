@@ -46,6 +46,8 @@ datasources:
         url: "http://vm-victoria-metrics-cluster-vmselect.observability.svc.cluster.local:8481/select/0/prometheus"
         access: proxy
         isDefault: true
+        jsonData:
+          rulerUrl: "http://vmalert-victoria-metrics-alert-server.observability.svc:8880"
 
 # Configure dashboard providers.
 # ref: http://docs.grafana.org/administration/provisioning/#dashboards
