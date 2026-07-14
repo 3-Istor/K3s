@@ -33,6 +33,20 @@ helmCharts:
     namespace: observability
     valuesFile: values-vm.yaml
 
+  - name: victoria-metrics-alert
+    repo: https://victoriametrics.github.io/helm-charts/
+    version: 0.44.0
+    releaseName: vmalert
+    namespace: observability
+    valuesFile: values-vmalert.yaml
+
+  - name: alertmanager
+    repo: https://prometheus-community.github.io/helm-charts
+    version: 1.40.2
+    releaseName: alertmanager
+    namespace: observability
+    valuesFile: values-alertmanager.yaml
+
   # Grafana (Visualisation)
   - name: grafana
     repo: https://grafana.github.io/helm-charts

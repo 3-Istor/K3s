@@ -1,0 +1,13 @@
+server:
+  replicaCount: 1
+
+  datasource:
+    url: "http://vm-victoria-metrics-cluster-vmselect.observability.svc.cluster.local:8481/select/0/prometheus"
+
+  remoteWrite:
+    url: "http://vm-victoria-metrics-cluster-vminsert.observability.svc.cluster.local:8480/insert/0/prometheus/api/v1/write"
+
+  notifier:
+    url: "http://alertmanager.observability.svc:9093"
+
+  configMap: "vmalert-rules"
