@@ -47,9 +47,16 @@ datasources:
         access: proxy
         isDefault: true
         jsonData:
-          rulerUrl: "http://vmalert-victoria-metrics-alert-server.observability.svc:8880"
           prometheusType: "Prometheus"
-          manageAlerts: true
+          manageAlerts: false
+
+      - name: Alertmanager
+        type: alertmanager
+        uid: alertmanager
+        url: "http://alertmanager.observability.svc.cluster.local:9093"
+        access: proxy
+        jsonData:
+          implementation: prometheus
 
 # Configure dashboard providers.
 # ref: http://docs.grafana.org/administration/provisioning/#dashboards
