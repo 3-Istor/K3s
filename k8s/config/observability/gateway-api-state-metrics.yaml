@@ -47720,6 +47720,9 @@ spec:
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: prometheus
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alloy
       ports:
         - port: 9093
           protocol: TCP
@@ -47763,6 +47766,9 @@ spec:
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: prometheus
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alloy
       ports:
         - port: 9115
           protocol: TCP
@@ -47796,6 +47802,9 @@ spec:
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: prometheus
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alloy
       ports:
         - port: 3000
           protocol: TCP
@@ -47827,6 +47836,9 @@ spec:
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: prometheus
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alloy
       ports:
         - port: 8443
           protocol: TCP
@@ -47860,6 +47872,9 @@ spec:
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: prometheus
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alloy
       ports:
         - port: 9100
           protocol: TCP
@@ -47892,6 +47907,9 @@ spec:
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: prometheus
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alloy
       ports:
         - port: 9090
           protocol: TCP
@@ -47933,6 +47951,9 @@ spec:
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: prometheus
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alloy
       ports:
         - port: 8443
           protocol: TCP
