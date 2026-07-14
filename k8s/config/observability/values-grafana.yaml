@@ -48,6 +48,8 @@ datasources:
         isDefault: true
         jsonData:
           rulerUrl: "http://vmalert-victoria-metrics-alert-server.observability.svc:8880"
+          prometheusType: "Prometheus"
+          manageAlerts: true
 
 # Configure dashboard providers.
 # ref: http://docs.grafana.org/administration/provisioning/#dashboards
