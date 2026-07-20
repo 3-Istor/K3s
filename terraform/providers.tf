@@ -11,17 +11,17 @@ terraform {
   required_providers {
     keycloak = {
       source  = "keycloak/keycloak"
-      version = "5.7.0"
+      version = "5.8.0"
     }
 
     vault = {
       source  = "hashicorp/vault"
-      version = "5.9.0"
+      version = "5.10.1"
     }
 
     cloudflare = {
       source  = "cloudflare/cloudflare"
-      version = "5.19.1"
+      version = "5.21.1"
     }
   }
 }
