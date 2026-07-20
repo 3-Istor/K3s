@@ -1,3 +1,5 @@
+fullnameOverride: "sessions-3istor"
+
 image:
   repository: ghcr.io/3-istor/3istor-sessions
   tag: "latest"

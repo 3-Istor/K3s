@@ -664,7 +664,7 @@ resource "vault_kv_secret_v2" "trois_istor_sessions_config" {
   mount = vault_mount.kvv2.path
   name  = "3istor-sessions/config"
   data_json = jsonencode({
-    "DATABASE_URL"                     = "postgresql://sessions:${var.sessions_db_password}@sessions-postgres:5432/sessions?schema=public"
+    "DATABASE_URL"                     = "postgresql://sessions:${var.sessions_db_password}@sessions-postgres:5432/sessions"
     "DATABASE_PASSWORD"                = var.sessions_db_password
     "APP_SECRET"                       = var.sessions_app_secret
     "GOOGLE_CLIENT_ID"                 = var.sessions_google_client_id
