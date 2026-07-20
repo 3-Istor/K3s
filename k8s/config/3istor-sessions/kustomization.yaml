@@ -16,7 +16,7 @@ helmGlobals:
 helmCharts:
   - name: 3istor-sessions
     repo: oci://ghcr.io/3-istor/charts
-    version: 1.0.0
+    version: 0.1.0
     releaseName: 3istor-sessions
     namespace: 3istor-sessions
     valuesFile: 3istor-sessions-values.yaml
