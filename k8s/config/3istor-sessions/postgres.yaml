@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sessions-postgres-pvc
+  namespace: 3istor-sessions
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sessions-postgres
+  namespace: 3istor-sessions
+spec:
+  selector:
+    app: sessions-postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sessions-postgres
+  namespace: 3istor-sessions
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sessions-postgres
+  template:
+    metadata:
+      labels:
+        app: sessions-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: "sessions"
+            - name: POSTGRES_USER
+              value: "sessions"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: 3istor-sessions-secrets
+                  key: DATABASE_PASSWORD
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+              subPath: postgres-data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: sessions-postgres-pvc

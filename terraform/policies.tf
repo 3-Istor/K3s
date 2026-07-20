@@ -186,3 +186,13 @@ resource "vault_policy" "rook_ceph_policy" {
     mount_path = vault_mount.kvv2.path
   })
 }
+
+# -----------------------------------------------------------------------------
+# 3istor Sessions Policies
+# -----------------------------------------------------------------------------
+resource "vault_policy" "trois_istor_sessions_policy" {
+  name = "3istor-sessions-policy"
+  policy = templatefile("${path.module}/policies/trois_istor_sessions.hcl", {
+    mount_path = vault_mount.kvv2.path
+  })
+}

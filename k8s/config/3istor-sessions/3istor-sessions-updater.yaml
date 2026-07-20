@@ -1,0 +1,23 @@
+apiVersion: argocd-image-updater.argoproj.io/v1alpha1
+kind: ImageUpdater
+metadata:
+  name: 3istor-sessions-updater
+  namespace: argocd
+spec:
+  applicationRefs:
+    - namePattern: "3istor-sessions"
+      images:
+        - alias: "sessions"
+          imageName: "ghcr.io/3-istor/3istor-sessions"
+          manifestTargets:
+            helm:
+              name: "image.repository"
+              tag: "image.tag"
+          commonUpdateSettings:
+            updateStrategy: "newest-build"
+            allowTags: "regexp:^sha-[a-f0-9]+$"
+      writeBackConfig:
+        method: "git:secret:argocd/git-creds"
+        gitConfig:
+          branch: "main"
+          writeBackTarget: "helmvalues:/k8s/config/3istor-sessions/3istor-sessions-values.yaml"

@@ -257,3 +257,15 @@ resource "vault_kubernetes_auth_backend_role" "rook_ceph_role" {
   token_ttl                        = 86400
   token_policies                   = [vault_policy.rook_ceph_policy.name]
 }
+
+# -----------------------------------------------------------------------------
+# 3istor Sessions Roles
+# -----------------------------------------------------------------------------
+resource "vault_kubernetes_auth_backend_role" "trois_istor_sessions_role" {
+  backend                          = vault_auth_backend.kubernetes.path
+  role_name                        = "3istor-sessions-role"
+  bound_service_account_names      = ["vault-secrets-operator"]
+  bound_service_account_namespaces = ["vault-secrets-operator"]
+  token_ttl                        = 86400
+  token_policies                   = [vault_policy.trois_istor_sessions_policy.name]
+}

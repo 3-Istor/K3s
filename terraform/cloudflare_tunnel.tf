@@ -15,7 +15,8 @@ locals {
     "qcm",
     "status",
     "linmap",
-    "grafana"
+    "grafana",
+    "sessions"
   ])
 
   tunnel_secret_b64 = base64encode(random_password.tunnel_secret.result)

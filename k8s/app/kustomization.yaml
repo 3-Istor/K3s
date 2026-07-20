@@ -27,3 +27,4 @@ resources:
   - cnp-projects-root.yaml
   - rook-ceph.yaml
   - observability.yaml
+  - 3istor-sessions.yaml

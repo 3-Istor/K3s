@@ -620,3 +620,57 @@ resource "vault_kv_secret_v2" "rook_ceph_globals" {
     "mon-data" = var.ceph_mon_data
   })
 }
+
+# -----------------------------------------------------------------------------
+# 3istor Sessions Secrets
+# -----------------------------------------------------------------------------
+variable "sessions_db_password" {
+  type      = string
+  sensitive = true
+}
+
+variable "sessions_app_secret" {
+  type      = string
+  sensitive = true
+}
+
+variable "sessions_google_client_id" {
+  type      = string
+  sensitive = true
+}
+
+variable "sessions_google_client_secret" {
+  type      = string
+  sensitive = true
+}
+
+variable "sessions_manager_email" {
+  type      = string
+  sensitive = true
+}
+
+variable "sessions_team_members" {
+  type      = string
+  sensitive = true
+}
+
+variable "sessions_google_availability_calendar_ids" {
+  type      = string
+  sensitive = true
+}
+
+
+resource "vault_kv_secret_v2" "trois_istor_sessions_config" {
+  mount = vault_mount.kvv2.path
+  name  = "3istor-sessions/config"
+  data_json = jsonencode({
+    "DATABASE_URL"                     = "postgresql://sessions:${var.sessions_db_password}@sessions-postgres:5432/sessions?schema=public"
+    "DATABASE_PASSWORD"                = var.sessions_db_password
+    "APP_SECRET"                       = var.sessions_app_secret
+    "GOOGLE_CLIENT_ID"                 = var.sessions_google_client_id
+    "GOOGLE_CLIENT_SECRET"             = var.sessions_google_client_secret
+    "MANAGER_EMAIL"                    = var.sessions_manager_email
+    "TEAM_MEMBERS"                     = var.sessions_team_members # This should be a comma-separated string of team member emails
+    "GOOGLE_AVAILABILITY_CALENDAR_IDS" = var.sessions_google_availability_calendar_ids
+  })
+}

@@ -1,0 +1,23 @@
+image:
+  repository: ghcr.io/3-istor/3istor-sessions
+  tag: "latest"
+  pullPolicy: Always
+
+persistence:
+  enabled: false
+
+env:
+  - name: APP_ENV
+    value: "production"
+  - name: AUTH_MODE
+    value: "google"
+  - name: FRONTEND_URL
+    value: "https://sessions.3istor.com"
+  - name: ALLOWED_HOSTS
+    value: "sessions.3istor.com"
+  - name: GOOGLE_REDIRECT_URI
+    value: "https://sessions.3istor.com/api/google/calendar/callback"
+  - name: SESSION_TTL_MINUTES
+    value: "480"
+
+existingSecret: "3istor-sessions-secrets"

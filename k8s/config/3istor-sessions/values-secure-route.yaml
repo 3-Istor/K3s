@@ -1,0 +1,10 @@
+routes:
+  3istor-sessions:
+    hostnames:
+      - "sessions.3istor.com"
+    rules:
+      - backendRefs:
+          - name: 3istor-sessions
+            port: 8000
+    auth:
+      enabled: false
