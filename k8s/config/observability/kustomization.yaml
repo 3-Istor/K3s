@@ -20,7 +20,7 @@ helmCharts:
   # Loki (Logs)
   - name: loki
     repo: https://grafana.github.io/helm-charts
-    version: 7.0.0
+    version: 7.2.0
     releaseName: loki
     namespace: observability
     valuesFile: values-loki.yaml
@@ -28,21 +28,21 @@ helmCharts:
   # VictoriaMetrics (Metrics)
   - name: victoria-metrics-cluster
     repo: https://victoriametrics.github.io/helm-charts/
-    version: 0.45.0
+    version: 0.48.0
     releaseName: vm
     namespace: observability
     valuesFile: values-vm.yaml
 
   - name: victoria-metrics-alert
     repo: https://victoriametrics.github.io/helm-charts/
-    version: 0.44.0
+    version: 0.46.0
     releaseName: vmalert
     namespace: observability
     valuesFile: values-vmalert.yaml
 
   - name: alertmanager
     repo: https://prometheus-community.github.io/helm-charts
-    version: 1.40.2
+    version: 1.41.0
     releaseName: alertmanager
     namespace: observability
     valuesFile: values-alertmanager.yaml
@@ -58,7 +58,7 @@ helmCharts:
   # Alloy (Logs and Metrics Aggregation)
   - name: alloy
     repo: https://grafana.github.io/helm-charts
-    version: 1.10.0
+    version: 1.11.1
     releaseName: alloy
     namespace: observability
     valuesFile: values-alloy.yaml
