@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/3-istor/roadmap
-  tag: "sha-3ca683c"
+  tag: "sha-6d8cbd2"
   pullPolicy: Always
 ingress:
   enabled: false
