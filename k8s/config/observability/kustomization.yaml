@@ -66,7 +66,7 @@ helmCharts:
   # Official Prometheus Operator CRDs
   - name: prometheus-operator-crds
     repo: https://prometheus-community.github.io/helm-charts
-    version: 30.0.1
+    version: 31.0.0
     releaseName: prometheus-operator-crds
     namespace: observability
     valuesFile: values-prometheus-operator-crds.yaml
