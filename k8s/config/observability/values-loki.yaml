@@ -42,6 +42,8 @@ loki:
 
 singleBinary:
   replicas: 1
+  extraArgs:
+    - "-config.expand-env=true"
   resources:
     requests:
       cpu: 50m
@@ -53,7 +55,7 @@ singleBinary:
   persistence:
     enabled: true
     storageClass: "ceph-block"
-    size: 5Gi
+    size: 20Gi
 
   extraEnvFrom:
     - secretRef:
