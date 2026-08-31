@@ -20,7 +20,7 @@ helmCharts:
   # Loki (Logs)
   - name: loki
     repo: https://grafana.github.io/helm-charts
-    version: 7.2.0
+    version: 7.3.0
     releaseName: loki
     namespace: observability
     valuesFile: values-loki.yaml
@@ -42,7 +42,7 @@ helmCharts:
 
   - name: alertmanager
     repo: https://prometheus-community.github.io/helm-charts
-    version: 1.41.0
+    version: 1.42.0
     releaseName: alertmanager
     namespace: observability
     valuesFile: values-alertmanager.yaml
@@ -66,7 +66,7 @@ helmCharts:
   # Official Prometheus Operator CRDs
   - name: prometheus-operator-crds
     repo: https://prometheus-community.github.io/helm-charts
-    version: 31.0.0
+    version: 31.0.1
     releaseName: prometheus-operator-crds
     namespace: observability
     valuesFile: values-prometheus-operator-crds.yaml
