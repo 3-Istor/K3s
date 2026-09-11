@@ -659,6 +659,11 @@ variable "sessions_google_availability_calendar_ids" {
   sensitive = true
 }
 
+variable "sessions_discord_webhook_url" {
+  type      = string
+  sensitive = true
+}
+
 
 resource "vault_kv_secret_v2" "trois_istor_sessions_config" {
   mount = vault_mount.kvv2.path
@@ -671,6 +676,7 @@ resource "vault_kv_secret_v2" "trois_istor_sessions_config" {
     "GOOGLE_CLIENT_SECRET"             = var.sessions_google_client_secret
     "MANAGER_EMAIL"                    = var.sessions_manager_email
     "TEAM_MEMBERS"                     = var.sessions_team_members # This should be a comma-separated string of team member emails
-    "GOOGLE_AVAILABILITY_CALENDAR_IDS" = var.sessions_google_availability_calendar_ids
+    "GOOGLE_AVAILABILITY_CALENDAR_yypIDS" = var.sessions_google_availability_calendar_ids
+    "DISCORD_WEBHOOK_URL" = var.sessions_discord_webhook_url
   })
 }
