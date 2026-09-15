@@ -1,0 +1,115 @@
+# Generates every project's Argo CD objects from the Git registry.
+#
+# Adding a project becomes a commit in cnp-projects/registry/projects/, and
+# adding a cloud becomes a cluster secret. Neither requires touching this file
+# or running Terraform against a Kubernetes API (D-02, D-03).
+#
+# Two ApplicationSets, because the two halves land on different clusters:
+#   - the AppProject belongs in the argocd namespace on the control plane
+#   - the workloads belong on the project's target cluster
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cnp-project-appprojects
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: https://github.com/3-Istor/cnp-projects.git
+        revision: main
+        files:
+          - path: "registry/projects/*.yaml"
+  template:
+    metadata:
+      name: "{{ .metadata.name }}-appproject"
+      labels:
+        cnp.3istor.com/project: "{{ .metadata.name }}"
+        cnp.3istor.com/cloud: "{{ .spec.targetCloud }}"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/3-Istor/cnp-project-base.git
+        targetRevision: HEAD
+        path: .
+        helm:
+          values: |
+            projectName: "{{ .metadata.name }}"
+            targetCloud: "{{ .spec.targetCloud }}"
+            features:
+              appProject: true
+              workloads: false
+      destination:
+        name: onprem
+        namespace: argocd
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cnp-project-systems
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: https://github.com/3-Istor/cnp-projects.git
+        revision: main
+        files:
+          - path: "registry/projects/*.yaml"
+  template:
+    metadata:
+      name: "{{ .metadata.name }}-bootstrap"
+      labels:
+        cnp.3istor.com/project: "{{ .metadata.name }}"
+        cnp.3istor.com/cloud: "{{ .spec.targetCloud }}"
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      # The project's own AppProject, which restricts destinations to the
+      # project's cluster and namespaces. A record whose targetCloud disagrees
+      # with this Application's destination is rejected by Argo CD rather than
+      # landing on the wrong cloud.
+      project: "{{ .metadata.name }}"
+      source:
+        repoURL: https://github.com/3-Istor/cnp-project-base.git
+        targetRevision: HEAD
+        path: .
+        helm:
+          values: |
+            projectName: "{{ .metadata.name }}"
+            targetCloud: "{{ .spec.targetCloud }}"
+            features:
+              appProject: false
+              workloads: true
+              gatus: {{ dig "features" "gatus" true .spec }}
+              gateway: {{ dig "features" "gateway" false .spec }}
+              tunnel: {{ dig "features" "tunnel" false .spec }}
+            tunnel:
+              hostnames:
+              {{- range dig "apps" (list) .spec }}
+                {{- range $env, $host := dig "hostnames" (dict) . }}
+                - "{{ $host }}"
+                {{- end }}
+              {{- end }}
+      destination:
+        # The whole point of the chantier: placement comes from the record, and
+        # it is a name rather than a URL because the URL changes when a cluster
+        # is rebuilt and the name does not.
+        name: "{{ .spec.targetCloud }}"
+        namespace: "{{ .metadata.name }}-system"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
