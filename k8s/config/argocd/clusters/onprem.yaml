@@ -1,0 +1,28 @@
+# Argo CD cluster registration for the on-prem cluster.
+#
+# Registered explicitly rather than relying on Argo CD's built-in "in-cluster"
+# destination, so all three clusters are addressed identically (D-03) and the
+# generated Applications can use spec.targetCloud straight from the registry as
+# their destination name.
+#
+# Credentials never live in Git: the operator materialises this Secret from
+# Vault, the same way argocd-secret and cnp-portal-github-creds already work.
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: cluster-onprem
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+    cnp.3istor.com/cloud: onprem
+spec:
+  path: kvv2/argocd/clusters/onprem
+  vaultRole: argocd-role
+  type: Opaque
+  keys:
+    # name:   must be exactly "onprem" — it is what Applications address.
+    # server: https://kubernetes.default.svc
+    # config: {"tlsClientConfig":{"insecure":false}}
+    - name
+    - server
+    - config
