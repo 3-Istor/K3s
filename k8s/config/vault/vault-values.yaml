@@ -22,12 +22,15 @@ server:
         path = "/vault/data"
       }
 
+  # Vault sat at 218Mi of a 256Mi limit while sealed and freshly restarted, and
+  # was OOMKilled 14 times. Every OOM re-seals it, which freezes all 39
+  # VaultSecret resources cluster-wide until someone unseals it by hand.
   resources:
     requests:
-      memory: "256Mi"
+      memory: "512Mi"
       cpu: "250m"
     limits:
-      memory: "256Mi"
+      memory: "512Mi"
       cpu: "250m"
 
   dataStorage:
