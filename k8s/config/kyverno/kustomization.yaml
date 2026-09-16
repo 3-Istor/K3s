@@ -15,3 +15,17 @@ helmCharts:
     namespace: kyverno
     valuesFile: values.yaml
     includeCRDs: true
+
+# The chart gates its Helm test pods on the controllers being enabled, with no
+# flag of its own. kustomize ignores helm.sh/hook, so without this they would be
+# applied by ArgoCD as permanent Pods.
+patches:
+  - target:
+      kind: Pod
+      labelSelector: "app.kubernetes.io/component=test"
+    patch: |
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: ignored
+      $patch: delete
