@@ -11,6 +11,28 @@ chunksCache:
 resultsCache:
   enabled: false
 
+# kustomize renders Helm test hooks as plain Pods, so ArgoCD would deploy them
+# as permanent workloads.
+test:
+  enabled: false
+
+# The canary writes ~40MB of logs per node back into Loki itself.
+lokiCanary:
+  enabled: false
+
+# SingleBinary exposes everything on the loki service already.
+gateway:
+  enabled: false
+
+sidecar:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
 loki:
   auth_enabled: true # Enable Multi-Tenancy
 

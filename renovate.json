@@ -15,6 +15,11 @@
       "/k8s/config/.*/kustomization\\.yaml$/"
     ]
   },
+  "kubernetes": {
+    "managerFilePatterns": [
+      "/^k8s/config/[^/]+/[^/]+\\.yaml$/"
+    ]
+  },
   "helm-values": {
     "managerFilePatterns": [
       "/k8s/config/.*/values.*\\.yaml$/"
