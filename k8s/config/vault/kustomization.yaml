@@ -21,3 +21,16 @@ helmCharts:
     releaseName: vault-routes
     namespace: vault
     valuesFile: values-secure-route.yaml
+
+# kustomize ignores helm.sh/hook, so this test Pod would be applied by ArgoCD as
+# a permanent workload. The chart offers no flag to disable it.
+patches:
+  - target:
+      kind: Pod
+      name: vault-server-test
+    patch: |
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: vault-server-test
+      $patch: delete

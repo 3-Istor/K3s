@@ -13,3 +13,16 @@ helmCharts:
     releaseName: vault-secrets-operator
     namespace: vault-secrets-operator
     valuesFile: vso-values.yaml
+
+# kustomize ignores helm.sh/hook, so this test Pod would be applied by ArgoCD as
+# a permanent workload. The chart offers no flag to disable it.
+patches:
+  - target:
+      kind: Pod
+      name: vault-secrets-operator-test-connection
+    patch: |
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: vault-secrets-operator-test-connection
+      $patch: delete

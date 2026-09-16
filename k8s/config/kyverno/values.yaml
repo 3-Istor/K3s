@@ -3,12 +3,20 @@
 # HA require at least 3 replicas
 admissionController:
   replicas: 1
+  serviceMonitor:
+    enabled: true
 backgroundController:
   replicas: 1
+  serviceMonitor:
+    enabled: true
 cleanupController:
   replicas: 1
+  serviceMonitor:
+    enabled: true
 reportsController:
   replicas: 1
+  serviceMonitor:
+    enabled: true
 
 # Necessary in EKS with custom Network CNI plugin
 # https://cert-manager.io/docs/installation/compatibility/#aws-eks
