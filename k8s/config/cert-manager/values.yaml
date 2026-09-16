@@ -12,3 +12,8 @@ config:
 global:
   leaderElection:
     namespace: cert-manager
+
+prometheus:
+  enabled: true
+  servicemonitor:
+    enabled: true

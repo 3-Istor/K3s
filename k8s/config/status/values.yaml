@@ -5,10 +5,25 @@ envFrom:
   - secretRef:
       name: status-secrets
 
+resources:
+  requests:
+    cpu: 25m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+serviceMonitor:
+  enabled: true
+  interval: 30s
+
 # ---------------------------------------------------------
 # Gatus main configuration
 # ---------------------------------------------------------
 config:
+  # Exposes /metrics, which the gatus_results_total alert depends on.
+  metrics: true
+
   # Alerting configuration
   alerting:
     discord:
