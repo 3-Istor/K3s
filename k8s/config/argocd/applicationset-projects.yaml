@@ -16,6 +16,20 @@ metadata:
 spec:
   goTemplate: true
   goTemplateOptions: ["missingkey=error"]
+  # Confirmed live (throwaway registry record, deleted after verifying): without
+  # this, removing a project's record races the AppProject's deletion against
+  # the deletion of the project-scoped Applications that reference it as
+  # spec.project. If the AppProject goes first, those Applications' own
+  # resources-finalizer can never resolve "get app project <name>" again and
+  # they hang in Terminating forever — the platform's own delete path, stuck.
+  # preserveResourcesOnDeletion keeps the underlying AppProject object alive
+  # when its generated Application is pruned, so the sibling Applications
+  # always have a project to look up while they finish their own deletion.
+  # The AppProject then sits orphaned-but-harmless until an explicit cleanup
+  # step removes it — matching D-13: destruction order is explicit, not
+  # automatic magic.
+  syncPolicy:
+    preserveResourcesOnDeletion: true
   generators:
     - git:
         repoURL: https://github.com/3-Istor/cnp-projects.git
