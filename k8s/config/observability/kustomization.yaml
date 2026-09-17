@@ -5,7 +5,7 @@ namespace: observability
 resources:
   - namespace.yaml
   - secrets.yaml
-  - gateway-api-state-metrics.yaml
+  - exporters.yaml
   - vmalert-rules.yaml
 
 helmGlobals:

@@ -24,3 +24,16 @@ helmCharts:
     releaseName: n8n-routes
     namespace: n8n
     valuesFile: values-secure-route.yaml
+
+# kustomize ignores helm.sh/hook, so this test Pod would be applied by ArgoCD as
+# a permanent workload. The chart offers no flag to disable it.
+patches:
+  - target:
+      kind: Pod
+      name: n8n-test-connection
+    patch: |
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: n8n-test-connection
+      $patch: delete

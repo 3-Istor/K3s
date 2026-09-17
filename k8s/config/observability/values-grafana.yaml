@@ -1,5 +1,10 @@
 replicas: 1
 
+# kustomize renders Helm test hooks as plain Pods, so ArgoCD would deploy the
+# test pod as a permanent workload.
+testFramework:
+  enabled: false
+
 deploymentStrategy:
   type: Recreate
 
@@ -58,6 +63,17 @@ datasources:
         jsonData:
           implementation: prometheus
 
+      # Loki runs with auth_enabled, so every query needs an explicit tenant.
+      - name: Loki
+        type: loki
+        uid: loki
+        url: "http://loki.observability.svc.cluster.local:3100"
+        access: proxy
+        jsonData:
+          httpHeaderName1: "X-Scope-OrgID"
+        secureJsonData:
+          httpHeaderValue1: "default"
+
 # Configure dashboard providers.
 # ref: http://docs.grafana.org/administration/provisioning/#dashboards
 # `path` must be /var/lib/grafana/dashboards/<provider_name>
@@ -74,15 +90,6 @@ dashboardProviders:
         allowUiUpdates: true
         options:
           path: /var/lib/grafana/dashboards/default
-
-      - name: "envoy-gateway"
-        orgId: 1
-        folder: "Envoy Gateway"
-        type: file
-        disableDeletion: false
-        editable: true
-        options:
-          path: /var/lib/grafana/dashboards/envoy-gateway
 
       - name: "kubernetes"
         orgId: 1
@@ -102,25 +109,47 @@ dashboardProviders:
         options:
           path: /var/lib/grafana/dashboards/infrastructure
 
-dashboards:
-  envoy-gateway:
-    # Doc: https://gateway.envoyproxy.io/docs/tasks/observability/gateway-api-metrics/#dashboards
-    # Grafana Links: https://grafana.com/grafana/dashboards/<gnetId>
-    gateway-api-state:
-      gnetId: 19433
-      revision: 2
-      datasource: Prometheus
-    gateway-http-metrics:
-      gnetId: 19432
-      revision: 2
-      datasource: Prometheus
-    envoy-proxy-metrics:
-      gnetId: 19434
-      revision: 2
-      datasource: Prometheus
+      - name: "gateway"
+        orgId: 1
+        folder: "Gateway API"
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/gateway
 
+      - name: "platform"
+        orgId: 1
+        folder: "Platform Services"
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/platform
+
+      - name: "observability"
+        orgId: 1
+        folder: "Observability"
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/observability
+
+      - name: "logs"
+        orgId: 1
+        folder: "Logs"
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/logs
+
+# Grafana Links: https://grafana.com/grafana/dashboards/<gnetId>
+dashboards:
+  # Cluster-wide views built on kube-state-metrics + cAdvisor + node-exporter.
   kubernetes:
-    k8s-cluster:
+    k8s-global:
       gnetId: 15757
       revision: 43
       datasource: Prometheus
@@ -136,9 +165,87 @@ dashboards:
       gnetId: 15760
       revision: 39
       datasource: Prometheus
+    k8s-apiserver:
+      gnetId: 15761
+      revision: 21
+      datasource: Prometheus
 
+  # Bare-metal / OS level, from node-exporter.
   infrastructure:
     node-exporter-full:
       gnetId: 1860
       revision: 45
       datasource: Prometheus
+
+  # Doc: https://gateway.envoyproxy.io/docs/tasks/observability/gateway-api-metrics/#dashboards
+  gateway:
+    gateway-api-gateways:
+      gnetId: 19433
+      revision: 2
+      datasource: Prometheus
+    gateway-api-gatewayclasses:
+      gnetId: 19432
+      revision: 2
+      datasource: Prometheus
+    gateway-api-httproutes:
+      gnetId: 19434
+      revision: 2
+      datasource: Prometheus
+
+  # Platform components. Each one needs its ServiceMonitor/PodMonitor enabled
+  # in the matching k8s/config/<component>/values.yaml.
+  platform:
+    argocd:
+      gnetId: 14584
+      revision: 1
+      datasource: Prometheus
+    cert-manager:
+      gnetId: 20842
+      revision: 3
+      datasource: Prometheus
+    cloudnative-pg:
+      gnetId: 20417
+      revision: 4
+      datasource: Prometheus
+
+  # The monitoring stack watching itself.
+  observability:
+    victoriametrics-cluster:
+      gnetId: 11176
+      revision: 60
+      datasource: Prometheus
+    alertmanager:
+      gnetId: 9578
+      revision: 4
+      datasource: Prometheus
+    loki-global:
+      gnetId: 13407
+      revision: 1
+      datasource: Prometheus
+
+  # Log exploration, backed by the Loki datasource.
+  logs:
+    loki-kubernetes-logs:
+      gnetId: 15141
+      revision: 1
+      datasource: Loki
+
+# The Kyverno require-resources-and-memory-limits policy needs every container,
+# including init containers, to declare requests with memory limit == request.
+initChownData:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
+downloadDashboards:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 64Mi

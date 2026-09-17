@@ -11,6 +11,28 @@ chunksCache:
 resultsCache:
   enabled: false
 
+# kustomize renders Helm test hooks as plain Pods, so ArgoCD would deploy them
+# as permanent workloads.
+test:
+  enabled: false
+
+# The canary writes ~40MB of logs per node back into Loki itself.
+lokiCanary:
+  enabled: false
+
+# SingleBinary exposes everything on the loki service already.
+gateway:
+  enabled: false
+
+sidecar:
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
 loki:
   auth_enabled: true # Enable Multi-Tenancy
 
@@ -34,7 +56,11 @@ loki:
       ruler: "loki-data"
       admin: "loki-data"
     s3:
-      endpoint: "s3.3istor.com"
+      # Must be the in-cluster Service, not s3.3istor.com. That hostname resolves
+      # to Envoy Gateway, which normalises headers in transit and invalidates the
+      # SigV4 signature, so every PutObject came back as 403 Invalid signature.
+      endpoint: "garage.garage-s3.svc.cluster.local:3900"
+      insecure: true
       region: "garage"
       accessKeyId: "${S3_ACCESS_KEY}"
       secretAccessKey: "${S3_SECRET_KEY}"
@@ -44,13 +70,15 @@ singleBinary:
   replicas: 1
   extraArgs:
     - "-config.expand-env=true"
+  # 1Gi was not enough to replay the WAL that built up while flushes were
+  # failing, so the pod was OOMKilled on every start.
   resources:
     requests:
       cpu: 50m
-      memory: 1Gi
+      memory: 2Gi
     limits:
       cpu: 500m
-      memory: 1Gi
+      memory: 2Gi
 
   persistence:
     enabled: true

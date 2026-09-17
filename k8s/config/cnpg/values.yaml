@@ -21,3 +21,6 @@ backups:
 #       schedule: "0 0 0 * * *" # Daily at midnight
 #       backupOwnerReference: self
 #   retentionPolicy: "30d"
+
+monitoring:
+  podMonitorEnabled: true

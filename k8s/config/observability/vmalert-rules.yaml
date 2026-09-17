@@ -8,15 +8,6 @@ data:
     groups:
       - name: app-golden-signals.rules
         rules:
-          - alert: TestDiscordAlert
-            expr: vector(1)
-            for: 0m
-            labels:
-              severity: critical
-            annotations:
-              summary: "Test: Discord Alerting Pipeline is working!"
-              description: "Brian's Test"
-
           # =====================================================================
           # 1. POD HEALTH & SATURATION (USE Method via cAdvisor & KSM)
           # =====================================================================
@@ -73,6 +64,19 @@ data:
               summary: "Pod {{ $labels.pod }} ({{ $labels.namespace }}) is restarting frequently"
               description: "Pod {{ $labels.pod }} has restarted {{ $value }} times over the last hour."
 
+          # Reactive Alert: Pod stuck out of Running/Succeeded for a long time
+          - alert: AppPodNotReady
+            expr: |
+              sum by (namespace, pod) (
+                kube_pod_status_phase{phase=~"Pending|Unknown|Failed", namespace!~"kube-system|observability|kyverno|envoy-gateway-system|cert-manager|rook-ceph|argocd"}
+              ) > 0
+            for: 20m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Pod {{ $labels.pod }} ({{ $labels.namespace }}) has been non-ready for 20 minutes"
+              description: "Pod {{ $labels.pod }} is stuck in a non-running phase."
+
           # =====================================================================
           # 2. PERSISTENT STORAGE (USE Method via Kubelet)
           # =====================================================================
@@ -92,6 +96,19 @@ data:
               summary: "Volume {{ $labels.persistentvolumeclaim }} ({{ $labels.namespace }}) is almost full"
               description: "Less than 15% of storage capacity (currently {{ $value | humanizePercentage }}) is left on the PVC."
 
+          # Early Warning: PVC will run out of space within 4 days at the current rate
+          - alert: AppPVCWillFillUp
+            expr: |
+              predict_linear(kubelet_volume_stats_available_bytes[6h], 4 * 24 * 3600) < 0
+              and
+              (kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes) < 0.4
+            for: 1h
+            labels:
+              severity: warning
+            annotations:
+              summary: "Volume {{ $labels.persistentvolumeclaim }} ({{ $labels.namespace }}) is projected to fill up"
+              description: "At the current growth rate the PVC runs out of space within 4 days."
+
           # =====================================================================
           # 3. TRAFFIC & USER EXPERIENCE (RED / Blackbox Method via Envoy & Gatus)
           # =====================================================================
@@ -102,7 +119,7 @@ data:
               (
                 sum(rate(envoy_http_downstream_rq_xx{envoy_response_code_class="5"}[5m]))
                 /
-                sum(rate(envoy_http_downstream_rq{}[5m]))
+                sum(rate(envoy_http_downstream_rq_xx[5m]))
               ) > 0.05
             for: 5m
             labels:
@@ -132,3 +149,110 @@ data:
             annotations:
               summary: "Endpoint {{ $labels.name }} (group {{ $labels.group }}) is failing"
               description: "Gatus has recorded at least 3 failed checks over the last 5 minutes for {{ $labels.name }}."
+
+      # =====================================================================
+      # 4. NODE & CLUSTER HEALTH (node-exporter + kube-state-metrics)
+      # =====================================================================
+      - name: infrastructure.rules
+        rules:
+          - alert: NodeNotReady
+            expr: |
+              kube_node_status_condition{condition="Ready", status="true"} == 0
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Node {{ $labels.node }} is NotReady"
+              description: "The node has been reporting NotReady for 5 minutes."
+
+          - alert: NodeMemoryPressure
+            expr: |
+              (
+                1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+              ) > 0.90
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Node {{ $labels.instance }} is low on memory"
+              description: "Memory usage is at {{ $value | humanizePercentage }}."
+
+          - alert: NodeDiskFillingUp
+            expr: |
+              (
+                1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"})
+              ) > 0.85
+            for: 15m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} is almost full"
+              description: "Disk usage is at {{ $value | humanizePercentage }}."
+
+          - alert: NodeCPUSaturated
+            expr: |
+              (
+                1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))
+              ) > 0.90
+            for: 30m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Node {{ $labels.instance }} CPU is saturated"
+              description: "CPU usage has been above 90% for 30 minutes (currently {{ $value | humanizePercentage }})."
+
+          - alert: NodeClockSkew
+            expr: |
+              abs(node_timex_offset_seconds) > 0.05
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Clock skew detected on {{ $labels.instance }}"
+              description: "The node clock is drifting by {{ $value }}s, which breaks TLS and token validation."
+
+      # =====================================================================
+      # 5. OBSERVABILITY SELF-MONITORING
+      # =====================================================================
+      - name: observability-self.rules
+        rules:
+          - alert: ScrapeTargetDown
+            expr: up == 0
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Scrape target {{ $labels.job }} ({{ $labels.instance }}) is down"
+              description: "Alloy has been unable to scrape this target for 15 minutes."
+
+          - alert: LokiIngestionStalled
+            expr: |
+              sum(rate(loki_ingester_chunks_flushed_total[15m])) == 0
+              and
+              sum(rate(loki_distributor_lines_received_total[15m])) > 0
+            for: 15m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Loki is receiving logs but flushing nothing to object storage"
+              description: "Ingestion is stalled, which usually means the S3 credentials or the bucket are broken."
+
+          - alert: VMStorageInsertErrors
+            expr: |
+              sum(rate(vm_rows_ignored_total[10m])) > 0
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "VictoriaMetrics is dropping rows"
+              description: "vmstorage is ignoring incoming samples, check vminsert and vmstorage logs."
+
+          - alert: AlertmanagerNotificationsFailing
+            expr: |
+              rate(alertmanager_notifications_failed_total[10m]) > 0
+            for: 10m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Alertmanager cannot deliver notifications to {{ $labels.integration }}"
+              description: "Alerts are firing but the Discord webhook is rejecting them."
