@@ -7,8 +7,19 @@
 # and run on every single deploy; moving them to a generator removes a whole
 # class of partial-apply failure modes.
 #
-# The nested matrix reads: for every project record, for every app in it, for
-# every component that app type has.
+# Two generators in the outer matrix — a git-files generator (one element per
+# project record) times a list generator (one element per app component).
+#
+# This used to be a matrix nested inside a matrix (apps x components as two
+# separate list generators). That is unsupported the way it was written: the
+# inner list's elementsYaml tried to reference the sibling list's per-element
+# .type field, and matrix generators do not thread parameters between two
+# generators at the same nesting level that way — confirmed live against a
+# throwaway registry record, "map has no entry for key \"type\"" on every
+# project. The fix pre-flattens apps x components into one list, in Go
+# template, before the matrix ever runs. sprig's dict/list/append build the
+# array; toJson serializes it once, so there is no manual JSON-comma handling
+# to get wrong.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -25,20 +36,20 @@ spec:
               revision: main
               files:
                 - path: "registry/projects/*.yaml"
-          - matrix:
-              generators:
-                - list:
-                    elementsYaml: "{{ dig \"apps\" (list) .spec | toJson }}"
-                - list:
-                    # A fullstack app renders a frontend and a backend, each with
-                    # its own values file and its own image; a static app renders
-                    # one component. Same split the Terraform module makes today.
-                    elementsYaml: |
-                      {{- if eq .type "fullstack" }}
-                      [{"component": "frontend"}, {"component": "backend"}]
-                      {{- else }}
-                      [{"component": "app"}]
-                      {{- end }}
+          - list:
+              # A fullstack app renders a frontend and a backend, each with its
+              # own values file and its own image; a static app renders one
+              # component. Same split the Terraform module makes today.
+              elementsYaml: |
+                {{- $out := list -}}
+                {{- range $app := dig "apps" (list) .spec -}}
+                  {{- $components := list "app" -}}
+                  {{- if eq $app.type "fullstack" -}}{{- $components = list "frontend" "backend" -}}{{- end -}}
+                  {{- range $c := $components -}}
+                    {{- $out = append $out (dict "name" $app.name "type" $app.type "repoURL" $app.repoURL "component" $c) -}}
+                  {{- end -}}
+                {{- end -}}
+                {{ $out | toJson }}
   template:
     metadata:
       name: "{{ .metadata.name }}-{{ .name }}-{{ .component }}"
