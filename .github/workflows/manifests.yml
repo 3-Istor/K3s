@@ -1,0 +1,58 @@
+name: Manifests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: Kustomize build and validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: azure/setup-helm@v4
+
+      - name: Install kubeconform
+        run: |
+          curl -sSLo /tmp/kubeconform.tar.gz \
+            https://github.com/yannh/kubeconform/releases/download/v0.7.0/kubeconform-linux-amd64.tar.gz
+          tar -xzf /tmp/kubeconform.tar.gz -C /tmp
+          sudo mv /tmp/kubeconform /usr/local/bin/
+
+      - name: Build every overlay
+        run: |
+          failed=0
+          for dir in k8s/app k8s/config/*/; do
+            [ -f "$dir/kustomization.yaml" ] || continue
+            echo "::group::$dir"
+            # Same flags Argo CD runs with — see --load-restrictor in
+            # k8s/config/argocd/patch-argocd-cm.yaml. CI that builds under
+            # different rules from the thing that deploys is CI that lies.
+            if ! kubectl kustomize --enable-helm --load-restrictor LoadRestrictionsNone \
+                 "$dir" > "/tmp/$(echo "$dir" | tr '/' '_').yaml"; then
+              echo "::error::kustomize build failed for $dir"
+              failed=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $failed
+
+      - name: Validate against Kubernetes schemas
+        run: |
+          kubeconform -strict -summary -ignore-missing-schemas /tmp/*.yaml
+
+      # Cluster credentials come from Vault, never from Git. This is cheap to
+      # check and expensive to discover in a public repository.
+      - name: No credentials in cluster registrations
+        run: |
+          # Manifests only: the README documents the Vault write with
+          # placeholder values, which is the point of it.
+          if grep -rEn --include='*.yaml' \
+               'bearerToken"?\s*:\s*"[^"<]+"|BEGIN [A-Z ]*PRIVATE KEY' \
+               k8s/config/argocd/clusters/; then
+            echo "::error::A cluster registration file contains credential material."
+            exit 1
+          fi
+          echo "No credential material in k8s/config/argocd/clusters/."

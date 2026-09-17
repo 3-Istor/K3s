@@ -1,0 +1,22 @@
+# Argo CD cluster registration for GCP. NOT referenced by kustomization.yaml —
+# add it there once kvv2/argocd/clusters/gcp exists in Vault, otherwise the
+# operator reconciles a path that is not there and reports an error every cycle.
+#
+# The cluster team provides the API server endpoint, the CA and a service
+# account token; those go into Vault, never into this file.
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: cluster-gcp
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+    cnp.3istor.com/cloud: gcp
+spec:
+  path: kvv2/argocd/clusters/gcp
+  vaultRole: argocd-role
+  type: Opaque
+  keys:
+    - name
+    - server
+    - config

@@ -1,0 +1,83 @@
+# Generates one Argo CD Application per application component, per project,
+# from the Git registry.
+#
+# This replaces the kubernetes_manifest.argocd_application resources that the
+# app-provision Terraform module creates today by writing straight into the API
+# server (D-02). Five of the six objects that module creates are per-application
+# and run on every single deploy; moving them to a generator removes a whole
+# class of partial-apply failure modes.
+#
+# The nested matrix reads: for every project record, for every app in it, for
+# every component that app type has.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cnp-apps
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - matrix:
+        generators:
+          - git:
+              repoURL: https://github.com/3-Istor/cnp-projects.git
+              revision: main
+              files:
+                - path: "registry/projects/*.yaml"
+          - matrix:
+              generators:
+                - list:
+                    elementsYaml: "{{ dig \"apps\" (list) .spec | toJson }}"
+                - list:
+                    # A fullstack app renders a frontend and a backend, each with
+                    # its own values file and its own image; a static app renders
+                    # one component. Same split the Terraform module makes today.
+                    elementsYaml: |
+                      {{- if eq .type "fullstack" }}
+                      [{"component": "frontend"}, {"component": "backend"}]
+                      {{- else }}
+                      [{"component": "app"}]
+                      {{- end }}
+  template:
+    metadata:
+      name: "{{ .metadata.name }}-{{ .name }}-{{ .component }}"
+      labels:
+        cnp.3istor.com/project: "{{ .metadata.name }}"
+        cnp.3istor.com/cloud: "{{ .spec.targetCloud }}"
+        cnp.3istor.com/app: "{{ .name }}"
+      annotations:
+        # Required for Kyverno compliance and to prevent sync-loops with
+        # mutating webhooks.
+        argocd.argoproj.io/compare-options: ServerSideDiff=true,IncludeMutationWebhook=true
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: "{{ .metadata.name }}"
+      sources:
+        - repoURL: https://github.com/3-Istor/infra-templates.git
+          targetRevision: HEAD
+          path: .
+          helm:
+            valueFiles:
+              - '{{ if eq .type "fullstack" }}$values/deploy/values-{{ .component }}.yaml{{ else }}$values/deploy/values.yaml{{ end }}'
+        - repoURL: "{{ .repoURL }}"
+          targetRevision: HEAD
+          path: ""
+          ref: values
+      destination:
+        name: "{{ .spec.targetCloud }}"
+        namespace: "{{ .metadata.name }}-{{ .name }}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+          - RespectIgnoreDifferences=true
+      ignoreDifferences:
+        - group: apps
+          kind: Deployment
+          jsonPointers:
+            - /spec/replicas
