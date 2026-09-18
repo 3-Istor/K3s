@@ -1,0 +1,38 @@
+# CMP only builds on v*.*.* tag push (a deliberate release gate, not a CI
+# accident) — so this tracks real semver tags, not every commit's sha-<hash>
+# the way roadmap/qcm/mepa-app do. A tag push is already the human decision
+# point; this just automates the last mile (the actual pod rollout) after it,
+# instead of needing a manual `kubectl rollout restart` every release.
+apiVersion: argocd-image-updater.argoproj.io/v1alpha1
+kind: ImageUpdater
+metadata:
+  name: arcl-cmp-updater
+  namespace: argocd
+spec:
+  applicationRefs:
+    - namePattern: "arcl-cmp"
+      useAnnotations: false
+      images:
+        - alias: "backend"
+          imageName: "ghcr.io/3-istor/cmp-backend"
+          manifestTargets:
+            helm:
+              name: "image.backend.repository"
+              tag: "image.backend.tag"
+          commonUpdateSettings:
+            updateStrategy: "semver"
+            allowTags: 'regexp:^v[0-9]+\.[0-9]+\.[0-9]+$'
+        - alias: "frontend"
+          imageName: "ghcr.io/3-istor/cmp-frontend"
+          manifestTargets:
+            helm:
+              name: "image.frontend.repository"
+              tag: "image.frontend.tag"
+          commonUpdateSettings:
+            updateStrategy: "semver"
+            allowTags: 'regexp:^v[0-9]+\.[0-9]+\.[0-9]+$'
+      writeBackConfig:
+        method: "git:secret:argocd/git-creds"
+        gitConfig:
+          branch: "main"
+          writeBackTarget: "helmvalues:/k8s/config/arcl-cmp/cmp-values.yaml"
