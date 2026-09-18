@@ -107,6 +107,7 @@ spec:
               gatus: {{ dig "features" "gatus" true .spec }}
               gateway: {{ dig "features" "gateway" false .spec }}
               tunnel: {{ dig "features" "tunnel" false .spec }}
+              keycloak: {{ dig "features" "keycloak" false .spec }}
             tunnel:
               hostnames:
               {{- range dig "apps" (list) .spec }}
