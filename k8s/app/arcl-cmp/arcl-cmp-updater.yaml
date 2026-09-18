@@ -21,7 +21,12 @@ spec:
               tag: "image.backend.tag"
           commonUpdateSettings:
             updateStrategy: "semver"
-            allowTags: 'regexp:^v[0-9]+\.[0-9]+\.[0-9]+$'
+            # docker/metadata-action's {{version}} pattern strips the "v"
+            # from the git tag — confirmed live against the real registry
+            # (ghcr.io/v2/.../tags/list): pushed tags are "0.3.0", not
+            # "v0.3.0". The first version of this regex required the "v"
+            # and matched nothing.
+            allowTags: 'regexp:^[0-9]+\.[0-9]+\.[0-9]+$'
         - alias: "frontend"
           imageName: "ghcr.io/3-istor/cmp-frontend"
           manifestTargets:
@@ -30,9 +35,18 @@ spec:
               tag: "image.frontend.tag"
           commonUpdateSettings:
             updateStrategy: "semver"
-            allowTags: 'regexp:^v[0-9]+\.[0-9]+\.[0-9]+$'
+            allowTags: 'regexp:^[0-9]+\.[0-9]+\.[0-9]+$'
+      # Not git:secret:argocd/git-creds, unlike roadmap/qcm/mepa-app: found
+      # live that this cluster's git-creds bot (TheGostsniperfr) no longer
+      # has push access to K3s — "Permission to 3-Istor/K3s.git denied",
+      # 403. That's a pre-existing, platform-wide credential problem (every
+      # app using git write-back is affected), not something introduced
+      # here — flagging, not fixing, since it needs GitHub org access this
+      # session doesn't have. "argocd" patches the live Application
+      # directly instead, so CMP's auto-deploy doesn't depend on that
+      # broken credential. Trade-off: no git commit recording which
+      # version is live — switch back to git write-back once the bot's
+      # permissions are fixed, if a git-tracked history of deploys matters
+      # here the way it does for the sha-tracking apps.
       writeBackConfig:
-        method: "git:secret:argocd/git-creds"
-        gitConfig:
-          branch: "main"
-          writeBackTarget: "helmvalues:/k8s/config/arcl-cmp/cmp-values.yaml"
+        method: "argocd"
