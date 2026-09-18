@@ -5,11 +5,6 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/compare-options: ServerSideDiff=true,IncludeMutationWebhook=true
-
-    argocd-image-updater.argoproj.io/image-list: backend=ghcr.io/3-istor/cmp-backend, frontend=ghcr.io/3-istor/cmp-frontend
-    argocd-image-updater.argoproj.io/backend.update-strategy: digest
-    argocd-image-updater.argoproj.io/frontend.update-strategy: digest
-    argocd-image-updater.argoproj.io/write-back-method: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
