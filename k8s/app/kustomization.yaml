@@ -23,6 +23,7 @@ resources:
   - kube-system.yaml
   - dev-sandbox.yaml
   - cnpg.yaml
+  - cnp-projects-db.yaml
   - status.yaml
   - cnp-projects-root.yaml
   - rook-ceph.yaml

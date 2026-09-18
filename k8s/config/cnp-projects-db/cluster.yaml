@@ -1,0 +1,27 @@
+# Shared Postgres for every project's dedicated Keycloak instance (WS-5).
+#
+# One CNPG cluster per target cloud, one database per project inside it — a
+# pod-and-a-half per project instead of two, per the decision doc's cost
+# argument. Projects get their own database and role via CNPG's Database /
+# DatabaseRole CRDs (declared alongside the rest of the project's objects in
+# cnp-project-base), not their own Postgres cluster.
+#
+# This is deliberately separate from k8s/config/cnpg/, which only installs the
+# operator — mixing operator install with the data plane it manages makes the
+# operator's own upgrade path harder to reason about.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: cnp-projects-keycloak
+spec:
+  instances: 3
+  storage:
+    storageClass: local-path
+    size: 2Gi
+  enableSuperuserAccess: false
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "256Mi"
+    limits:
+      memory: "256Mi"
