@@ -28,10 +28,15 @@ sidecar:
   resources:
     requests:
       cpu: 10m
-      memory: 64Mi
+      # loki-sc-rules was OOMKilled 551 times at 64Mi. kiwigrid/k8s-sidecar's
+      # own memory footprint grew significantly across versions
+      # (kiwigrid/k8s-sidecar#462); the chart's own documented baseline is
+      # 100Mi, and we're on 2.5.0 (newer than the version that regressed),
+      # so keeping headroom above that baseline rather than the bare minimum.
+      memory: 128Mi
     limits:
       cpu: 100m
-      memory: 64Mi
+      memory: 128Mi
 
 loki:
   auth_enabled: true # Enable Multi-Tenancy
