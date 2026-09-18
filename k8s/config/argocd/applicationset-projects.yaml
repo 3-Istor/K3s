@@ -55,6 +55,7 @@ spec:
             features:
               appProject: true
               workloads: false
+              keycloak: {{ dig "features" "keycloak" false .spec }}
       destination:
         name: onprem
         namespace: argocd
