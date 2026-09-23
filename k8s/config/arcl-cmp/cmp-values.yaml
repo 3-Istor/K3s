@@ -134,6 +134,11 @@ extraEnv:
       secretKeyRef:
         name: arcl-cmp-secret
         key: aws-s3-key-prefix
+  - name: TF_BACKEND_S3_DYNAMODB_TABLE
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: aws-dynamodb-table
 
   # --- Avatars S3 Compatible Storage ---
   - name: AVATARS_S3_ACCESS_KEY_ID
