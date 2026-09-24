@@ -87,6 +87,14 @@ spec:
           - CreateNamespace=true
           - ServerSideApply=true
           - RespectIgnoreDifferences=true
+        # The project's Gateway only allows routes from namespaces carrying
+        # this label (cnp-project-base/templates/gateway.yaml's
+        # allowedRoutes.namespaces.selector) — without it, CreateNamespace=true
+        # creates a bare namespace and every HTTPRoute in it is permanently
+        # rejected with NotAllowedByListeners.
+        managedNamespaceMetadata:
+          labels:
+            cnp.3istor.com/project: "{{ .metadata.name }}"
       ignoreDifferences:
         - group: apps
           kind: Deployment
