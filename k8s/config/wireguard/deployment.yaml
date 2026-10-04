@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wireguard
+  namespace: wireguard
+spec:
+  replicas: 1
+  # Two pods with the same key would fight over the AWS peer
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: wireguard
+  template:
+    metadata:
+      labels:
+        app: wireguard
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 20
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: wireguard
+          image: ghcr.io/3-istor/cnp-wireguard@sha256:239e11d20aaf28730a319590dc31dee9d98dc8176138cc69f33bc378ffb6e82a
+          command: ["/bin/sh", "/scripts/onprem.sh"]
+          envFrom:
+            - configMapRef:
+                name: wireguard-settings
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          ports:
+            - name: onprem-to-aws
+              containerPort: 18081
+              protocol: TCP
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+              add: ["NET_ADMIN"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 64Mi
+          readinessProbe:
+            exec:
+              command: ["wg", "show", "wg0", "public-key"]
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: key
+              mountPath: /secrets
+              readOnly: true
+      volumes:
+        - name: scripts
+          configMap:
+            name: wireguard-scripts
+        - name: key
+          secret:
+            secretName: wireguard-key
+            defaultMode: 0400

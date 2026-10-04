@@ -1,4 +1,4 @@
-# Cloudflared Policy
-path "${mount_path}/cnp-vpn/wireguard/*" {
+# Wireguard Policy
+path "${mount_path}/data/cnp-vpn/*" {
   capabilities = ["read"]
 }
