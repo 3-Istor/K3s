@@ -39,6 +39,17 @@ resource "vault_policy" "cloudflared_policy" {
 }
 
 # -----------------------------------------------------------------------------
+# Wireguard Policies
+# -----------------------------------------------------------------------------
+
+resource "vault_policy" "wireguard_policy" {
+  name = "wireguard-policy"
+  policy = templatefile("${path.module}/policies/wireguard.hcl", {
+    mount_path = vault_mount.kvv2.path
+  })
+}
+
+# -----------------------------------------------------------------------------
 # Demo App Policies
 # -----------------------------------------------------------------------------
 
