@@ -1,11 +1,11 @@
 terraform {
   backend "s3" {
-    bucket         = "3-istor-tf-infra-aws"
-    key            = "infra/bare-metal/k3s-master/terraform.tfstate"
-    region         = "eu-west-3"
-    dynamodb_table = "terraform-state-lock"
-    encrypt        = true
-    profile        = "3-istor"
+    bucket       = "istor-cnp-tfstate-757826"
+    key          = "cnp/k3s/terraform.tfstate"
+    region       = "eu-west-3"
+    use_lockfile = true
+    encrypt      = true
+    profile      = "3-istor"
   }
 
   required_providers {
