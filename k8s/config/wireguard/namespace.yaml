@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: wireguard
+  labels:
+    # NET_ADMIN is required to create the wg0 interface in the pod network namespace
+    pod-security.kubernetes.io/enforce: privileged

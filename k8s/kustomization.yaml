@@ -21,3 +21,4 @@ resources:
   - config/mepa-app/
   - config/cnpg/
   - config/3istor-sessions/
+  - config/wireguard/

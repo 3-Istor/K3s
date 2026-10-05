@@ -48,6 +48,19 @@ resource "vault_kubernetes_auth_backend_role" "cloudflared_role" {
 }
 
 # -----------------------------------------------------------------------------
+# Wireguard Roles
+# -----------------------------------------------------------------------------
+
+resource "vault_kubernetes_auth_backend_role" "wireguard_role" {
+  backend                          = vault_auth_backend.kubernetes.path
+  role_name                        = "wireguard-role"
+  bound_service_account_names      = ["vault-secrets-operator"]
+  bound_service_account_namespaces = ["vault-secrets-operator"]
+  token_ttl                        = 86400
+  token_policies                   = [vault_policy.wireguard_policy.name]
+}
+
+# -----------------------------------------------------------------------------
 # Demo App Roles
 # -----------------------------------------------------------------------------
 
