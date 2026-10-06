@@ -56,6 +56,11 @@ spec:
               appProject: true
               workloads: false
               keycloak: {{ dig "features" "keycloak" false .spec }}
+            apps:
+            {{- range dig "apps" (list) .spec }}
+              - name: "{{ .name }}"
+                repoURL: "{{ .repoURL }}"
+            {{- end }}
       destination:
         name: onprem
         namespace: argocd
@@ -89,11 +94,12 @@ spec:
       finalizers:
         - resources-finalizer.argocd.argoproj.io
     spec:
-      # The project's own AppProject, which restricts destinations to the
-      # project's cluster and namespaces. A record whose targetCloud disagrees
-      # with this Application's destination is rejected by Argo CD rather than
-      # landing on the wrong cloud.
-      project: "{{ .metadata.name }}"
+      # The project's platform AppProject, which restricts destinations to the
+      # project's cluster and system namespace. A record whose targetCloud
+      # disagrees with this Application's destination is rejected by Argo CD
+      # rather than landing on the wrong cloud. Not the tenant AppProject: that
+      # one cannot hold the cluster-scoped objects this chart creates.
+      project: "{{ .metadata.name }}-platform"
       source:
         repoURL: https://github.com/3-Istor/cnp-project-base.git
         targetRevision: HEAD
