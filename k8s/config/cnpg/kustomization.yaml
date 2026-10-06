@@ -15,3 +15,11 @@ helmCharts:
     releaseName: cnpg
     namespace: cnpg-system
     valuesFile: values.yaml
+  # Backups through the CNPG-I plugin: the in-tree barmanObjectStore is
+  # deprecated since CNPG 1.26.
+  - name: plugin-barman-cloud
+    repo: https://cloudnative-pg.github.io/charts
+    version: "0.8.1"
+    releaseName: barman-cloud
+    namespace: cnpg-system
+    valuesFile: values-barman-cloud.yaml

@@ -1,0 +1,34 @@
+# S3 for the platform: the RGW that cephadm already runs on the OpenStack
+# Ceph (rgw.default on pae-node-1). Rook does not run a gateway here; it only
+# creates buckets and users on it for ObjectBucketClaims.
+apiVersion: ceph.rook.io/v1
+kind: CephObjectStore
+metadata:
+  name: openstack-rgw
+spec:
+  gateway:
+    port: 7480
+    externalRgwEndpoints:
+      - ip: 192.168.1.110
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ceph-bucket
+provisioner: rook-ceph.ceph.rook.io/bucket
+reclaimPolicy: Delete
+parameters:
+  objectStoreName: openstack-rgw
+  objectStoreNamespace: rook-ceph
+---
+# For data that must outlive its claim: the bucket stays on the RGW when the
+# claim, its app or its project is deleted.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ceph-bucket-retain
+provisioner: rook-ceph.ceph.rook.io/bucket
+reclaimPolicy: Retain
+parameters:
+  objectStoreName: openstack-rgw
+  objectStoreNamespace: rook-ceph

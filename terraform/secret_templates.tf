@@ -612,6 +612,31 @@ resource "vault_kv_secret_v2" "rook_csi_rbd_provisioner" {
 }
 
 # Global configurations (FSID, Pool Names)
+variable "ceph_rgw_admin_access_key" {
+  type        = string
+  sensitive   = true
+  description = "S3 access key of the RGW admin-ops user Rook manages buckets with"
+}
+
+variable "ceph_rgw_admin_secret_key" {
+  type        = string
+  sensitive   = true
+  description = "S3 secret key of the RGW admin-ops user Rook manages buckets with"
+}
+
+# Created on the Ceph cluster with:
+#   cephadm shell -- radosgw-admin user create --uid rgw-admin-ops-user \
+#     --display-name "Rook RGW Admin Ops user" \
+#     --caps "buckets=*;users=*;usage=read;metadata=read;zone=read"
+resource "vault_kv_secret_v2" "rook_ceph_rgw_admin" {
+  mount = vault_mount.kvv2.path
+  name  = "rook-ceph/rgw-admin-ops-user"
+  data_json = jsonencode({
+    "accessKey" = var.ceph_rgw_admin_access_key
+    "secretKey" = var.ceph_rgw_admin_secret_key
+  })
+}
+
 resource "vault_kv_secret_v2" "rook_ceph_globals" {
   mount = vault_mount.kvv2.path
   name  = "rook-ceph/globals"
