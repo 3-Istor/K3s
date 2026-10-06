@@ -95,6 +95,10 @@ spec:
         managedNamespaceMetadata:
           labels:
             cnp.3istor.com/project: "{{ .metadata.name }}"
+            # Same levels as the project's system namespace (cnp-project-base).
+            pod-security.kubernetes.io/enforce: baseline
+            pod-security.kubernetes.io/audit: restricted
+            pod-security.kubernetes.io/warn: restricted
       ignoreDifferences:
         - group: apps
           kind: Deployment
