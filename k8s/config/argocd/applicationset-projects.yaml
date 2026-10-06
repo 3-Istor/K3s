@@ -115,6 +115,10 @@ spec:
               gateway: {{ dig "features" "gateway" false .spec }}
               tunnel: {{ dig "features" "tunnel" false .spec }}
               keycloak: {{ dig "features" "keycloak" false .spec }}
+            apps:
+            {{- range dig "apps" (list) .spec }}
+              - name: "{{ .name }}"
+            {{- end }}
             tunnel:
               hostnames:
               {{- range dig "apps" (list) .spec }}

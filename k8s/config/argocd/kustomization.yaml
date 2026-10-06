@@ -16,6 +16,7 @@ resources:
   # reports an error every cycle.
   - applicationset-projects.yaml
   - applicationset-apps.yaml
+  - appproject-janitor.yaml
 
 patches:
   - path: patch-argocd-cm.yaml
