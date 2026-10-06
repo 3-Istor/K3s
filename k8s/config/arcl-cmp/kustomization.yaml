@@ -8,6 +8,7 @@ resources:
   - secrets.yaml
   - offhours-guard.yaml
   - rbac.yaml
+  - api-jwt.yaml
 
 helmGlobals:
   chartHome: ../../../charts
