@@ -91,6 +91,11 @@ spec:
       labels:
         cnp.3istor.com/project: "{{ .metadata.name }}"
         cnp.3istor.com/cloud: "{{ .spec.targetCloud }}"
+      annotations:
+        # Without it the client-side diff counts the fields the API server
+        # defaults on HTTPRoutes (backendRef group/kind/weight, the "/" match)
+        # and the Application stays OutOfSync after every successful sync.
+        argocd.argoproj.io/compare-options: ServerSideDiff=true
       finalizers:
         - resources-finalizer.argocd.argoproj.io
     spec:
