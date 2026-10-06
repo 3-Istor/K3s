@@ -1,0 +1,41 @@
+# Digest-pinned images (name@sha256:...) are accepted without a tag.
+# A registry with a port (host:5000/img) must not be mistaken for a tag.
+
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: disallow-latest-and-untagged-images
+spec:
+  validationActions:
+    - Audit
+  matchConstraints:
+    namespaceSelector:
+      matchExpressions:
+        - key: cnp.3istor.com/project
+          operator: Exists
+    resourceRules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - pods
+  variables:
+    - name: allContainers
+      expression: >-
+        object.spec.containers + object.spec.?initContainers.orValue([])
+  validations:
+    - message: "Images must carry an explicit tag or digest; untagged images default to :latest."
+      expression: >-
+        variables.allContainers.all(c,
+          c.image.contains('@') ||
+          c.image.split('/')[size(c.image.split('/')) - 1].contains(':'))
+
+    - message: "The :latest tag is not allowed."
+      expression: >-
+        variables.allContainers.all(c,
+          c.image.contains('@') ||
+          !c.image.split('/')[size(c.image.split('/')) - 1].endsWith(':latest'))

@@ -1,0 +1,112 @@
+# Pod Security Standards "Restricted" (includes Baseline), audit only.
+# Scoped to CNP project namespaces. Ephemeral containers are not checked: they
+# are a distinct schema type and cannot be concatenated with containers in CEL.
+
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: pod-security-restricted
+spec:
+  validationActions:
+    - Audit
+  matchConstraints:
+    namespaceSelector:
+      matchExpressions:
+        - key: cnp.3istor.com/project
+          operator: Exists
+    resourceRules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - pods
+  variables:
+    - name: allContainers
+      expression: >-
+        object.spec.containers + object.spec.?initContainers.orValue([])
+  validations:
+    - message: "Host namespaces (hostNetwork, hostPID, hostIPC) must not be used."
+      expression: >-
+        !object.spec.?hostNetwork.orValue(false) &&
+        !object.spec.?hostPID.orValue(false) &&
+        !object.spec.?hostIPC.orValue(false)
+
+    - message: "Privileged containers are not allowed."
+      expression: >-
+        variables.allContainers.all(c, !c.?securityContext.?privileged.orValue(false))
+
+    - message: "hostPort must not be used."
+      expression: >-
+        variables.allContainers.all(c, c.?ports.orValue([]).all(p, p.?hostPort.orValue(0) == 0))
+
+    - message: "Only configMap, csi, downwardAPI, emptyDir, ephemeral, persistentVolumeClaim, projected and secret volumes are allowed (no hostPath)."
+      expression: >-
+        object.spec.?volumes.orValue([]).all(v,
+          has(v.configMap) || has(v.csi) || has(v.downwardAPI) || has(v.emptyDir) ||
+          has(v.ephemeral) || has(v.persistentVolumeClaim) || has(v.projected) || has(v.secret)
+        )
+
+    - message: "Containers may only add the NET_BIND_SERVICE capability."
+      expression: >-
+        variables.allContainers.all(c,
+          c.?securityContext.?capabilities.?add.orValue([]).all(cap, cap == 'NET_BIND_SERVICE'))
+
+    - message: "Containers must drop ALL capabilities."
+      expression: >-
+        variables.allContainers.all(c,
+          c.?securityContext.?capabilities.?drop.orValue([]).exists(cap, cap == 'ALL'))
+
+    - message: "allowPrivilegeEscalation must be explicitly set to false."
+      expression: >-
+        variables.allContainers.all(c,
+          c.?securityContext.?allowPrivilegeEscalation.orValue(true) == false)
+
+    - message: "Containers must set runAsNonRoot to true (container or pod level)."
+      expression: >-
+        variables.allContainers.all(c,
+          c.?securityContext.?runAsNonRoot.orValue(
+            object.spec.?securityContext.?runAsNonRoot.orValue(false)) == true)
+
+    - message: "Containers must not run as UID 0."
+      expression: >-
+        variables.allContainers.all(c,
+          c.?securityContext.?runAsUser.orValue(
+            object.spec.?securityContext.?runAsUser.orValue(1)) != 0)
+
+    - message: "seccompProfile type must be RuntimeDefault or Localhost (container or pod level)."
+      expression: >-
+        variables.allContainers.all(c,
+          c.?securityContext.?seccompProfile.?type.orValue(
+            object.spec.?securityContext.?seccompProfile.?type.orValue('')) in ['RuntimeDefault', 'Localhost'])
+
+    - message: "procMount must be Default."
+      expression: >-
+        variables.allContainers.all(c, c.?securityContext.?procMount.orValue('Default') == 'Default')
+
+    - message: "SELinux type must be unset or one of container_t, container_init_t, container_kvm_t, container_engine_t, and user and role must be unset."
+      expression: >-
+        [object.spec.?securityContext.?seLinuxOptions.orValue(null)].filter(o, o != null).all(o,
+          o.?type.orValue('') in ['', 'container_t', 'container_init_t', 'container_kvm_t', 'container_engine_t'] &&
+          o.?user.orValue('') == '' && o.?role.orValue('') == '') &&
+        variables.allContainers.all(c,
+          [c.?securityContext.?seLinuxOptions.orValue(null)].filter(o, o != null).all(o,
+            o.?type.orValue('') in ['', 'container_t', 'container_init_t', 'container_kvm_t', 'container_engine_t'] &&
+            o.?user.orValue('') == '' && o.?role.orValue('') == ''))
+
+    - message: "AppArmor profiles must be runtime/default or localhost/*."
+      expression: >-
+        object.metadata.?annotations.orValue({}).all(k,
+          !k.startsWith('container.apparmor.security.beta.kubernetes.io/') ||
+          object.metadata.annotations[k] == 'runtime/default' ||
+          object.metadata.annotations[k].startsWith('localhost/'))
+
+    - message: "Only safe sysctls are allowed."
+      expression: >-
+        object.spec.?securityContext.?sysctls.orValue([]).all(s,
+          s.name in ['kernel.shm_rmid_forced', 'net.ipv4.ip_local_port_range',
+            'net.ipv4.ip_unprivileged_port_start', 'net.ipv4.tcp_syncookies',
+            'net.ipv4.ping_group_range', 'net.ipv4.ip_local_reserved_ports'])
