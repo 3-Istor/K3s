@@ -1,0 +1,114 @@
+# Deletes a project's AppProjects once the project has left the registry.
+#
+# cnp-project-appprojects keeps the AppProjects when a record is removed
+# (preserveResourcesOnDeletion, see applicationset-projects.yaml): deleting them
+# with the record races the project's Applications, which then hang in
+# Terminating. This job is the explicit cleanup step that comment relies on. An
+# AppProject goes only when its <project>-appproject Application is gone (the
+# record was removed) and no Application references it any more.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: appproject-janitor
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: appproject-janitor
+rules:
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications"]
+    verbs: ["get", "list"]
+  - apiGroups: ["argoproj.io"]
+    resources: ["appprojects"]
+    verbs: ["list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: appproject-janitor
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: appproject-janitor
+subjects:
+  - kind: ServiceAccount
+    name: appproject-janitor
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: appproject-janitor
+data:
+  janitor.sh: |
+    set -eu
+    projects=$(kubectl get appprojects -l cnp.3istor.com/project \
+      -o jsonpath='{range .items[*]}{.metadata.name}{"|"}{.metadata.labels.cnp\.3istor\.com/project}{"\n"}{end}')
+    for entry in $projects; do
+      appproject=${entry%%|*}
+      project=${entry##*|}
+      if [ -n "$(kubectl get application "$project-appproject" --ignore-not-found -o name)" ]; then
+        continue
+      fi
+      users=$(kubectl get applications \
+        -o jsonpath="{range .items[?(@.spec.project=='$appproject')]}{.metadata.name}{' '}{end}")
+      if [ -n "$users" ]; then
+        echo "keep $appproject: still used by $users"
+        continue
+      fi
+      echo "delete $appproject: project $project is no longer registered"
+      kubectl delete appproject "$appproject"
+    done
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: appproject-janitor
+spec:
+  schedule: "*/15 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          serviceAccountName: appproject-janitor
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: janitor
+              image: alpine/kubectl:1.34.2@sha256:96a7d245a74d461925a56e3024d2f027c2a7a822b3e9e0117ec558db42de9c35
+              command: ["/bin/sh", "/scripts/janitor.sh"]
+              env:
+                - name: HOME
+                  value: /tmp
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 64Mi
+                limits:
+                  memory: 64Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: scripts
+                  mountPath: /scripts
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: scripts
+              configMap:
+                name: appproject-janitor
+            - name: tmp
+              emptyDir: {}

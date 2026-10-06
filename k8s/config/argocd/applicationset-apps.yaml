@@ -83,22 +83,20 @@ spec:
         automated:
           prune: true
           selfHeal: true
+        # No CreateNamespace: the namespace belongs to the project's bootstrap
+        # Application (cnp-project-base templates/namespace.yaml), so it is
+        # pruned when the app leaves the record. Until that sync lands, this
+        # Application retries: automated sync never re-attempts a failed sync
+        # of the same revision on its own.
         syncOptions:
-          - CreateNamespace=true
           - ServerSideApply=true
           - RespectIgnoreDifferences=true
-        # The project's Gateway only allows routes from namespaces carrying
-        # this label (cnp-project-base/templates/gateway.yaml's
-        # allowedRoutes.namespaces.selector) — without it, CreateNamespace=true
-        # creates a bare namespace and every HTTPRoute in it is permanently
-        # rejected with NotAllowedByListeners.
-        managedNamespaceMetadata:
-          labels:
-            cnp.3istor.com/project: "{{ .metadata.name }}"
-            # Same levels as the project's system namespace (cnp-project-base).
-            pod-security.kubernetes.io/enforce: baseline
-            pod-security.kubernetes.io/audit: restricted
-            pod-security.kubernetes.io/warn: restricted
+        retry:
+          limit: 10
+          backoff:
+            duration: 15s
+            factor: 2
+            maxDuration: 5m
       ignoreDifferences:
         - group: apps
           kind: Deployment
