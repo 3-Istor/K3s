@@ -1,0 +1,60 @@
+# The CMP backend decodes JWTs without checking their signature (it trusts
+# the edge), so the edge has to: a forged token was accepted as any user.
+# Optional on the whole route so pages and NextAuth keep working, mandatory on
+# /api/deployments, which creates and deletes infrastructure.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: cmp-api-jwt
+  namespace: arcl-cmp
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: cmp-route-route
+  jwt:
+    optional: true
+    providers:
+      - name: keycloak-3istor
+        issuer: https://auth.3istor.com/realms/3istor
+        remoteJWKS:
+          uri: https://auth.3istor.com/realms/3istor/protocol/openid-connect/certs
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: cmp-api-deployments
+  namespace: arcl-cmp
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: shared-gateway
+      namespace: gateway-infra
+  hostnames:
+    - cmp.3istor.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/deployments
+      backendRefs:
+        - name: arcl-cmp-backend
+          port: 8000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: cmp-api-deployments-jwt
+  namespace: arcl-cmp
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: cmp-api-deployments
+  jwt:
+    providers:
+      - name: keycloak-3istor
+        issuer: https://auth.3istor.com/realms/3istor
+        remoteJWKS:
+          uri: https://auth.3istor.com/realms/3istor/protocol/openid-connect/certs
