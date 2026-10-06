@@ -9,7 +9,7 @@ spec:
     - Audit # warning mode
   matchConditions:
     - name: exclude-system-namespaces
-      expression: "!([ 'kube-system', 'kyverno', 'cilium', 'longhorn-system', 'gateway-nfra' ].exists(ns, request.namespace == ns))"
+      expression: "!([ 'kube-system', 'kyverno', 'rook-ceph', 'gateway-infra' ].exists(ns, request.namespace == ns))"
   matchConstraints:
     resourceRules:
       - apiGroups:
