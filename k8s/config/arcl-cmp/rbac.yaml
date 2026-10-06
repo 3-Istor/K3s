@@ -35,3 +35,33 @@ roleRef:
   kind: ClusterRole
   name: cmp-terraform-runner-role
   apiGroup: rbac.authorization.k8s.io
+---
+# Read-only view the CMP's project security page is built from. Kept apart
+# from cmp-terraform-runner-role so it can be reviewed on its own.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cmp-security-reader
+rules:
+  - apiGroups: ["wgpolicyk8s.io"]
+    resources: ["policyreports"]
+    verbs: ["get", "list"]
+  - apiGroups: ["cilium.io"]
+    resources: ["ciliumclusterwidenetworkpolicies"]
+    verbs: ["get", "list"]
+  - apiGroups: ["postgresql.cnpg.io"]
+    resources: ["clusters", "backups", "scheduledbackups"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cmp-security-reader
+subjects:
+  - kind: ServiceAccount
+    name: arcl-cmp
+    namespace: arcl-cmp
+roleRef:
+  kind: ClusterRole
+  name: cmp-security-reader
+  apiGroup: rbac.authorization.k8s.io
