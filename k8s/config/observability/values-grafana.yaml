@@ -10,9 +10,36 @@ deploymentStrategy:
 
 envFromSecret: observability-secrets
 
+# kustomize renders the chart with `helm template`, so a chart-generated admin
+# secret would be re-randomised on every sync and shadow Vault through
+# GF_SECURITY_ADMIN_PASSWORD. Vault is the only source.
+admin:
+  existingSecret: observability-secrets
+  passwordKey: GRAFANA_ADMIN_PASSWORD
+
+env:
+  GF_SECURITY_ADMIN_USER: admin
+
+# Grafana only reads the admin password when it creates its database, so a
+# rotation in Vault never reaches the existing one without this.
+extraInitContainers:
+  - name: sync-admin-password
+    image: docker.io/grafana/grafana:12.3.1
+    command:
+      - sh
+      - -c
+      - printf '%s' "$GRAFANA_ADMIN_PASSWORD" | grafana cli --homepath /usr/share/grafana admin reset-admin-password --password-from-stdin
+    envFrom:
+      - secretRef:
+          name: observability-secrets
+    env:
+      - name: GF_PATHS_DATA
+        value: /var/lib/grafana
+    volumeMounts:
+      - name: storage
+        mountPath: /var/lib/grafana
+
 grafana.ini:
-  security:
-    admin_password: $__env{GRAFANA_ADMIN_PASSWORD}
   server:
     root_url: "https://grafana.3istor.com"
   auth.generic_oauth:
