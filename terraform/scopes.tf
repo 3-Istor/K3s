@@ -27,6 +27,9 @@ resource "keycloak_openid_client_default_scopes" "openid_client_default_scopes" 
   realm_id  = keycloak_realm.kube_lab.id
   client_id = keycloak_openid_client.openid_client.id
   default_scopes = [
+    # Since Keycloak 25 the sub claim of access tokens comes from "basic";
+    # without it the CMP cannot identify the user behind a token.
+    "basic",
     "profile",
     "email",
     "roles",
