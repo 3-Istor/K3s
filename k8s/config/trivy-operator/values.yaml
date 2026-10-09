@@ -1,0 +1,52 @@
+# Values: https://github.com/aquasecurity/trivy-operator/blob/main/deploy/helm/values.yaml
+#
+# Sized for a memory-bound cluster: one shared vulnerability DB in the built-in
+# Trivy server instead of one download per scan job, and at most two scan jobs
+# at a time.
+
+operator:
+  scanJobsConcurrentLimit: 2
+  scanJobTimeout: 5m
+  # Reports expire after a day and the operator regenerates them: this is the
+  # daily rescan that catches CVEs published after an image was deployed.
+  scannerReportTTL: "24h"
+  builtInTrivyServer: true
+
+  vulnerabilityScannerEnabled: true
+  exposedSecretScannerEnabled: true
+  configAuditScannerEnabled: true
+  # Kyverno already audits RBAC and pod configuration, and the CMP reads none of these.
+  rbacAssessmentScannerEnabled: false
+  infraAssessmentScannerEnabled: false
+  clusterComplianceEnabled: false
+  sbomGenerationEnabled: false
+
+serviceMonitor:
+  enabled: true
+
+trivy:
+  severity: MEDIUM,HIGH,CRITICAL
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  # The DB is re-downloaded on restart rather than kept on a Ceph volume.
+  storageClassEnabled: false
+  server:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 512Mi
