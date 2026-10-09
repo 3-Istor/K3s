@@ -36,8 +36,10 @@ roleRef:
   name: cmp-terraform-runner-role
   apiGroup: rbac.authorization.k8s.io
 ---
-# Read-only view the CMP's project security page is built from. Kept apart
-# from cmp-terraform-runner-role so it can be reviewed on its own.
+# What the CMP's security dashboard reads, plus the two actions it offers.
+# Kept apart from cmp-terraform-runner-role so it can be reviewed on its own.
+# Deleting a Trivy report is how a rescan is requested: the operator
+# recreates it. Creating a CNPG Backup is the manual backup button.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -52,6 +54,16 @@ rules:
   - apiGroups: ["postgresql.cnpg.io"]
     resources: ["clusters", "backups", "scheduledbackups"]
     verbs: ["get", "list"]
+  - apiGroups: ["postgresql.cnpg.io"]
+    resources: ["backups"]
+    verbs: ["create"]
+  - apiGroups: ["aquasecurity.github.io"]
+    resources:
+      ["vulnerabilityreports", "exposedsecretreports", "configauditreports"]
+    verbs: ["get", "list"]
+  - apiGroups: ["aquasecurity.github.io"]
+    resources: ["vulnerabilityreports", "exposedsecretreports"]
+    verbs: ["delete", "deletecollection"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

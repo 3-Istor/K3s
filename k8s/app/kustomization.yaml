@@ -12,6 +12,7 @@ resources:
   - demo-app.yaml
   - gateway-infra.yaml
   - kyverno.yaml
+  - trivy-operator.yaml
   - keycloak.yaml
   - envoy-gateway.yaml
   - vault-secrets-operator.yaml
