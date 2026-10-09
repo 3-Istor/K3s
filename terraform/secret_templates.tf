@@ -230,6 +230,14 @@ variable "discord_webhook_url" {
   sensitive = true
 }
 
+# Default channel of the CMP's security alerts. Teams can point their project
+# or app to their own webhook from the CMP; empty falls back to the one above.
+variable "security_discord_webhook_url" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
 
 
 resource "vault_kv_secret_v2" "arcl_cmp_creds" {
@@ -258,6 +266,7 @@ resource "vault_kv_secret_v2" "arcl_cmp_creds" {
     "cloudflare-api-token"         = var.cloudflare_api_token_secret_var
     "cloudflare-zone-id"           = var.cloudflare_zone_id
     "discord-webhook-url"          = var.discord_webhook_url
+    "security-discord-webhook-url" = var.security_discord_webhook_url
     "cloudflare-account-id"        = var.cloudflare_account_id
     "github-app-id"                = var.github_app_id
     "github-app-private-key"       = var.github_app_private_key
