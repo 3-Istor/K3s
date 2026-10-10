@@ -53,10 +53,15 @@ vmauth:
   config:
     unauthorized_user:
       url_map:
+        # vmauth does not expand regex groups in url_prefix: "$1" was sent
+        # as is and every query from a project Grafana org failed. Dropping
+        # "/select/<tenant>/prometheus" and appending the rest is the
+        # supported way.
         - src_paths:
-            - "/select/[^/]+/prometheus(.*)"
+            - "/select/[^/]+/prometheus/.*"
+          drop_src_path_prefix_parts: 3
           url_prefix:
-            - "http://vm-victoria-metrics-cluster-vmselect:8481/select/0/prometheus$1"
+            - "http://vm-victoria-metrics-cluster-vmselect:8481/select/0/prometheus"
 
         - src_paths:
             - "/insert/[^/]+/prometheus/api/v1/write"
