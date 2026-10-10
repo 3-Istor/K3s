@@ -25,6 +25,8 @@ gateway:
   enabled: false
 
 sidecar:
+  rules:
+    folder: /rules/default
   resources:
     requests:
       cpu: 10m
@@ -70,6 +72,17 @@ loki:
       - selector: '{retention="30d"}'
         priority: 1
         period: 720h
+
+  # Rules come from ConfigMaps through the sidecar, not object storage.
+  rulerConfig:
+    alertmanager_url: http://alertmanager.observability.svc:9093
+    enable_api: true
+    wal:
+      dir: /var/loki/ruler-wal
+    storage:
+      type: local
+      local:
+        directory: /rules
 
   storage:
     type: s3
