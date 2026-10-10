@@ -1,0 +1,23 @@
+# The CMP's platform view shows when the audit archive last ran.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cmp-audit-archive-status
+rules:
+  - apiGroups: ["batch"]
+    resources: ["cronjobs"]
+    resourceNames: ["audit-archive"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cmp-audit-archive-status
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cmp-audit-archive-status
+subjects:
+  - kind: ServiceAccount
+    name: arcl-cmp
+    namespace: arcl-cmp

@@ -9,6 +9,7 @@ resources:
   - loki-security-rules.yaml
   - audit-archive.yaml
   - loki-networkpolicy.yaml
+  - cmp-archive-status.yaml
   - exporters.yaml
   - vmalert-rules.yaml
 
