@@ -12,6 +12,9 @@ alloy:
     content: |-
       discovery.kubernetes "pods" {
         role = "pod"
+        attach_metadata {
+          namespace = true
+        }
       }
 
       discovery.kubernetes "nodes" {
@@ -22,18 +25,54 @@ alloy:
       // Logs
       // ---------------------------------------------------------------
 
-      loki.source.kubernetes "local_logs" {
-        targets    = discovery.kubernetes.pods.targets
-        forward_to = [loki.process.add_tenant.receiver]
+      discovery.relabel "pod_logs" {
+        targets = discovery.kubernetes.pods.targets
+
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_namespace_label_cnp_3istor_com_project"]
+          regex         = "(.+)"
+          target_label  = "project"
+        }
+
+        // The app's own setting first, then the namespace's, so a project
+        // that sets one overrides its apps.
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_cnp_3istor_com_log_retention"]
+          target_label  = "__tmp_retention"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_namespace_label_cnp_3istor_com_log_retention"]
+          regex         = "(.+)"
+          target_label  = "__tmp_retention"
+        }
+
+        // Only the periods Loki's retention_stream knows; anything else falls
+        // back to the 14d default instead of creating a new stream label value.
+        rule {
+          source_labels = ["__tmp_retention"]
+          regex         = "(7d|14d|30d)"
+          target_label  = "retention"
+        }
       }
 
-      loki.process "add_tenant" {
-        stage.match {
-          selector = "{namespace=~\"project-.*|demo-app|n8n\"}"
-          stage.tenant {
-            label = "tenant"
-          }
-        }
+      loki.source.kubernetes "local_logs" {
+        targets    = discovery.relabel.pod_logs.output
         forward_to = [loki.write.local_loki.receiver]
       }
 
