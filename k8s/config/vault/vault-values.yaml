@@ -25,13 +25,18 @@ server:
   # Vault sat at 218Mi of a 256Mi limit while sealed and freshly restarted, and
   # was OOMKilled 14 times. Every OOM re-seals it, which freezes all 39
   # VaultSecret resources cluster-wide until someone unseals it by hand.
+  # On 2026-10-10 it sat at 484Mi of 512Mi (8714 hits on memory.max, no OOM
+  # kill yet) and its 250m CPU limit throttled it until `vault status` took 6s
+  # and the readiness probe timed out. 768Mi leaves half again as headroom.
+  # The StatefulSet is OnDelete: this applies at the next manual restart, which
+  # re-seals Vault, so plan it with the unseal keys at hand.
   resources:
     requests:
-      memory: "512Mi"
+      memory: "768Mi"
       cpu: "250m"
     limits:
-      memory: "512Mi"
-      cpu: "250m"
+      memory: "768Mi"
+      cpu: "500m"
 
   dataStorage:
     enabled: true
