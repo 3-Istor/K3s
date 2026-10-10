@@ -16,12 +16,12 @@ terraform {
 
     vault = {
       source  = "hashicorp/vault"
-      version = "5.11.0"
+      version = "5.12.0"
     }
 
     cloudflare = {
       source  = "cloudflare/cloudflare"
-      version = "5.23.0"
+      version = "5.26.0"
     }
   }
 }
