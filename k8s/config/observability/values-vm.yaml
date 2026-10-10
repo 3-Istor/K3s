@@ -7,11 +7,16 @@ vmstorage:
     limits:
       memory: "1Gi"
       cpu: "500m"
+  # 10Gi with the default 1-month retention filled up on 2026-10-05 and
+  # vmstorage went read-only: no metrics were kept for five days. The volume
+  # was grown in place (StatefulSet volume templates are immutable: recreate
+  # the StatefulSet with --cascade=orphan after changing the size).
+  retentionPeriod: "14d"
   storageDataPath: "/storage"
   persistentVolume:
     enabled: true
     storageClassName: "ceph-block"
-    size: "10Gi"
+    size: "20Gi"
 
 vminsert:
   replicaCount: 1
