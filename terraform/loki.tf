@@ -2,7 +2,9 @@
 # can be revoked alone. Each client reads its own plaintext; the gateway only
 # gets the bcrypt hashes. Loki itself has no authentication.
 locals {
-  loki_clients = ["alloy", "grafana", "archive", "cmp"]
+  # grafana-projects: the Loki datasource of every project's Grafana org,
+  # which pins the project's tenant.
+  loki_clients = ["alloy", "grafana", "archive", "cmp", "grafana-projects"]
 }
 
 resource "random_password" "loki_client" {
@@ -35,6 +37,7 @@ resource "vault_kv_secret_v2" "arcl_cmp_loki" {
   mount = vault_mount.kvv2.path
   name  = "arcl-cmp/loki"
   data_json = jsonencode({
-    "loki-password" = random_password.loki_client["cmp"].result
+    "loki-password"                  = random_password.loki_client["cmp"].result
+    "grafana-projects-loki-password" = random_password.loki_client["grafana-projects"].result
   })
 }

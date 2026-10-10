@@ -265,6 +265,12 @@ extraEnv:
       secretKeyRef:
         name: arcl-cmp-loki
         key: loki-password
+  # Handed to each project's Grafana org as its Loki datasource credential.
+  - name: LOKI_GRAFANA_PROJECTS_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-loki
+        key: grafana-projects-loki-password
 
 secrets:
   create: false
