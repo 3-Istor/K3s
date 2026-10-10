@@ -16,6 +16,13 @@ spec:
       - ServerSideApply=true
       - CreateNamespace=true
       - RespectIgnoreDifferences=true
+  # The CMP keeps vmauth's per-project users up to date in this Secret.
+  ignoreDifferences:
+    - kind: Secret
+      name: vmauth-projects
+      jsonPointers:
+        - /data
+        - /stringData
   project: default
   source:
     repoURL: https://github.com/3-Istor/K3s.git

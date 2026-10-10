@@ -272,6 +272,13 @@ extraEnv:
         name: arcl-cmp-loki
         key: grafana-projects-loki-password
 
+  # --- Per-project metrics isolation (vmauth users derived from this key) ---
+  - name: METRICS_PROJECT_KEY
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-metrics
+        key: metrics-project-key
+
 secrets:
   create: false
 

@@ -11,6 +11,7 @@ resources:
   - audit-archive.yaml
   - loki-networkpolicy.yaml
   - cmp-archive-status.yaml
+  - vmauth-projects.yaml
   - exporters.yaml
   - vmalert-rules.yaml
 

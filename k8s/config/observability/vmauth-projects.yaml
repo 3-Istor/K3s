@@ -1,0 +1,36 @@
+# vmauth's config, written by the CMP: one user per project whose queries are
+# always filtered to the project's namespaces (extra_filters). Argo CD creates
+# the Secret and then leaves its data alone (ignoreDifferences on the
+# observability app). Until the CMP writes it, nobody is let through.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vmauth-projects
+type: Opaque
+stringData:
+  auth.yml: |
+    unauthorized_user:
+      url_prefix: "http://127.0.0.1:1/"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cmp-vmauth-projects
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["vmauth-projects"]
+    verbs: ["get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cmp-vmauth-projects
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cmp-vmauth-projects
+subjects:
+  - kind: ServiceAccount
+    name: arcl-cmp
+    namespace: arcl-cmp
