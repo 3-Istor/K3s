@@ -20,6 +20,12 @@ admin:
 env:
   GF_SECURITY_ADMIN_USER: admin
 
+envValueFrom:
+  GRAFANA_LOKI_PASSWORD:
+    secretKeyRef:
+      name: loki-clients
+      key: GRAFANA_LOKI_PASSWORD
+
 # Grafana only reads the admin password when it creates its database, so a
 # rotation in Vault never reaches the existing one without this.
 extraInitContainers:
@@ -94,12 +100,15 @@ datasources:
       - name: Loki
         type: loki
         uid: loki
-        url: "http://loki.observability.svc.cluster.local:3100"
+        url: "http://loki-gateway.observability.svc.cluster.local"
         access: proxy
+        basicAuth: true
+        basicAuthUser: grafana
         jsonData:
           httpHeaderName1: "X-Scope-OrgID"
         secureJsonData:
           httpHeaderValue1: "default"
+          basicAuthPassword: "$GRAFANA_LOKI_PASSWORD"
 
 # Configure dashboard providers.
 # ref: http://docs.grafana.org/administration/provisioning/#dashboards

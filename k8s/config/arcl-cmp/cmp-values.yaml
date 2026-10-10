@@ -255,6 +255,17 @@ extraEnv:
         name: arcl-cmp-secret
         key: keycloak-client-secret
 
+  # --- Activity tab: Loki through its authenticating gateway ---
+  - name: LOKI_URL
+    value: "http://loki-gateway.observability.svc.cluster.local"
+  - name: LOKI_USERNAME
+    value: cmp
+  - name: LOKI_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-loki
+        key: loki-password
+
 secrets:
   create: false
 

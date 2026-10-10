@@ -1,4 +1,11 @@
 alloy:
+  extraEnv:
+    - name: ALLOY_LOKI_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: loki-clients
+          key: ALLOY_LOKI_PASSWORD
+
   mounts:
     extra:
       - name: k3s-server-logs
@@ -98,8 +105,13 @@ alloy:
 
       loki.write "local_loki" {
         endpoint {
-          url       = "http://loki.observability.svc.cluster.local:3100/loki/api/v1/push"
+          url       = "http://loki-gateway.observability.svc.cluster.local/loki/api/v1/push"
           tenant_id = "default"
+
+          basic_auth {
+            username = "alloy"
+            password = sys.env("ALLOY_LOKI_PASSWORD")
+          }
         }
       }
 

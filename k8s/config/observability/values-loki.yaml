@@ -20,9 +20,22 @@ test:
 lokiCanary:
   enabled: false
 
-# SingleBinary exposes everything on the loki service already.
+# Loki has no authentication of its own: every client goes through this
+# nginx with its own basic-auth user (K3s/terraform/loki.tf), and a
+# NetworkPolicy keeps everyone else off the Loki pods.
 gateway:
-  enabled: false
+  enabled: true
+  replicas: 1
+  basicAuth:
+    enabled: true
+    existingSecret: loki-gateway-htpasswd
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 32Mi
 
 sidecar:
   rules:
