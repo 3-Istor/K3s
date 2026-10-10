@@ -30,3 +30,22 @@ data:
               severity: warning
             annotations:
               summary: "{{ $labels.namespace }} logged {{ $value }} lines in 10 minutes"
+
+      # Watched from Loki on purpose: a read-only vmstorage cannot store the
+      # metrics that would alert about itself (it went silent for 5 days on
+      # 2026-10-05 before this rule existed).
+      - name: platform-metrics
+        interval: 1m
+        rules:
+          - alert: MetricsStorageRejectingWrites
+            expr: |
+              sum(count_over_time({namespace="observability", container=~".*vminsert.*"}
+                |= `cannot push` [10m])) > 0
+              or
+              sum(count_over_time({namespace="observability", container=~".*vmstorage.*"}
+                |= `read-only mode` [10m])) > 0
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "VictoriaMetrics is rejecting writes: metrics are being lost"
