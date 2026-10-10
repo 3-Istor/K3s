@@ -12,6 +12,7 @@ resources:
   - loki-networkpolicy.yaml
   - cmp-archive-status.yaml
   - vmauth-projects.yaml
+  - vm-networkpolicies.yaml
   - exporters.yaml
   - vmalert-rules.yaml
 
