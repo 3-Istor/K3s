@@ -41,3 +41,19 @@ resource "vault_kv_secret_v2" "arcl_cmp_loki" {
     "grafana-projects-loki-password" = random_password.loki_client["grafana-projects"].result
   })
 }
+
+# The CMP derives each project's vmauth password from this key (HMAC of the
+# project name), so the passwords are never stored anywhere but in vmauth's
+# config and the project's Grafana datasource.
+resource "random_password" "metrics_project_key" {
+  length  = 64
+  special = false
+}
+
+resource "vault_kv_secret_v2" "arcl_cmp_metrics" {
+  mount = vault_mount.kvv2.path
+  name  = "arcl-cmp/metrics"
+  data_json = jsonencode({
+    "metrics-project-key" = random_password.metrics_project_key.result
+  })
+}
