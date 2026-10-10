@@ -73,6 +73,22 @@ loki:
         priority: 1
         period: 720h
 
+  # 5000 audit events (~860 bytes each) overflow the default 4MiB gRPC message
+  # between querier and frontend, and Loki retries forever instead of failing.
+  server:
+    http_listen_port: 3100
+    grpc_listen_port: 9095
+    http_server_read_timeout: 600s
+    http_server_write_timeout: 600s
+    grpc_server_max_recv_msg_size: 16777216
+    grpc_server_max_send_msg_size: 16777216
+
+  structuredConfig:
+    frontend_worker:
+      grpc_client_config:
+        max_send_msg_size: 16777216
+        max_recv_msg_size: 16777216
+
   # Rules come from ConfigMaps through the sidecar, not object storage.
   rulerConfig:
     alertmanager_url: http://alertmanager.observability.svc:9093
