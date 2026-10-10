@@ -22,6 +22,11 @@ spec:
     storageClass: local-path
     size: 2Gi
   enableSuperuserAccess: false
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: cnp-projects-keycloak-backup
   resources:
     requests:
       cpu: "50m"
