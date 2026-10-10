@@ -6,3 +6,4 @@ namespace: cnp-projects-db
 resources:
   - namespace.yaml
   - cluster.yaml
+  - backup.yaml
