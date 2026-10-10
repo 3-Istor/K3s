@@ -113,6 +113,7 @@ spec:
           values: |
             projectName: "{{ .metadata.name }}"
             targetCloud: "{{ .spec.targetCloud }}"
+            logRetention: "{{ dig "logRetention" "" .spec }}"
             features:
               appProject: false
               workloads: true
