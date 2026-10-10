@@ -4,3 +4,5 @@ metadata:
   name: keycloak
   labels:
     prod-gateway-access: "true"
+    # Audit events land in these logs.
+    cnp.3istor.com/log-retention: "30d"
