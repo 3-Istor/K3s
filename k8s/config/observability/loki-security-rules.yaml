@@ -1,0 +1,58 @@
+# Loaded by Loki's rules sidecar into /rules/default, "default" being the only
+# tenant Alloy writes to.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loki-security-rules
+  labels:
+    loki_rule: "1"
+data:
+  security.yaml: |
+    groups:
+      - name: security-audit
+        interval: 1m
+        rules:
+          # Terraform and the CMP bootstrap hold a root-policy token, so this
+          # also fires on their runs: each one should be one we expect.
+          - alert: VaultRootTokenUsed
+            expr: |
+              sum by (display_name) (count_over_time({namespace="vault", container="vault"}
+                |= `"type":"response"` |= `"policies":["root"]`
+                | json display_name="auth.display_name" [5m])) > 0
+            labels:
+              severity: warning
+            annotations:
+              summary: "Vault root token used by {{ $labels.display_name }}"
+
+          - alert: VaultPermissionDeniedBurst
+            expr: |
+              sum by (display_name) (count_over_time({namespace="vault", container="vault"}
+                |= `"type":"response"` |= `permission denied`
+                | json display_name="auth.display_name" [5m])) > 20
+            labels:
+              severity: warning
+            annotations:
+              summary: "{{ $value }} denied Vault requests in 5m from {{ $labels.display_name }}"
+
+          - alert: KeycloakLoginFailureBurst
+            expr: |
+              sum by (realm) (count_over_time({namespace=~"keycloak|.+-system"}
+                |= `type="LOGIN_ERROR"`
+                | regexp `realmName="(?P<realm>[^"]+)"` [5m])) > 10
+            labels:
+              severity: critical
+            annotations:
+              summary: "{{ $value }} failed logins in 5m on realm {{ $labels.realm }}"
+
+          # Project bootstrap grants the tenant admin realm-admin, so a new
+          # project fires this once.
+          - alert: KeycloakPrivilegeChange
+            expr: |
+              sum by (operation, resource) (count_over_time({namespace=~"keycloak|.+-system"}
+                |= `operationType=`
+                | regexp `operationType="(?P<operation>[A-Z]+)".*resourceType="(?P<resource>REALM|REALM_ROLE|REALM_ROLE_MAPPING|CLIENT_ROLE|CLIENT_ROLE_MAPPING|IDENTITY_PROVIDER)"`
+                | resource != "" [5m])) > 0
+            labels:
+              severity: warning
+            annotations:
+              summary: "Keycloak {{ $labels.operation }} on {{ $labels.resource }}"
