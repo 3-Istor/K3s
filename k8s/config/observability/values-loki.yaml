@@ -97,6 +97,10 @@ loki:
     grpc_server_max_send_msg_size: 16777216
 
   structuredConfig:
+    # Each project's logs live in a tenant named after it; the CMP and the
+    # platform admins read "<project>|default" in one query.
+    querier:
+      multi_tenant_queries_enabled: true
     frontend_worker:
       grpc_client_config:
         max_send_msg_size: 16777216
