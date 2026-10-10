@@ -80,6 +80,10 @@ extraEnv: |
     value: "true"
   - name: KC_HOSTNAME_STRICT_HTTPS
     value: "true"
+  # jboss-logging logs successful events, admin events included, at debug by
+  # default; info puts them in the pod logs that Alloy ships to Loki.
+  - name: KC_SPI_EVENTS_LISTENER__JBOSS_LOGGING__SUCCESS_LEVEL
+    value: info
   - name: KEYCLOAK_ADMIN
     value: admin
   - name: KEYCLOAK_ADMIN_PASSWORD
