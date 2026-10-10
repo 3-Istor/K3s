@@ -8,29 +8,6 @@ metadata:
 data:
   logs.yaml: |
     groups:
-      - name: log-volume
-        interval: 1m
-        rules:
-          # An app suddenly logging far more than it did at the same time
-          # yesterday is usually looping on an error. The floors keep quiet
-          # apps from tripping it with a handful of lines; a brand-new app has
-          # no yesterday, so only the absolute floor applies to it.
-          - alert: LogVolumeSpike
-            expr: |
-              (
-                sum by (project, namespace) (count_over_time({project=~".+"}[10m]))
-                  > 5 * sum by (project, namespace) (count_over_time({project=~".+"}[10m] offset 1d))
-                and
-                sum by (project, namespace) (count_over_time({project=~".+"}[10m])) > 3000
-              )
-              or
-              sum by (project, namespace) (count_over_time({project=~".+"}[10m])) > 30000
-            for: 10m
-            labels:
-              severity: warning
-            annotations:
-              summary: "{{ $labels.namespace }} logged {{ $value }} lines in 10 minutes"
-
       # Watched from Loki on purpose: a read-only vmstorage cannot store the
       # metrics that would alert about itself (it went silent for 5 days on
       # 2026-10-05 before this rule existed).
