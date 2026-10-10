@@ -24,7 +24,7 @@ env:
 # rotation in Vault never reaches the existing one without this.
 extraInitContainers:
   - name: sync-admin-password
-    image: docker.io/grafana/grafana:12.3.1
+    image: docker.io/grafana/grafana:12.4.11
     command:
       - sh
       - -c

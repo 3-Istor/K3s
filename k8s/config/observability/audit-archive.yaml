@@ -85,7 +85,7 @@ spec:
                 name: audit-archive-scripts
           initContainers:
             - name: export
-              image: grafana/logcli:3.6.11
+              image: grafana/logcli:3.7.8
               command: ["sh", "/scripts/export.sh"]
               volumeMounts:
                 - name: work
@@ -105,7 +105,7 @@ spec:
                   drop: ["ALL"]
           containers:
             - name: upload
-              image: amazon/aws-cli:2.27.0
+              image: amazon/aws-cli:2.37.4
               command: ["bash", "/scripts/upload.sh"]
               env:
                 - name: HOME
