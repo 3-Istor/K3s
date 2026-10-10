@@ -8,6 +8,7 @@ resources:
   - loki-bucket.yaml
   - loki-security-rules.yaml
   - audit-archive.yaml
+  - loki-networkpolicy.yaml
   - exporters.yaml
   - vmalert-rules.yaml
 
