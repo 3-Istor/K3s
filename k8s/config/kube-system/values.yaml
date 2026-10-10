@@ -53,3 +53,25 @@ l7Proxy: true # default true
 # This require to add Envoy-related CRDs
 envoyConfig:
   enabled: false
+
+# Flows denied by a network policy, written to the agent's own log so Alloy
+# ships them to Loki with everything else. Measured before enabling: zero
+# policy denials over the agents' flow buffers, so the volume is small.
+hubble:
+  export:
+    static:
+      enabled: true
+      filePath: stdout
+      allowList:
+        - '{"verdict":["DROPPED"],"drop_reason_desc":["POLICY_DENIED"]}'
+      fieldMask:
+        - time
+        - source.namespace
+        - source.pod_name
+        - destination.namespace
+        - destination.pod_name
+        - IP
+        - l4
+        - verdict
+        - drop_reason_desc
+        - traffic_direction
