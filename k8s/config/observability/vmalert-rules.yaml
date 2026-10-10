@@ -265,3 +265,28 @@ data:
             annotations:
               summary: "Audit archive run {{ $labels.job_name }} failed"
               description: "An hour of audit logs may be missing from the cnp-audit-archive bucket; check the job's export and upload logs."
+
+      # Project logs live in per-project Loki tenants, which the Loki ruler
+      # (tenant "default") does not see; Alloy counts them as metrics instead.
+      - name: project-logs.rules
+        rules:
+          # An app suddenly logging far more than at the same time yesterday is
+          # usually looping on an error. The floors keep quiet apps from
+          # tripping it; a new app has no yesterday, so only the high floor
+          # applies to it.
+          - alert: LogVolumeSpike
+            expr: |
+              (
+                sum by (project, namespace) (increase(loki_process_custom_log_lines_total[10m]))
+                  > 5 * sum by (project, namespace) (increase(loki_process_custom_log_lines_total[10m] offset 1d))
+                and
+                sum by (project, namespace) (increase(loki_process_custom_log_lines_total[10m])) > 3000
+              )
+              or
+              sum by (project, namespace) (increase(loki_process_custom_log_lines_total[10m])) > 30000
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "{{ $labels.namespace }} logged {{ $value | humanize }} lines in 10 minutes"
+              description: "Far above its usual volume; it is often an error loop. Check the Logs view of the project in the CMP."

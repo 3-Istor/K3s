@@ -86,7 +86,64 @@ alloy:
 
       loki.source.kubernetes "local_logs" {
         targets    = discovery.relabel.pod_logs.output
+        forward_to = [loki.process.projects.receiver]
+      }
+
+      // Counts every project line, and its error lines, as metrics for
+      // VictoriaMetrics (log volume and error alerts work whatever tenant the
+      // lines land in), then sends each project's lines to its own Loki
+      // tenant. Everything else stays in "default".
+      loki.process "projects" {
+        stage.match {
+          selector = "{project=~\".+\"}"
+
+          stage.metrics {
+            metric.counter {
+              name              = "log_lines_total"
+              description       = "Log lines per project namespace."
+              match_all         = true
+              action            = "inc"
+              max_idle_duration = "24h"
+            }
+            metric.counter {
+              name              = "log_bytes_total"
+              description       = "Log bytes per project namespace."
+              match_all         = true
+              count_entry_bytes = true
+              action            = "add"
+              max_idle_duration = "24h"
+            }
+          }
+
+          stage.match {
+            selector = "{project=~\".+\"} |~ \"(?i)\\\\b(error|fatal|panic|exception|traceback)\\\\b\""
+
+            stage.metrics {
+              metric.counter {
+                name              = "log_error_lines_total"
+                description       = "Log lines that look like errors, per project namespace."
+                match_all         = true
+                action            = "inc"
+                max_idle_duration = "24h"
+              }
+            }
+          }
+
+          stage.tenant {
+            label = "project"
+          }
+        }
         forward_to = [loki.write.local_loki.receiver]
+      }
+
+      // Alloy's own metrics, including the log counters above.
+      prometheus.exporter.self "alloy" { }
+
+      prometheus.scrape "alloy_self" {
+        targets         = prometheus.exporter.self.alloy.targets
+        job_name        = "alloy"
+        scrape_interval = "30s"
+        forward_to      = [prometheus.remote_write.vmauth.receiver]
       }
 
       // Kubernetes API audit log, only present on the K3s server node.
