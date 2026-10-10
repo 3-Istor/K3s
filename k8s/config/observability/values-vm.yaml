@@ -50,20 +50,9 @@ vmauth:
       memory: "128Mi"
       cpu: "100m"
 
-  config:
-    unauthorized_user:
-      url_map:
-        # vmauth does not expand regex groups in url_prefix: "$1" was sent
-        # as is and every query from a project Grafana org failed. Dropping
-        # "/select/<tenant>/prometheus" and appending the rest is the
-        # supported way.
-        - src_paths:
-            - "/select/[^/]+/prometheus/.*"
-          drop_src_path_prefix_parts: 3
-          url_prefix:
-            - "http://vm-victoria-metrics-cluster-vmselect:8481/select/0/prometheus"
-
-        - src_paths:
-            - "/insert/[^/]+/prometheus/api/v1/write"
-          url_prefix:
-            - "http://vm-victoria-metrics-cluster-vminsert:8480/insert/0/prometheus/api/v1/write"
+  # One user per project, written by the CMP (vmauth-projects.yaml): every
+  # query is filtered to the project's namespaces. The anonymous routes that
+  # read every namespace are gone.
+  configSecretName: vmauth-projects
+  extraArgs:
+    configCheckInterval: 30s
