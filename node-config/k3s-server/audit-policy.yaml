@@ -1,0 +1,62 @@
+# Kubernetes API audit policy for the K3s server (my-k3s-cluster-node).
+# Installed at /etc/rancher/k3s/audit-policy.yaml; see README.md.
+apiVersion: audit.k8s.io/v1
+kind: Policy
+omitStages:
+  - RequestReceived
+rules:
+  # Control-plane chatter: nothing a person did.
+  - level: None
+    users:
+      - system:kube-proxy
+      - system:kube-scheduler
+      - system:kube-controller-manager
+      - system:apiserver
+      - k3s-cloud-controller-manager
+  - level: None
+    userGroups:
+      - system:nodes
+  - level: None
+    nonResourceURLs:
+      - /healthz*
+      - /readyz*
+      - /livez*
+      - /version
+      - /metrics
+      - /openapi*
+  - level: None
+    resources:
+      - group: ""
+        resources: ["events"]
+      - group: coordination.k8s.io
+        resources: ["leases"]
+      - group: events.k8s.io
+        resources: ["events"]
+  - level: None
+    verbs: ["watch"]
+
+  # Never log the content of secrets or tokens, only who touched them.
+  - level: Metadata
+    resources:
+      - group: ""
+        resources: ["secrets", "configmaps", "serviceaccounts/token"]
+
+  # Shells and tunnels into pods; the command is in the request URI.
+  - level: Metadata
+    resources:
+      - group: ""
+        resources: ["pods/exec", "pods/attach", "pods/portforward"]
+
+  # Who changed which permission, with the new object.
+  - level: Request
+    verbs: ["create", "update", "patch", "delete"]
+    resources:
+      - group: rbac.authorization.k8s.io
+
+  # Controllers reading the cluster all day.
+  - level: None
+    userGroups:
+      - system:serviceaccounts
+    verbs: ["get", "list"]
+
+  - level: Metadata

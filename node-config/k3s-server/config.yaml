@@ -1,0 +1,16 @@
+# /etc/rancher/k3s/config.yaml on my-k3s-cluster-node. Holds no secret: the
+# join token lives in /var/lib/rancher/k3s/server/token.
+disable:
+  - traefik
+kube-apiserver-arg:
+  - "oidc-issuer-url=https://auth.3istor.com/realms/3istor"
+  - "oidc-client-id=k3s-cluster"
+  - "oidc-username-claim=email"
+  - "oidc-groups-claim=groups"
+  - "oidc-groups-prefix=oidc:"
+  - "audit-policy-file=/etc/rancher/k3s/audit-policy.yaml"
+  # Local buffer only: Alloy ships it to Loki, which keeps 30 days.
+  - "audit-log-path=/var/lib/rancher/k3s/server/logs/audit.log"
+  - "audit-log-maxsize=100"
+  - "audit-log-maxbackup=3"
+  - "audit-log-maxage=2"

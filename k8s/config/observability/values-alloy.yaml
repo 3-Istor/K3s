@@ -1,4 +1,10 @@
 alloy:
+  mounts:
+    extra:
+      - name: k3s-server-logs
+        mountPath: /var/lib/rancher/k3s/server/logs
+        readOnly: true
+
   resources:
     requests:
       cpu: 50m
@@ -73,6 +79,20 @@ alloy:
 
       loki.source.kubernetes "local_logs" {
         targets    = discovery.relabel.pod_logs.output
+        forward_to = [loki.write.local_loki.receiver]
+      }
+
+      // Kubernetes API audit log, only present on the K3s server node.
+      local.file_match "k8s_audit" {
+        path_targets = [{
+          __path__  = "/var/lib/rancher/k3s/server/logs/audit.log",
+          job       = "k8s-audit",
+          retention = "30d",
+        }]
+      }
+
+      loki.source.file "k8s_audit" {
+        targets    = local.file_match.k8s_audit.targets
         forward_to = [loki.write.local_loki.receiver]
       }
 
@@ -287,3 +307,11 @@ configReloader:
     limits:
       cpu: 100m
       memory: 50Mi
+
+controller:
+  volumes:
+    extra:
+      - name: k3s-server-logs
+        hostPath:
+          path: /var/lib/rancher/k3s/server/logs
+          type: DirectoryOrCreate
