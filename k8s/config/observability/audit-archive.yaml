@@ -28,7 +28,7 @@ data:
     date -u -d "@$start" +%Y/%m/%d/%H > /work/hour
     export_stream() {
       # Batches of 1000: 5000 audit events overflow Loki's 4MiB gRPC messages.
-      logcli query --addr=http://loki.observability.svc:3100 --org-id=default \
+      logcli query --addr=http://loki-gateway.observability.svc --org-id=default \
         --from="$from" --to="$to" --limit=10000000 --batch=1000 --forward \
         --output=jsonl --quiet "$2" | gzip > "/work/$1.jsonl.gz"
       echo "$1: $(gzip -dc "/work/$1.jsonl.gz" | wc -l) lines for $from"
@@ -87,6 +87,14 @@ spec:
             - name: export
               image: grafana/logcli:3.6.11
               command: ["sh", "/scripts/export.sh"]
+              env:
+                - name: LOKI_USERNAME
+                  value: archive
+                - name: LOKI_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: loki-clients
+                      key: ARCHIVE_LOKI_PASSWORD
               volumeMounts:
                 - name: work
                   mountPath: /work
