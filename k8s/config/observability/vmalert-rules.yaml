@@ -256,3 +256,12 @@ data:
             annotations:
               summary: "Alertmanager cannot deliver notifications to {{ $labels.integration }}"
               description: "Alerts are firing but the Discord webhook is rejecting them."
+
+          - alert: AuditArchiveFailed
+            expr: |
+              max by (job_name) (kube_job_status_failed{namespace="observability", job_name=~"audit-archive-.*"}) > 0
+            labels:
+              severity: warning
+            annotations:
+              summary: "Audit archive run {{ $labels.job_name }} failed"
+              description: "An hour of audit logs may be missing from the cnp-audit-archive bucket; check the job's export and upload logs."

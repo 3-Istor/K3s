@@ -6,6 +6,9 @@ kind: CephObjectStore
 metadata:
   name: openstack-rgw
 spec:
+  # Lets observability declare the audit archive's RGW user next to its CronJob.
+  allowUsersInNamespaces:
+    - observability
   gateway:
     port: 7480
     externalRgwEndpoints:
