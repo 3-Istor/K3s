@@ -56,3 +56,29 @@ data:
               severity: warning
             annotations:
               summary: "Keycloak {{ $labels.operation }} on {{ $labels.resource }}"
+
+          # Any shell into a pod, people and service accounts alike.
+          - alert: KubernetesPodExec
+            expr: |
+              sum by (user, namespace, pod) (count_over_time({job="k8s-audit"}
+                |= `"subresource":"exec"` or `"subresource":"attach"`
+                | json user="user.username", namespace="objectRef.namespace", pod="objectRef.name", code="responseStatus.code"
+                | code < 400 [5m])) > 0
+            labels:
+              severity: warning
+            annotations:
+              summary: "{{ $labels.user }} opened a shell in {{ $labels.namespace }}/{{ $labels.pod }}"
+
+          # Argo CD and the operators change RBAC through their service
+          # accounts; a person doing it by hand is the exception.
+          - alert: KubernetesRbacChangeByHuman
+            expr: |
+              sum by (user, verb, kind, name) (count_over_time({job="k8s-audit"}
+                |= `"apiGroup":"rbac.authorization.k8s.io"`
+                | json user="user.username", verb="verb", kind="objectRef.resource", name="objectRef.name"
+                | verb =~ "create|update|patch|delete"
+                | user !~ "system:serviceaccount:.*|system:kube-.*|system:k3s-.*|system:apiserver" [5m])) > 0
+            labels:
+              severity: critical
+            annotations:
+              summary: "{{ $labels.user }} {{ $labels.verb }} {{ $labels.kind }}/{{ $labels.name }}"

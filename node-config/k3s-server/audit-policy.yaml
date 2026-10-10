@@ -13,9 +13,13 @@ rules:
       - system:kube-controller-manager
       - system:apiserver
       - k3s-cloud-controller-manager
+      - system:k3s-controller
+      - system:k3s-supervisor
   - level: None
     userGroups:
       - system:nodes
+      # Built-in controllers (endpoints, replicasets, ...).
+      - system:serviceaccounts:kube-system
   - level: None
     nonResourceURLs:
       - /healthz*
@@ -34,6 +38,48 @@ rules:
         resources: ["events"]
   - level: None
     verbs: ["watch"]
+  # Authorization and token checks: every webhook and operator makes them.
+  - level: None
+    resources:
+      - group: authorization.k8s.io
+      - group: authentication.k8s.io
+  # Argo CD writes each Application's status on every reconcile.
+  - level: None
+    users:
+      - system:serviceaccount:argocd:argocd-application-controller
+    resources:
+      - group: argoproj.io
+        resources: ["applications"]
+
+  # Scan results the operators rewrite on every pass, and Kyverno refreshing
+  # its own webhooks: tool output, not actions.
+  - level: None
+    userGroups:
+      - system:serviceaccounts
+    resources:
+      - group: wgpolicyk8s.io
+      - group: reports.kyverno.io
+      - group: aquasecurity.github.io
+      - group: argocd-image-updater.argoproj.io
+  - level: None
+    users:
+      - system:serviceaccount:kyverno:kyverno-admission-controller
+    resources:
+      - group: admissionregistration.k8s.io
+
+  # Shells and tunnels into pods, service accounts included: the command is
+  # in the request URI, and a WebSocket exec is logged with verb "get".
+  - level: Metadata
+    resources:
+      - group: ""
+        resources: ["pods/exec", "pods/attach", "pods/portforward"]
+
+  # Controllers reading the cluster all day, secrets included: what they read
+  # is fixed by their RBAC. Their writes, and every read by a person, stay.
+  - level: None
+    userGroups:
+      - system:serviceaccounts
+    verbs: ["get", "list"]
 
   # Never log the content of secrets or tokens, only who touched them.
   - level: Metadata
@@ -41,22 +87,10 @@ rules:
       - group: ""
         resources: ["secrets", "configmaps", "serviceaccounts/token"]
 
-  # Shells and tunnels into pods; the command is in the request URI.
-  - level: Metadata
-    resources:
-      - group: ""
-        resources: ["pods/exec", "pods/attach", "pods/portforward"]
-
   # Who changed which permission, with the new object.
   - level: Request
     verbs: ["create", "update", "patch", "delete"]
     resources:
       - group: rbac.authorization.k8s.io
-
-  # Controllers reading the cluster all day.
-  - level: None
-    userGroups:
-      - system:serviceaccounts
-    verbs: ["get", "list"]
 
   - level: Metadata
