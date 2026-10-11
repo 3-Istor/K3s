@@ -6,3 +6,6 @@ k8s/**/charts/
 *.tfvars.json
 charts/
 !charts/secure-route
+
+# Python test artifacts
+__pycache__/
