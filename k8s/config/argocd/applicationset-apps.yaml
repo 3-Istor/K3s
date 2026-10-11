@@ -46,7 +46,7 @@ spec:
                   {{- $components := list "app" -}}
                   {{- if eq $app.type "fullstack" -}}{{- $components = list "frontend" "backend" -}}{{- end -}}
                   {{- range $c := $components -}}
-                    {{- $out = append $out (dict "name" $app.name "type" $app.type "repoURL" $app.repoURL "component" $c) -}}
+                    {{- $out = append $out (dict "name" $app.name "type" $app.type "repoURL" $app.repoURL "component" $c "sourceRevision" (dig "sourceRevision" "HEAD" $app) "chartRevision" (dig "chartRevision" "HEAD" $app) "imageTag" (dig "imageTag" "" $app) "imageDigest" (dig "imageDigest" "" $app)) -}}
                   {{- end -}}
                 {{- end -}}
                 {{ $out | toJson }}
@@ -67,13 +67,21 @@ spec:
       project: "{{ .metadata.name }}"
       sources:
         - repoURL: https://github.com/3-Istor/infra-templates.git
-          targetRevision: HEAD
+          targetRevision: "{{ .chartRevision }}"
           path: .
           helm:
+            # Digest pinning only for imports. Catalog values remain unchanged.
+            values: |
+              {{- if .imageDigest }}
+              image:
+                tag: {{ printf "%s@%s" .imageTag .imageDigest | quote }}
+              {{- else }}
+              {}
+              {{- end }}
             valueFiles:
               - '{{ if eq .type "fullstack" }}$values/deploy/values-{{ .component }}.yaml{{ else }}$values/deploy/values.yaml{{ end }}'
         - repoURL: "{{ .repoURL }}"
-          targetRevision: HEAD
+          targetRevision: "{{ .sourceRevision }}"
           path: ""
           ref: values
       destination:
