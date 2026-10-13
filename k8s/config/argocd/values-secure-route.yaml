@@ -1,9 +1,25 @@
 routes:
   argocd-ui:
-    targetService:
-      name: "argocd-server"
-      port: 80
     ingress:
       hostname: "argocd.3istor.com"
+    rules:
+      # GitHub push webhooks for ApplicationSets: argocd-server's /api/webhook only refreshes
+      # existing Applications, so registry commits otherwise wait for the 3 min git poll.
+      - matches:
+          - path:
+              type: PathPrefix
+              value: /api/webhook/applicationset
+        filters:
+          - type: URLRewrite
+            urlRewrite:
+              path:
+                type: ReplacePrefixMatch
+                replacePrefixMatch: /api/webhook
+        backendRefs:
+          - name: argocd-applicationset-controller
+            port: 7000
+      - backendRefs:
+          - name: argocd-server
+            port: 80
     auth:
       enabled: false
