@@ -88,6 +88,10 @@ spec:
       value: "6"
   metrics:
     - name: canary-requests
+      # The canary's per-endpoint series only appear once it takes traffic, and
+      # increase()/rate() need two scrapes: measuring right after a weight
+      # change always reads empty, which ends the analysis inconclusive.
+      initialDelay: 60s
       interval: 20s
       count: "{{args.count}}"
       # One quiet measurement right after a weight change is expected.
@@ -103,6 +107,7 @@ spec:
               * on (pod_ip) group_left (created_by_name) max by (pod_ip, created_by_name) (kube_pod_info{namespace="{{args.namespace}}",created_by_name="{{args.rollout}}-{{args.canary-hash}}"})
             )
     - name: error-rate
+      initialDelay: 60s
       interval: 20s
       count: "{{args.count}}"
       # A single noisy 20s sample must not abort a release.
