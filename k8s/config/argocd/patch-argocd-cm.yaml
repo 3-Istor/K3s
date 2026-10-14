@@ -27,3 +27,16 @@ data:
     clientID: argocd
     clientSecret: $oidc.keycloak.clientSecret
     requestedScopes: ["openid", "profile", "email", "groups"]
+
+  # CNPG Backups created as sync hooks (infra-templates migrations): without a
+  # health check Argo CD treats them as healthy on creation and moves on before
+  # the backup has run.
+  resource.customizations.health.postgresql.cnpg.io_Backup: |
+    hs = {}
+    if obj.status ~= nil and obj.status.phase ~= nil then
+      local phase = obj.status.phase
+      if phase == "completed" then hs.status = "Healthy"; hs.message = "Backup completed"; return hs end
+      if phase == "failed" or phase == "walArchivingFailing" then hs.status = "Degraded"; hs.message = obj.status.error or ("Backup " .. phase); return hs end
+      hs.status = "Progressing"; hs.message = "Backup " .. phase; return hs
+    end
+    hs.status = "Progressing"; hs.message = "Waiting for the backup to start"; return hs

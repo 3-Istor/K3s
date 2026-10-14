@@ -98,7 +98,15 @@ spec:
             factor: 2
             maxDuration: 1m
       ignoreDifferences:
+        # Also what a Rollout's workloadRef does: it scales the Deployment to 0.
         - group: apps
           kind: Deployment
           jsonPointers:
             - /spec/replicas
+        # The Argo Rollouts gatewayAPI plugin moves these during a canary.
+        # Side effect for every route: a weight changed in Git is not applied
+        # to a route that already exists.
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          jqPathExpressions:
+            - .spec.rules[]?.backendRefs[]?.weight

@@ -61,6 +61,7 @@ spec:
               - name: "{{ .name }}"
                 repoURL: "{{ .repoURL }}"
             {{- end }}
+            syncWindows: {{ dig "syncWindows" (list) .spec | toJson }}
       destination:
         name: onprem
         namespace: argocd
