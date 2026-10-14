@@ -103,10 +103,21 @@ spec:
           kind: Deployment
           jsonPointers:
             - /spec/replicas
-        # The Argo Rollouts gatewayAPI plugin moves these during a canary.
-        # Side effect for every route: a weight changed in Git is not applied
-        # to a route that already exists.
+        # The Argo Rollouts gatewayAPI plugin moves the stable/canary weights
+        # during a canary: rule 0 without stickiness, rule 2 behind the two
+        # cookie rules. Exact pointers, not a jq path over every rule: with
+        # RespectIgnoreDifferences a jq path into the rules array kept the
+        # whole live array, so a route switching to canary never got its new
+        # rules. A pointer missing from the live route is skipped.
         - group: gateway.networking.k8s.io
           kind: HTTPRoute
-          jqPathExpressions:
-            - .spec.rules[]?.backendRefs[]?.weight
+          jsonPointers:
+            - /spec/rules/0/backendRefs/0/weight
+            - /spec/rules/0/backendRefs/1/weight
+            - /spec/rules/2/backendRefs/0/weight
+            - /spec/rules/2/backendRefs/1/weight
+        # Argo Rollouts pins the stable and canary Services to a pod hash.
+        - group: ""
+          kind: Service
+          jsonPointers:
+            - /spec/selector/rollouts-pod-template-hash
