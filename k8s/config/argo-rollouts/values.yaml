@@ -1,6 +1,8 @@
 # Values: https://github.com/argoproj/argo-helm/blob/main/charts/argo-rollouts/values.yaml
 
 controller:
+  # RAM is tight on this cluster; a missed reconcile during a restart only delays a step.
+  replicas: 1
   resources:
     requests:
       cpu: 20m
