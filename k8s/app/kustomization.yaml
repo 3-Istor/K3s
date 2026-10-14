@@ -31,3 +31,4 @@ resources:
   - observability.yaml
   - 3istor-sessions.yaml
   - wireguard.yaml
+  - argo-rollouts.yaml

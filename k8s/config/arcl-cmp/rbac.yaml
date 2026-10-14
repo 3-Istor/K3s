@@ -77,3 +77,36 @@ roleRef:
   kind: ClusterRole
   name: cmp-security-reader
   apiGroup: rbac.authorization.k8s.io
+---
+# Release tab: reads Rollout progress and drives promote/skip/abort/retry,
+# which are all patches on the status subresource, never on the spec.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cmp-release-operator
+rules:
+  - apiGroups: ["argoproj.io"]
+    resources: ["rollouts", "analysisruns"]
+    verbs: ["get", "list"]
+  - apiGroups: ["argoproj.io"]
+    resources: ["rollouts/status"]
+    verbs: ["patch"]
+  - apiGroups: ["argoproj.io"]
+    resources: ["analysistemplates", "clusteranalysistemplates"]
+    verbs: ["get"]
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cmp-release-operator
+subjects:
+  - kind: ServiceAccount
+    name: arcl-cmp
+    namespace: arcl-cmp
+roleRef:
+  kind: ClusterRole
+  name: cmp-release-operator
+  apiGroup: rbac.authorization.k8s.io

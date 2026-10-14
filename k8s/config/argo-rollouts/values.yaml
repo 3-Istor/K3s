@@ -1,0 +1,34 @@
+# Values: https://github.com/argoproj/argo-helm/blob/main/charts/argo-rollouts/values.yaml
+
+controller:
+  resources:
+    requests:
+      cpu: 20m
+      memory: 128Mi
+    limits:
+      memory: 128Mi
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+  # Downloaded by the controller at startup and checked against the sha256.
+  # Plugin config on a Rollout: trafficRouting.plugins["argoproj-labs/gatewayAPI"].
+  trafficRouterPlugins:
+    - name: argoproj-labs/gatewayAPI
+      location: https://github.com/argoproj-labs/rollouts-plugin-trafficrouter-gatewayapi/releases/download/v0.17.0/gatewayapi-plugin-linux-amd64
+      sha256: 1904ca787d33107c140521899d61fff030ee75d99908bd175fca5a4647759061
+
+# Only Gateway API routes traffic here. Every other provider would hand the
+# controller write access to CRDs this cluster does not run.
+providerRBAC:
+  providers:
+    istio: false
+    smi: false
+    ambassador: false
+    awsLoadBalancerController: false
+    awsAppMesh: false
+    traefik: false
+    apisix: false
+    contour: false
+    glooPlatform: false
+    gatewayAPI: true
