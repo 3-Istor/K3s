@@ -40,3 +40,19 @@ data:
       hs.status = "Progressing"; hs.message = "Backup " .. phase; return hs
     end
     hs.status = "Progressing"; hs.message = "Waiting for the backup to start"; return hs
+
+  # Tenant databases sync at wave -3 so the migration Job (wave -1) runs only
+  # once the database accepts connections; without this check Argo CD would
+  # move on as soon as the Cluster object exists.
+  resource.customizations.health.postgresql.cnpg.io_Cluster: |
+    hs = {}
+    if obj.status ~= nil and obj.status.conditions ~= nil then
+      for _, condition in ipairs(obj.status.conditions) do
+        if condition.type == "Ready" and condition.status == "True" then
+          hs.status = "Healthy"; hs.message = obj.status.phase or "Ready"; return hs
+        end
+      end
+    end
+    hs.status = "Progressing"
+    hs.message = (obj.status ~= nil and obj.status.phase) or "Waiting for the database"
+    return hs
