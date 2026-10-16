@@ -35,6 +35,12 @@ spec:
       writeBackConfig:
         method: "git:secret:argocd/cnp-portal-github-creds"
         gitConfig:
+          {{- /*
+            The Application has two sources: infra-templates (the chart) first,
+            then the app repo for $values. Without this the updater writes into
+            the first one, the shared chart repo.
+          */}}
+          repository: {{ $app.repoURL | quote }}
           branch: main
           writeBackTarget: {{ printf "helmvalues:/deploy/%s" (ternary "values.yaml" (printf "values-%s.yaml" $component) (eq $component "app")) | quote }}
 {{- end }}
