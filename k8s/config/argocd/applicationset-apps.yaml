@@ -103,6 +103,12 @@ spec:
           kind: Deployment
           jsonPointers:
             - /spec/replicas
+        # Offhours puts a canary app to sleep through its Rollout, which holds
+        # the pods once it took the Deployment over.
+        - group: argoproj.io
+          kind: Rollout
+          jsonPointers:
+            - /spec/replicas
         # The Argo Rollouts gatewayAPI plugin moves the stable/canary weights
         # during a canary: rule 0 without stickiness, rule 2 behind the two
         # cookie rules. Exact pointers, not a jq path over every rule: with
