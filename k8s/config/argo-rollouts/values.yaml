@@ -3,12 +3,14 @@
 controller:
   # RAM is tight on this cluster; a missed reconcile during a restart only delays a step.
   replicas: 1
+  # 128Mi was OOMKilled on every start once the gatewayAPI plugin process came
+  # up (241 restarts in a day, steps only moved between crashes).
   resources:
     requests:
       cpu: 20m
-      memory: 128Mi
+      memory: 192Mi
     limits:
-      memory: 128Mi
+      memory: 384Mi
   metrics:
     enabled: true
     serviceMonitor:
