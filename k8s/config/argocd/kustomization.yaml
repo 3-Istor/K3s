@@ -16,6 +16,8 @@ resources:
   # reports an error every cycle.
   - applicationset-projects.yaml
   - applicationset-apps.yaml
+  - applicationset-image-updaters.yaml
+  - image-updater-app-registry-rbac.yaml
   - appproject-janitor.yaml
 
 patches:

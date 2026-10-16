@@ -1,0 +1,41 @@
+{{- /*
+  A release starts when a developer pushes a vX.Y.Z git tag: the app's CI
+  publishes the image as X.Y.Z, this updater writes that tag into the app's
+  values file, and Argo CD rolls it out with the app's release strategy.
+  Semver, not newest-build: branch builds never reach the cluster by themselves.
+*/}}
+{{- range $app := .Values.apps }}
+{{- $owner := regexReplaceAll "^https://github.com/([^/]+)/.*$" $app.repoURL "${1}" | lower }}
+{{- $components := ternary (list "frontend" "backend") (list "app") (eq $app.type "fullstack") }}
+{{- range $component := $components }}
+---
+apiVersion: argocd-image-updater.argoproj.io/v1alpha1
+kind: ImageUpdater
+metadata:
+  name: {{ printf "%s-%s-%s-updater" $.Values.project $app.name $component }}
+  namespace: argocd
+  labels:
+    cnp.3istor.com/project: {{ $.Values.project | quote }}
+    cnp.3istor.com/app: {{ $app.name | quote }}
+spec:
+  applicationRefs:
+    - namePattern: {{ printf "%s-%s-%s" $.Values.project $app.name $component | quote }}
+      images:
+        - alias: app-image
+          imageName: {{ printf "ghcr.io/%s/%s%s" $owner ($app.name | lower) (ternary "" (printf "/%s" $component) (eq $component "app")) | quote }}
+          commonUpdateSettings:
+            updateStrategy: semver
+            allowTags: 'regexp:^[0-9]+\.[0-9]+\.[0-9]+$'
+            {{- /* The app's own GHCR pull secret; see image-updater-app-registry RBAC. */}}
+            pullSecret: {{ printf "pullsecret:%s-%s/app-registry" $.Values.project $app.name | quote }}
+          manifestTargets:
+            helm:
+              name: image.repository
+              tag: image.tag
+      writeBackConfig:
+        method: "git:secret:argocd/cnp-portal-github-creds"
+        gitConfig:
+          branch: main
+          writeBackTarget: {{ printf "helmvalues:/deploy/%s" (ternary "values.yaml" (printf "values-%s.yaml" $component) (eq $component "app")) | quote }}
+{{- end }}
+{{- end }}
