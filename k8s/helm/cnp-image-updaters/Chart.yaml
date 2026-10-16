@@ -1,0 +1,5 @@
+apiVersion: v2
+name: cnp-image-updaters
+description: One Argo CD Image Updater per component of a CNP project's apps
+type: application
+version: 0.1.0
