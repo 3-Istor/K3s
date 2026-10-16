@@ -39,7 +39,7 @@ spec:
     - matches:
         - path:
             type: RegularExpression
-            value: /api/deployments/[0-9]+/(release|logs)/stream
+            value: /api/deployments/[0-9]+/(release|logs|release/traffic)/stream
       timeouts:
         request: 1h
       backendRefs:
