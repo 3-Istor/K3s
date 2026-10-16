@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/thegostsniperfr/offhours-guard
-  tag: "sha-c003d9a"
+  tag: "sha-d9435a2"
   pullPolicy: Always
 
 # The chart default (32Mi) sits at the controller's steady usage (27Mi).
