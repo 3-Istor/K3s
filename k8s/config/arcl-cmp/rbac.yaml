@@ -97,6 +97,11 @@ rules:
   - apiGroups: ["apps"]
     resources: ["replicasets"]
     verbs: ["list"]
+  # The route reconciler checks that a canary app's route has its canary
+  # backend: one left in its rolling shape blocks the Rollout at step 0.
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
