@@ -1,0 +1,38 @@
+# Cloud-side WireGuard pods, deployed on each registered public cloud. The namespace and
+# the private key Secret come from Terraform (Cloud repo, module cluster-addons).
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: wireguard-clouds
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - list:
+        elements:
+          - cloud: aws
+            path: terraform/public/aws/EKS/kubernetes
+          - cloud: gcp
+            path: terraform/public/gcp/GKE/kubernetes
+  template:
+    metadata:
+      name: "wireguard-{{ .cloud }}"
+      annotations:
+        argocd.argoproj.io/compare-options: ServerSideDiff=true
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/3-Istor/Cloud.git
+        targetRevision: HEAD
+        path: "{{ .path }}"
+      destination:
+        name: "{{ .cloud }}"
+        namespace: cnp-vpn
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - ServerSideApply=true
+          - CreateNamespace=true
