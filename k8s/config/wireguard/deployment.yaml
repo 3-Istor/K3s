@@ -5,7 +5,8 @@ metadata:
   namespace: wireguard
 spec:
   replicas: 1
-  # Two pods with the same key would fight over the AWS peer
+  # Recreate: two copies of this pod share one key and would fight over the cloud peer.
+  # One tunnel per pod: changing one cloud's settings never restarts the other tunnel.
   strategy:
     type: Recreate
   selector:
@@ -34,7 +35,7 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
           ports:
-            - name: onprem-to-aws
+            - name: onprem-to-cloud
               containerPort: 18081
               protocol: TCP
           securityContext:

@@ -7,6 +7,7 @@ resources:
   - namespace.yaml
   - secrets.yaml
   - deployment.yaml
+  - deployment-gcp.yaml
   - service.yaml
   - whoami.yaml
 
@@ -19,3 +20,6 @@ configMapGenerator:
   - name: wireguard-scripts
     files:
       - onprem.sh
+  - name: wireguard-settings-gcp
+    envs:
+      - settings-gcp.env
