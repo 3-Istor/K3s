@@ -33,5 +33,13 @@ spec:
         automated:
           prune: true
           selfHeal: true
+        # The clouds are ephemeral: a sync that failed while a cluster was down is never
+        # retried on the same commit. Retry forever so it heals on the next up.
+        retry:
+          limit: -1
+          backoff:
+            duration: 30s
+            factor: 2
+            maxDuration: 3m
         syncOptions:
           - ServerSideApply=true
