@@ -5,7 +5,8 @@ metadata:
   namespace: wireguard
 spec:
   replicas: 1
-  # One tunnel per pod: changing the AWS settings never restarts the GCP tunnel
+  # Recreate: two copies of this pod share one key and would fight over the cloud peer.
+  # One tunnel per pod: changing one cloud's settings never restarts the other tunnel.
   strategy:
     type: Recreate
   selector:
