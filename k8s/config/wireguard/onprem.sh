@@ -1,5 +1,5 @@
 #!/bin/sh
-# On-prem WireGuard peer: initiates the tunnel towards the AWS pod and relays
+# On-prem WireGuard peer: initiates the tunnel towards one cloud pod (EKS or GKE)
 # only the declared TCP flows (same model as wireguard/gateway.py on EKS).
 set -eu
 
@@ -18,26 +18,26 @@ ip address add "$ONPREM_TUNNEL_ADDRESS" dev wg0
 wg set wg0 private-key /secrets/privatekey
 ip link set wg0 mtu "$MTU" up
 
-if [ -n "$AWS_PUBLIC_KEY" ] && [ -n "$AWS_ENDPOINT" ]; then
+if [ -n "$CLOUD_PUBLIC_KEY" ] && [ -n "$CLOUD_ENDPOINT" ]; then
   # On-prem is behind NAT: it initiates and keeps the mapping open
-  wg set wg0 peer "$AWS_PUBLIC_KEY" \
-    endpoint "$AWS_ENDPOINT" \
-    allowed-ips "$AWS_TUNNEL_IP/32" \
+  wg set wg0 peer "$CLOUD_PUBLIC_KEY" \
+    endpoint "$CLOUD_ENDPOINT" \
+    allowed-ips "$CLOUD_TUNNEL_IP/32" \
     persistent-keepalive 25
-  echo "wg0 up, peer $AWS_ENDPOINT"
+  echo "wg0 up, peer $CLOUD_ENDPOINT"
 else
-  echo "AWS_ENDPOINT/AWS_PUBLIC_KEY empty: wg0 up without peer"
+  echo "CLOUD_ENDPOINT/CLOUD_PUBLIC_KEY empty: wg0 up without peer"
 fi
 echo "on-prem public key: $(wg show wg0 public-key)"
 
-# onprem-to-aws: on-prem pods -> Service aws-apps -> AWS relay port
-socat "TCP4-LISTEN:$ONPREM_TO_AWS_PORT,bind=$POD_IP,reuseaddr,fork" \
-  "TCP4:$AWS_TUNNEL_IP:$ONPREM_TO_AWS_PORT" &
+# onprem-to-cloud: on-prem pods -> Service aws-apps / gcp-apps -> cloud relay port
+socat "TCP4-LISTEN:$ONPREM_TO_CLOUD_PORT,bind=$POD_IP,reuseaddr,fork" \
+  "TCP4:$CLOUD_TUNNEL_IP:$ONPREM_TO_CLOUD_PORT" &
 PIDS="$PIDS $!"
 
-# aws-to-onprem: only reachable through the tunnel IP
-socat "TCP4-LISTEN:$AWS_TO_ONPREM_PORT,bind=${ONPREM_TUNNEL_ADDRESS%/*},reuseaddr,fork" \
-  "TCP4:$AWS_TO_ONPREM_TARGET" &
+# cloud-to-onprem: only reachable through the tunnel IP
+socat "TCP4-LISTEN:$CLOUD_TO_ONPREM_PORT,bind=${ONPREM_TUNNEL_ADDRESS%/*},reuseaddr,fork" \
+  "TCP4:$CLOUD_TO_ONPREM_TARGET" &
 PIDS="$PIDS $!"
 
 # Exit (and let Kubernetes restart the container) if a relay dies

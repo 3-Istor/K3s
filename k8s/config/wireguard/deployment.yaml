@@ -34,7 +34,7 @@ spec:
                 fieldRef:
                   fieldPath: status.podIP
           ports:
-            - name: onprem-to-aws
+            - name: onprem-to-cloud
               containerPort: 18081
               protocol: TCP
           securityContext:
