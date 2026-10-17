@@ -5,7 +5,7 @@ metadata:
   namespace: wireguard
 spec:
   replicas: 1
-  # Two pods with the same key would fight over the AWS peer
+  # One tunnel per pod: changing the AWS settings never restarts the GCP tunnel
   strategy:
     type: Recreate
   selector:

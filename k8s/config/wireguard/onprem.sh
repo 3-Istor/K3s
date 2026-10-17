@@ -1,6 +1,6 @@
 #!/bin/sh
 # On-prem WireGuard peer: initiates the tunnel towards one cloud pod (EKS or GKE)
-# only the declared TCP flows (same model as wireguard/gateway.py on EKS).
+# and relays only the declared TCP flows (same model as wireguard/gateway.py on the cloud side).
 set -eu
 
 PIDS=""
