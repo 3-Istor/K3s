@@ -27,7 +27,7 @@ fetch_endpoint() {
 set_peer() {
   ep=$(fetch_endpoint)
   if [ -z "$ep" ]; then
-    echo "no endpoint at $CLOUD_ENDPOINT_URL yet: wg0 up without peer"
+    echo "no endpoint at $CLOUD_ENDPOINT_URL: peer unchanged"
     return 0
   fi
   # On-prem is behind NAT: it initiates and keeps the mapping open
