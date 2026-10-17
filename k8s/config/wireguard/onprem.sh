@@ -18,16 +18,25 @@ ip address add "$ONPREM_TUNNEL_ADDRESS" dev wg0
 wg set wg0 private-key /secrets/privatekey
 ip link set wg0 mtu "$MTU" up
 
-if [ -n "$CLOUD_PUBLIC_KEY" ] && [ -n "$CLOUD_ENDPOINT" ]; then
+# Endpoint published by Terraform on every cloud up (Cloud repo, module cluster-addons).
+fetch_endpoint() {
+  python3 -c 'import sys, urllib.request; print(urllib.request.urlopen(sys.argv[1], timeout=10).read().decode().strip())' \
+    "$CLOUD_ENDPOINT_URL" 2>/dev/null || true
+}
+
+set_peer() {
+  ep=$(fetch_endpoint)
+  if [ -z "$ep" ]; then
+    echo "no endpoint at $CLOUD_ENDPOINT_URL: peer unchanged"
+    return 0
+  fi
   # On-prem is behind NAT: it initiates and keeps the mapping open
-  wg set wg0 peer "$CLOUD_PUBLIC_KEY" \
-    endpoint "$CLOUD_ENDPOINT" \
-    allowed-ips "$CLOUD_TUNNEL_IP/32" \
-    persistent-keepalive 25
-  echo "wg0 up, peer $CLOUD_ENDPOINT"
-else
-  echo "CLOUD_ENDPOINT/CLOUD_PUBLIC_KEY empty: wg0 up without peer"
-fi
+  wg set wg0 peer "$CLOUD_PUBLIC_KEY" endpoint "$ep" \
+    allowed-ips "$CLOUD_TUNNEL_IP/32" persistent-keepalive 25
+  echo "peer endpoint $ep"
+}
+
+set_peer
 echo "on-prem public key: $(wg show wg0 public-key)"
 
 # onprem-to-cloud: on-prem pods -> Service aws-apps / gcp-apps -> cloud relay port
@@ -41,6 +50,7 @@ socat "TCP4-LISTEN:$CLOUD_TO_ONPREM_PORT,bind=${ONPREM_TUNNEL_ADDRESS%/*},reusea
 PIDS="$PIDS $!"
 
 # Exit (and let Kubernetes restart the container) if a relay dies
+i=0
 while true; do
   for pid in $PIDS; do
     if ! kill -0 "$pid" 2>/dev/null; then
@@ -49,6 +59,12 @@ while true; do
       exit 1
     fi
   done
+  # The cloud worker's IP changes on every up: re-read the endpoint once the tunnel goes quiet.
+  i=$((i + 1))
+  if [ $((i % 12)) -eq 0 ]; then
+    last=$(wg show wg0 latest-handshakes | awk '{print $2}')
+    if [ $(( $(date +%s) - ${last:-0} )) -gt 180 ]; then set_peer; fi
+  fi
   sleep 5 &
   wait $!
 done
