@@ -9,6 +9,7 @@ resources:
   - https://raw.githubusercontent.com/argoproj-labs/argocd-image-updater/refs/tags/v1.2.0/config/install.yaml
   - apps.yaml
   - secrets.yaml
+  - cloud-app-registry-secret.yaml
   - servicemonitors.yaml
   - clusters/onprem.yaml
   - clusters/aws.yaml
