@@ -33,3 +33,4 @@ resources:
   - wireguard.yaml
   - argo-rollouts.yaml
   - wireguard-clouds.yaml
+  - platform-clouds.yaml

@@ -122,9 +122,6 @@ spec:
               gateway: {{ dig "features" "gateway" false .spec }}
               tunnel: {{ dig "features" "tunnel" false .spec }}
               keycloak: {{ dig "features" "keycloak" false .spec }}
-            # Its CRD exists only on-prem for now (CNP-106).
-            offhours-guard:
-              enabled: {{ eq .spec.targetCloud "onprem" }}
             apps:
             {{- range dig "apps" (list) .spec }}
               - name: "{{ .name }}"
