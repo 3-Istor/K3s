@@ -17,6 +17,10 @@ resource "vault_auth_backend" "kubernetes_cloud" {
   for_each = toset(["aws", "gcp"])
   type     = "kubernetes"
   path     = "kubernetes-${each.key}"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # -----------------------------------------------------------------------------
