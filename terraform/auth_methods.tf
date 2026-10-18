@@ -11,6 +11,14 @@ resource "vault_kubernetes_auth_backend_config" "kubernetes_auth" {
   disable_iss_validation = "true"
 }
 
+# Config is written by Cloud cluster-addons on each cluster up; never destroy
+# these mounts, as destroying them also removes the CMP roles.
+resource "vault_auth_backend" "kubernetes_cloud" {
+  for_each = toset(["aws", "gcp"])
+  type     = "kubernetes"
+  path     = "kubernetes-${each.key}"
+}
+
 # -----------------------------------------------------------------------------
 # OIDC Auth Backend for Vault
 # -----------------------------------------------------------------------------
