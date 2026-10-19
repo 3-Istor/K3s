@@ -30,6 +30,15 @@ spec:
           podSelector:
             matchLabels:
               app.kubernetes.io/name: argo-rollouts
+        # Metrics suites of the CMP Environments tab (Envoy numbers of a
+        # staging route before a promotion).
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: arcl-cmp
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: backend
+              app.kubernetes.io/name: arcl-cmp
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
