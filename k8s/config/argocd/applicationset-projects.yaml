@@ -60,6 +60,7 @@ spec:
             {{- range dig "apps" (list) .spec }}
               - name: "{{ .name }}"
                 repoURL: "{{ .repoURL }}"
+                environments: {{ dig "environments" (list "prod") . | toJson }}
             {{- end }}
             syncWindows: {{ dig "syncWindows" (list) .spec | toJson }}
       destination:
@@ -125,6 +126,7 @@ spec:
             apps:
             {{- range dig "apps" (list) .spec }}
               - name: "{{ .name }}"
+                environments: {{ dig "environments" (list "prod") . | toJson }}
             {{- end }}
             tunnel:
               hostnames:

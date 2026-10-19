@@ -45,18 +45,45 @@ spec:
                 {{- range $app := dig "apps" (list) .spec -}}
                   {{- $components := list "app" -}}
                   {{- if eq $app.type "fullstack" -}}{{- $components = list "frontend" "backend" -}}{{- end -}}
-                  {{- range $c := $components -}}
-                    {{- $out = append $out (dict "name" $app.name "type" $app.type "repoURL" $app.repoURL "component" $c) -}}
+                  {{- $envs := dig "environments" (list "prod") $app -}}
+                  {{- $staged := has "staging" $envs -}}
+                  {{- range $env := $envs -}}
+                    {{- range $c := $components -}}
+                      {{- $out = append $out (dict "name" $app.name "type" $app.type "repoURL" $app.repoURL "component" $c "env" $env "suffix" (ternary "" "-stg" (eq $env "prod")) "staged" $staged) -}}
+                    {{- end -}}
                   {{- end -}}
                 {{- end -}}
                 {{ $out | toJson }}
+  # An app that runs staging adds a per-environment values file on top of the
+  # shared one: deploy/env/<env>/<component>.yaml, where the image lives (the
+  # staging updater writes the staging one, a promotion from the CMP writes the
+  # prod one). The patch replaces the whole sources list, so it repeats it.
+  # Apps without staging get no patch and render exactly as before.
+  templatePatch: |
+    {{- if .staged }}
+    spec:
+      sources:
+        - repoURL: https://github.com/3-Istor/infra-templates.git
+          targetRevision: HEAD
+          path: .
+          helm:
+            ignoreMissingValueFiles: true
+            valueFiles:
+              - '{{ if eq .type "fullstack" }}$values/deploy/values-{{ .component }}.yaml{{ else }}$values/deploy/values.yaml{{ end }}'
+              - '$values/deploy/env/{{ .env }}/{{ .component }}.yaml'
+        - repoURL: "{{ .repoURL }}"
+          targetRevision: HEAD
+          path: ""
+          ref: values
+    {{- end }}
   template:
     metadata:
-      name: "{{ .metadata.name }}-{{ .name }}-{{ .component }}"
+      name: "{{ .metadata.name }}-{{ .name }}-{{ .component }}{{ .suffix }}"
       labels:
         cnp.3istor.com/project: "{{ .metadata.name }}"
         cnp.3istor.com/cloud: "{{ .spec.targetCloud }}"
         cnp.3istor.com/app: "{{ .name }}"
+        cnp.3istor.com/env: "{{ .env }}"
       annotations:
         # Required for Kyverno compliance and to prevent sync-loops with
         # mutating webhooks.
@@ -78,7 +105,7 @@ spec:
           ref: values
       destination:
         name: "{{ .spec.targetCloud }}"
-        namespace: "{{ .metadata.name }}-{{ .name }}"
+        namespace: "{{ .metadata.name }}-{{ .name }}{{ .suffix }}"
       syncPolicy:
         automated:
           prune: true

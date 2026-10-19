@@ -4,28 +4,46 @@
   values file, and Argo CD rolls it out with the app's release strategy.
   Semver, not newest-build: branch builds never reach the cluster by themselves.
 */}}
+{{- /*
+  An app that also runs staging gets a staging updater only: it takes release
+  candidates (X.Y.Z-rc.N) into deploy/env/staging/<component>.yaml, and prod
+  changes only through a promotion from the CMP, which copies the digest that
+  ran in staging. A final X.Y.Z pushed by hand is built but deployed nowhere.
+*/}}
 {{- range $app := .Values.apps }}
 {{- $owner := regexReplaceAll "^https://github.com/([^/]+)/.*$" $app.repoURL "${1}" | lower }}
 {{- $components := ternary (list "frontend" "backend") (list "app") (eq $app.type "fullstack") }}
+{{- $staged := has "staging" ($app.environments | default (list "prod")) }}
 {{- range $component := $components }}
+{{- $image := printf "ghcr.io/%s/%s%s" $owner ($app.name | lower) (ternary "" (printf "/%s" $component) (eq $component "app")) }}
 ---
 apiVersion: argocd-image-updater.argoproj.io/v1alpha1
 kind: ImageUpdater
 metadata:
-  name: {{ printf "%s-%s-%s-updater" $.Values.project $app.name $component }}
+  name: {{ printf "%s-%s-%s%s-updater" $.Values.project $app.name $component (ternary "-stg" "" $staged) }}
   namespace: argocd
   labels:
     cnp.3istor.com/project: {{ $.Values.project | quote }}
     cnp.3istor.com/app: {{ $app.name | quote }}
+    cnp.3istor.com/env: {{ ternary "staging" "prod" $staged | quote }}
 spec:
   applicationRefs:
-    - namePattern: {{ printf "%s-%s-%s" $.Values.project $app.name $component | quote }}
+    - namePattern: {{ printf "%s-%s-%s%s" $.Values.project $app.name $component (ternary "-stg" "" $staged) | quote }}
       images:
         - alias: app-image
-          imageName: {{ printf "ghcr.io/%s/%s%s" $owner ($app.name | lower) (ternary "" (printf "/%s" $component) (eq $component "app")) | quote }}
+          {{- if $staged }}
+          {{- /* The -0 lower bound is what lets semver consider pre-releases at all. */}}
+          imageName: {{ printf "%s:>=0.0.0-0" $image | quote }}
+          {{- else }}
+          imageName: {{ $image | quote }}
+          {{- end }}
           commonUpdateSettings:
             updateStrategy: semver
+            {{- if $staged }}
+            allowTags: 'regexp:^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$'
+            {{- else }}
             allowTags: 'regexp:^[0-9]+\.[0-9]+\.[0-9]+$'
+            {{- end }}
             {{- /* The app's own GHCR pull secret (see image-updater-app-registry RBAC); cloud apps' lives off this cluster, so use the shared one. */}}
             pullSecret: {{ ternary (printf "pullsecret:%s-%s/app-registry" $.Values.project $app.name) "pullsecret:argocd/cnp-cloud-app-registry" (eq $.Values.targetCloud "onprem") | quote }}
           manifestTargets:
@@ -42,6 +60,10 @@ spec:
           */}}
           repository: {{ $app.repoURL | quote }}
           branch: main
+          {{- if $staged }}
+          writeBackTarget: {{ printf "helmvalues:/deploy/env/staging/%s.yaml" $component | quote }}
+          {{- else }}
           writeBackTarget: {{ printf "helmvalues:/deploy/%s" (ternary "values.yaml" (printf "values-%s.yaml" $component) (eq $component "app")) | quote }}
+          {{- end }}
 {{- end }}
 {{- end }}

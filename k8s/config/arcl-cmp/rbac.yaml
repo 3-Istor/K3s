@@ -115,3 +115,34 @@ roleRef:
   kind: ClusterRole
   name: cmp-release-operator
   apiGroup: rbac.authorization.k8s.io
+---
+# Environments tab: reads which image each environment's pods really run (the
+# digest a promotion copies to prod) and wakes a staging environment that
+# offhours-guard put to sleep before running a verification on it.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cmp-environment-operator
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services"]
+    verbs: ["get", "list"]
+  - apiGroups: ["guard.3istor.com"]
+    resources: ["offhoursschedules"]
+    verbs: ["get", "list"]
+  - apiGroups: ["guard.3istor.com"]
+    resources: ["offhoursschedules/status"]
+    verbs: ["patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cmp-environment-operator
+subjects:
+  - kind: ServiceAccount
+    name: arcl-cmp
+    namespace: arcl-cmp
+roleRef:
+  kind: ClusterRole
+  name: cmp-environment-operator
+  apiGroup: rbac.authorization.k8s.io

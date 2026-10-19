@@ -1,4 +1,5 @@
 # Set by the cnp-image-updaters ApplicationSet from the project record.
 project: ""
+# Each app: name, type, repoURL, environments (default [prod]).
 apps: []
 targetCloud: onprem
