@@ -9,6 +9,7 @@ resources:
   - offhours-guard.yaml
   - rbac.yaml
   - api-jwt.yaml
+  - mcp-route.yaml
 
 helmGlobals:
   chartHome: ../../../charts
