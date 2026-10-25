@@ -212,6 +212,8 @@ resource "vault_policy" "trois_istor_sessions_policy" {
 # CMP Cluster Ops Policies
 # -----------------------------------------------------------------------------
 resource "vault_policy" "cmp_cluster_ops_policy" {
-  name   = "cmp-cluster-ops"
-  policy = templatefile("${path.module}/policies/cmp_cluster_ops.hcl", {})
+  name = "cmp-cluster-ops"
+  policy = templatefile("${path.module}/policies/cmp_cluster_ops.hcl", {
+    mount_path = vault_mount.kvv2.path
+  })
 }

@@ -1,12 +1,17 @@
 # CMP cluster up/down: what the cluster-addons module reads and writes in Vault.
-path "kvv2/data/argocd/clusters/*" {
+path "${mount_path}/data/argocd/clusters/*" {
   capabilities = ["create", "update", "read"]
 }
 
-path "kvv2/data/cnp-vpn/*" {
+path "${mount_path}/data/cnp-vpn/*" {
   capabilities = ["read"]
 }
 
-path "auth/kubernetes-*/config" {
+# Vault globs only match a trailing "*": one explicit path per cloud.
+path "auth/kubernetes-aws/config" {
+  capabilities = ["create", "update", "read"]
+}
+
+path "auth/kubernetes-gcp/config" {
   capabilities = ["create", "update", "read"]
 }
