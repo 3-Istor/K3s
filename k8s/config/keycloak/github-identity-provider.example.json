@@ -1,0 +1,17 @@
+{
+  "alias": "github",
+  "displayName": "GitHub",
+  "providerId": "github",
+  "enabled": true,
+  "linkOnly": true,
+  "trustEmail": false,
+  "storeToken": false,
+  "addReadTokenRoleOnCreate": false,
+  "authenticateByDefault": false,
+  "config": {
+    "clientId": "<GITHUB_OAUTH_CLIENT_ID>",
+    "clientSecret": "<GITHUB_OAUTH_CLIENT_SECRET>",
+    "syncMode": "IMPORT",
+    "hideOnLoginScreen": "true"
+  }
+}
