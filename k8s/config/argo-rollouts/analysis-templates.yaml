@@ -1,0 +1,140 @@
+# Shared by every tenant Rollout rendered by infra-templates (cnp-generic-app),
+# referenced with clusterScope: true. The AnalysisRuns and the smoke Jobs run
+# in the app's namespace.
+apiVersion: argoproj.io/v1alpha1
+kind: ClusterAnalysisTemplate
+metadata:
+  name: cnp-smoke
+spec:
+  args:
+    - name: smoke-url
+  metrics:
+    - name: smoke
+      provider:
+        job:
+          spec:
+            # curl retries on its own; a second pod would only double the wait.
+            backoffLimit: 0
+            activeDeadlineSeconds: 90
+            template:
+              spec:
+                restartPolicy: Never
+                automountServiceAccountToken: false
+                securityContext:
+                  runAsNonRoot: true
+                  runAsUser: 65532
+                  runAsGroup: 65532
+                  seccompProfile:
+                    type: RuntimeDefault
+                containers:
+                  - name: smoke
+                    image: curlimages/curl:8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+                    # The URL comes from tenant values: passed as an env var,
+                    # never spliced into the script.
+                    env:
+                      - name: SMOKE_URL
+                        value: "{{args.smoke-url}}"
+                    command: ["/bin/sh", "-c"]
+                    args:
+                      - |
+                        code=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+                          --max-time 5 --retry 5 --retry-delay 3 --retry-all-errors --fail "$SMOKE_URL")
+                        echo "GET $SMOKE_URL -> HTTP $code"
+                        case "$code" in 2??) exit 0 ;; esac
+                        exit 1
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                      readOnlyRootFilesystem: true
+                      capabilities:
+                        drop: ["ALL"]
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: 32Mi
+                      limits:
+                        cpu: 100m
+                        memory: 32Mi
+---
+# Error ratio of the canary ReplicaSet only. Envoy Gateway aggregates stable
+# and canary in one cluster per route rule, so the canary's share comes from
+# per-endpoint stats (EnvoyProxy enablePerEndpointStats) joined on pod IP to
+# kube_pod_info. Every envoy series is scraped twice (envoy and
+# shutdown-manager containers), hence container="envoy".
+#
+# Below min-requests canary requests in the 1m window both metrics return
+# nothing, which the len(result) > 0 guards turn into Inconclusive: a quiet
+# canary is never promoted on no data. vmselect unreachable gives Error, and
+# the Rollout aborts.
+apiVersion: argoproj.io/v1alpha1
+kind: ClusterAnalysisTemplate
+metadata:
+  name: cnp-error-rate
+spec:
+  args:
+    - name: namespace
+    - name: route
+    - name: rollout
+    - name: canary-hash
+    # Ratio, not percent: 0.01 is 1 %.
+    - name: max-error-rate
+      value: "0.01"
+    - name: min-requests
+      value: "50"
+    # Informational: argument substitution is plain text, so a count cannot
+    # be derived from it. The chart passes count = duration / 20s.
+    - name: duration
+      value: "2m"
+    - name: count
+      value: "6"
+  metrics:
+    - name: canary-requests
+      # The canary's per-endpoint series only appear once it takes traffic, and
+      # increase()/rate() need two scrapes: measuring right after a weight
+      # change always reads empty, which ends the analysis inconclusive.
+      initialDelay: 60s
+      interval: 20s
+      count: "{{args.count}}"
+      # One quiet measurement right after a weight change is expected.
+      inconclusiveLimit: 1
+      successCondition: len(result) > 0 && result[0] >= {{args.min-requests}}
+      failureCondition: "false"
+      provider:
+        prometheus:
+          address: http://vm-victoria-metrics-cluster-vmselect.observability.svc:8481/select/0/prometheus
+          query: |
+            sum(
+              label_replace(increase(envoy_cluster_endpoint_rq_total{container="envoy",envoy_cluster_name=~"httproute/{{args.namespace}}/{{args.route}}/rule/.*"}[1m]), "pod_ip", "$1", "envoy_endpoint_address", "(.*):[0-9]+")
+              * on (pod_ip) group_left (created_by_name) max by (pod_ip, created_by_name) (kube_pod_info{namespace="{{args.namespace}}",created_by_name="{{args.rollout}}-{{args.canary-hash}}"})
+            )
+    - name: error-rate
+      initialDelay: 60s
+      interval: 20s
+      count: "{{args.count}}"
+      # A single noisy 20s sample must not abort a release.
+      failureLimit: 1
+      inconclusiveLimit: 1
+      successCondition: len(result) > 0 && result[0] <= {{args.max-error-rate}}
+      failureCondition: len(result) > 0 && result[0] > {{args.max-error-rate}}
+      provider:
+        prometheus:
+          address: http://vm-victoria-metrics-cluster-vmselect.observability.svc:8481/select/0/prometheus
+          query: |
+            (
+              (
+                sum(
+                  label_replace(rate(envoy_cluster_endpoint_rq_error{container="envoy",envoy_cluster_name=~"httproute/{{args.namespace}}/{{args.route}}/rule/.*"}[1m]), "pod_ip", "$1", "envoy_endpoint_address", "(.*):[0-9]+")
+                  * on (pod_ip) group_left (created_by_name) max by (pod_ip, created_by_name) (kube_pod_info{namespace="{{args.namespace}}",created_by_name="{{args.rollout}}-{{args.canary-hash}}"})
+                )
+                or on () vector(0)
+              )
+              /
+              sum(
+                label_replace(rate(envoy_cluster_endpoint_rq_total{container="envoy",envoy_cluster_name=~"httproute/{{args.namespace}}/{{args.route}}/rule/.*"}[1m]), "pod_ip", "$1", "envoy_endpoint_address", "(.*):[0-9]+")
+                * on (pod_ip) group_left (created_by_name) max by (pod_ip, created_by_name) (kube_pod_info{namespace="{{args.namespace}}",created_by_name="{{args.rollout}}-{{args.canary-hash}}"})
+              )
+            )
+            and on ()
+            sum(
+              label_replace(increase(envoy_cluster_endpoint_rq_total{container="envoy",envoy_cluster_name=~"httproute/{{args.namespace}}/{{args.route}}/rule/.*"}[1m]), "pod_ip", "$1", "envoy_endpoint_address", "(.*):[0-9]+")
+              * on (pod_ip) group_left (created_by_name) max by (pod_ip, created_by_name) (kube_pod_info{namespace="{{args.namespace}}",created_by_name="{{args.rollout}}-{{args.canary-hash}}"})
+            ) >= {{args.min-requests}}

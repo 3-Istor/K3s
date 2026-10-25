@@ -86,6 +86,16 @@ resource "vault_kubernetes_auth_backend_role" "vault_secrets_operator_role" {
   token_policies                   = [vault_policy.vault_secrets_operator_policy.name]
 }
 
+resource "vault_kubernetes_auth_backend_role" "vault_secrets_operator_role_cloud" {
+  for_each                         = toset(["aws", "gcp"])
+  backend                          = vault_auth_backend.kubernetes_cloud[each.key].path
+  role_name                        = "vault-secrets-operator-role"
+  bound_service_account_names      = ["vault-secrets-operator"]
+  bound_service_account_namespaces = ["vault-secrets-operator"]
+  token_ttl                        = 86400 # 24h
+  token_policies                   = [vault_policy.vault_secrets_operator_policy.name]
+}
+
 # -----------------------------------------------------------------------------
 # ArgoCD Roles
 # -----------------------------------------------------------------------------

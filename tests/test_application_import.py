@@ -58,5 +58,40 @@ class ApplicationImportTests(unittest.TestCase):
         self.assertEqual(json.loads(render(self.expression, {"spec": {"targetCloud": "onprem"}})), [])
 
 
+    def test_staging_catalog_keeps_overlays_but_imports_remain_prod_only(self):
+        app = {"name": "web", "type": "static", "repoURL": "https://github.com/example/web",
+               "environments": ["prod", "staging"]}
+        elements = json.loads(render(self.expression, {"spec": {"apps": [app]}}))
+        self.assertEqual([e["env"] for e in elements], ["prod", "staging"])
+        patch = yaml.safe_load(render(self.spec["templatePatch"], elements[1]))
+        self.assertEqual(patch["spec"]["sources"][0]["targetRevision"], "HEAD")
+        self.assertIn("$values/deploy/env/staging/app.yaml",
+                      patch["spec"]["sources"][0]["helm"]["valueFiles"])
+        imported = {**app, "sourceRevision": "a" * 40, "chartRevision": "b" * 40,
+                    "imageTag": "import-test", "imageDigest": "sha256:" + "c" * 64}
+        elements = json.loads(render(self.expression, {"spec": {"apps": [imported]}}))
+        self.assertEqual([e["env"] for e in elements], ["prod"])
+        self.assertFalse(elements[0]["staged"])
+        self.assertFalse(render(self.spec["templatePatch"], elements[0]).strip())
+
+    def test_image_updaters_do_not_write_imported_repositories(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "values.yaml"
+            path.write_text(yaml.safe_dump({
+                "project": "sandbox", "targetCloud": "onprem",
+                "apps": [
+                    {"name": "catalog", "type": "static", "repoURL": "https://github.com/example/catalog"},
+                    {"name": "imported", "type": "static", "repoURL": "https://github.com/example/imported",
+                     "sourceRevision": "a" * 40, "chartRevision": "b" * 40,
+                     "imageTag": "import-test", "imageDigest": "sha256:" + "c" * 64}
+                ]}))
+            result = subprocess.run(
+                [HELM, "template", "test", str(ROOT / "k8s/helm/cnp-image-updaters"),
+                 "--values", str(path)], capture_output=True, text=True, check=True)
+        objects = [obj for obj in yaml.safe_load_all(result.stdout) if obj]
+        self.assertEqual([obj["metadata"]["name"] for obj in objects],
+                         ["sandbox-catalog-app-updater"])
+
+
 if __name__ == "__main__":
     unittest.main()

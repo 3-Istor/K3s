@@ -9,6 +9,7 @@ resources:
   - offhours-guard.yaml
   - rbac.yaml
   - api-jwt.yaml
+  - mcp-route.yaml
 
 helmGlobals:
   chartHome: ../../../charts
@@ -16,7 +17,7 @@ helmGlobals:
 helmCharts:
   - name: arcl-cmp
     repo: oci://ghcr.io/3-istor/charts
-    version: 0.2.2
+    version: 0.2.3
     releaseName: arcl-cmp
     namespace: arcl-cmp
     valuesFile: cmp-values.yaml

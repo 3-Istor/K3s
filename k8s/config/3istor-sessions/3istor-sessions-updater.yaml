@@ -17,7 +17,7 @@ spec:
             updateStrategy: "newest-build"
             allowTags: "regexp:^sha-[a-f0-9]+$"
       writeBackConfig:
-        method: "git:secret:argocd/git-creds"
+        method: "git:secret:argocd/cnp-portal-github-creds"
         gitConfig:
           branch: "main"
           writeBackTarget: "helmvalues:/k8s/config/3istor-sessions/3istor-sessions-values.yaml"

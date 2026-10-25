@@ -1,4 +1,4 @@
-# Test target for the aws-to-onprem flow
+# Test target for the cloud-to-onprem flows (EKS and GKE)
 apiVersion: apps/v1
 kind: Deployment
 metadata:

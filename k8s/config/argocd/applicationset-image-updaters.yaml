@@ -1,0 +1,45 @@
+# One Application per project record rendering an Argo CD ImageUpdater per app
+# component (k8s/helm/cnp-image-updaters). Terraform created these until it
+# stopped writing Kubernetes objects (D-02); nothing replaced them, so apps
+# created since never picked up a new image.
+#
+# ImageUpdaters must live in argocd: the controller ignores one in another
+# namespace (3istor-sessions-updater was never evaluated).
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cnp-image-updaters
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: https://github.com/3-Istor/cnp-projects.git
+        revision: main
+        files:
+          - path: "registry/projects/*.yaml"
+  template:
+    metadata:
+      name: "{{ .metadata.name }}-image-updaters"
+      labels:
+        cnp.3istor.com/project: "{{ .metadata.name }}"
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/3-Istor/K3s.git
+        targetRevision: HEAD
+        path: k8s/helm/cnp-image-updaters
+        helm:
+          values: '{{ dict "project" .metadata.name "targetCloud" (dig "targetCloud" "onprem" .spec) "apps" (dig "apps" (list) .spec) | toJson }}'
+      destination:
+        name: in-cluster
+        namespace: argocd
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - ServerSideApply=true

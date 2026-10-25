@@ -1,0 +1,42 @@
+# Base platform (Cloud repo, terraform/public/<cloud>/<X>/platform) on each public cloud cluster.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: platform-clouds
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - list:
+        elements:
+          - cloud: aws
+            path: terraform/public/aws/EKS/platform
+          - cloud: gcp
+            path: terraform/public/gcp/GKE/platform
+  template:
+    metadata:
+      name: "platform-{{ .cloud }}"
+      annotations:
+        argocd.argoproj.io/compare-options: ServerSideDiff=true
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/3-Istor/Cloud.git
+        targetRevision: HEAD
+        path: "{{ .path }}"
+      destination:
+        name: "{{ .cloud }}"
+        namespace: default
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        retry:
+          limit: -1
+          backoff:
+            duration: 30s
+            factor: 2
+            maxDuration: 3m
+        syncOptions:
+          - ServerSideApply=true

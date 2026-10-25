@@ -9,19 +9,22 @@ resources:
   - https://raw.githubusercontent.com/argoproj-labs/argocd-image-updater/refs/tags/v1.2.0/config/install.yaml
   - apps.yaml
   - secrets.yaml
+  - cloud-app-registry-secret.yaml
   - servicemonitors.yaml
   - clusters/onprem.yaml
-  # Add clusters/aws.yaml and clusters/gcp.yaml once kvv2/argocd/clusters/<cloud>
-  # exists in Vault — the operator otherwise reconciles a missing path and
-  # reports an error every cycle.
+  - clusters/aws.yaml
+  - clusters/gcp.yaml
   - applicationset-projects.yaml
   - applicationset-apps.yaml
+  - applicationset-image-updaters.yaml
+  - image-updater-app-registry-rbac.yaml
   - appproject-janitor.yaml
 
 patches:
   - path: patch-argocd-cm.yaml
   - path: argocd-cmd-params-cm-patch.yaml
   - path: patch-argocd-rbac-cm.yaml
+  - path: patch-argocd-server-extensions.yaml
 
 helmGlobals:
   chartHome: ../../../charts

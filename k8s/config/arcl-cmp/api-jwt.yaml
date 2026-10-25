@@ -34,6 +34,17 @@ spec:
   hostnames:
     - cmp.3istor.com
   rules:
+    # SSE streams outlive Envoy's 15 s default route timeout: cut every 15 s,
+    # the release tab reconnected forever.
+    - matches:
+        - path:
+            type: RegularExpression
+            value: /api/deployments/[0-9]+/(release|logs|release/traffic)/stream
+      timeouts:
+        request: 1h
+      backendRefs:
+        - name: arcl-cmp-backend
+          port: 8000
     - matches:
         - path:
             type: PathPrefix

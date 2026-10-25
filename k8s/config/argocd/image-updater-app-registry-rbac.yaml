@@ -1,0 +1,26 @@
+# Tenant ImageUpdaters (applicationset-image-updaters.yaml) list an app's
+# private GHCR tags with that app's own pull secret. resourceNames limits the
+# controller to the secrets named app-registry, in any namespace: it reads no
+# other tenant secret.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: image-updater-app-registry
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["app-registry"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: image-updater-app-registry
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: image-updater-app-registry
+subjects:
+  - kind: ServiceAccount
+    name: argocd-image-updater-controller
+    namespace: argocd
