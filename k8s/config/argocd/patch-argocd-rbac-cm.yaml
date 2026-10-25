@@ -12,3 +12,10 @@ data:
   policy.csv: |
     g, infra, role:admin
     g, member, role:readonly
+    # The portal validates the user/project/repository before using this account.
+    p, role:cmp-import, applicationsets, get, */cnp-apps, allow
+    p, role:cmp-import, applicationsets, get, */cnp-image-updaters, allow
+    p, role:cmp-import, applications, get, */*, allow
+    p, role:cmp-import, repositories, get, *, allow
+    p, role:cmp-import, repositories, create, *, allow
+    g, cmp-import, role:cmp-import

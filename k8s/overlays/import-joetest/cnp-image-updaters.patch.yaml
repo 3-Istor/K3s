@@ -1,0 +1,25 @@
+- op: replace
+  path: /spec/generators
+  value:
+  - git:
+      repoURL: https://github.com/3-Istor/cnp-projects.git
+      revision: main
+      files:
+      - path: registry/projects/*.yaml
+      - path: registry/projects/joetest.yaml
+        exclude: true
+  - git:
+      repoURL: https://github.com/3-Istor/cnp-projects.git
+      revision: import-fichier-joe-raph
+      files:
+      - path: registry/projects/joetest.yaml
+- op: add
+  path: /metadata/annotations
+  value:
+    cnp.3istor.com/import-test-project: joetest
+    cnp.3istor.com/import-test-registry: import-fichier-joe-raph
+    cnp.3istor.com/import-test-k3s-revision: 77e9b381c4dbac554ae19b650f9489a06e77b074
+- op: replace
+  path: /spec/template/spec/source/targetRevision
+  value: '{{ if eq .metadata.name "joetest" }}77e9b381c4dbac554ae19b650f9489a06e77b074{{
+    else }}HEAD{{ end }}'

@@ -1,0 +1,15 @@
+- op: add
+  path: /spec/ignoreDifferences
+  value:
+  - group: argoproj.io
+    kind: Application
+    name: argocd
+    namespace: argocd
+    jsonPointers:
+    - /spec/source/path
+    - /spec/source/targetRevision
+- op: add
+  path: /spec/syncPolicy/syncOptions
+  value:
+  - CreateNamespace=true
+  - RespectIgnoreDifferences=true

@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+resources:
+- ../../config/argocd
+patches:
+- target:
+    group: argoproj.io
+    version: v1alpha1
+    kind: ApplicationSet
+    name: cnp-project-appprojects
+  path: cnp-project-appprojects.patch.yaml
+- target:
+    group: argoproj.io
+    version: v1alpha1
+    kind: ApplicationSet
+    name: cnp-project-systems
+  path: cnp-project-systems.patch.yaml
+- target:
+    group: argoproj.io
+    version: v1alpha1
+    kind: ApplicationSet
+    name: cnp-apps
+  path: cnp-apps.patch.yaml
+- target:
+    group: argoproj.io
+    version: v1alpha1
+    kind: ApplicationSet
+    name: cnp-image-updaters
+  path: cnp-image-updaters.patch.yaml
+- target:
+    group: argoproj.io
+    version: v1alpha1
+    kind: Application
+    name: apps
+  path: apps.patch.yaml
