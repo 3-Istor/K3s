@@ -55,5 +55,11 @@ opencost:
   carbonCost:
     enabled: true
 
+  # kube-state-metrics already runs in observability: emitting OpenCost's own
+  # copies of its series doubled every sum of requests in VictoriaMetrics.
+  metrics:
+    kubeStateMetrics:
+      emitKsmV1MetricsOnly: true
+
   ui:
     enabled: false
