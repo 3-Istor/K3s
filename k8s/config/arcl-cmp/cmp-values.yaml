@@ -54,6 +54,10 @@ env:
     KEYCLOAK_URL: "https://auth.3istor.com"
     KEYCLOAK_CLIENT_ID: "3-istor-openid"
     VAULT_URL: "http://vault.vault.svc.cluster.local:8200"
+    # FinOps: ingest real costs now; the UI switches to them with
+    # FINOPS_PROVIDER=real once the real provider is released.
+    FINOPS_INGEST_ENABLED: "true"
+    FINOPS_PROVIDER: "simulated"
 
 extraEnv:
   # --- OpenStack SDK ---
