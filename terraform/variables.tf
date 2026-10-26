@@ -100,3 +100,24 @@ variable "github_app_private_key" {
   type        = string
   sensitive   = true
 }
+
+
+# GitHub identity federation is distinct from GitHub App repository credentials.
+variable "github_identity_provider_enabled" {
+  description = "Explicitly enable the GitHub account-linking provider after review and OAuth callback configuration."
+  type        = bool
+  default     = false
+}
+
+variable "github_oauth_client_id" {
+  description = "OAuth client ID of the approved GitHub App."
+  type        = string
+  default     = ""
+}
+
+variable "github_oauth_client_secret" {
+  description = "OAuth client secret supplied securely; do not commit it or confuse it with the App private key."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
