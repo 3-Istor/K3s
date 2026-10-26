@@ -117,9 +117,9 @@ data:
           - alert: GatewayHighHTTP5xxRate
             expr: |
               (
-                sum(rate(envoy_http_downstream_rq_xx{envoy_response_code_class="5"}[5m]))
+                sum(rate(envoy_http_downstream_rq_xx{cluster="onprem", envoy_response_code_class="5"}[5m]))
                 /
-                sum(rate(envoy_http_downstream_rq_xx[5m]))
+                sum(rate(envoy_http_downstream_rq_xx{cluster="onprem"}[5m]))
               ) > 0.05
             for: 5m
             labels:
@@ -131,7 +131,7 @@ data:
           # Alert: Connection failures from Envoy Gateway to Backend services
           - alert: GatewayUpstreamConnectionFailures
             expr: |
-              sum(rate(envoy_cluster_upstream_cx_connect_fail{}[5m])) by (envoy_cluster_name) > 0
+              sum(rate(envoy_cluster_upstream_cx_connect_fail{cluster="onprem"}[5m])) by (envoy_cluster_name) > 0
             for: 2m
             labels:
               severity: warning
@@ -229,9 +229,9 @@ data:
 
           - alert: LokiIngestionStalled
             expr: |
-              sum(rate(loki_ingester_chunks_flushed_total[15m])) == 0
+              sum(rate(loki_ingester_chunks_flushed_total{cluster="onprem"}[15m])) == 0
               and
-              sum(rate(loki_distributor_lines_received_total[15m])) > 0
+              sum(rate(loki_distributor_lines_received_total{cluster="onprem"}[15m])) > 0
             for: 15m
             labels:
               severity: critical
@@ -241,7 +241,7 @@ data:
 
           - alert: VMStorageInsertErrors
             expr: |
-              sum(rate(vm_rows_ignored_total[10m])) > 0
+              sum(rate(vm_rows_ignored_total{cluster="onprem"}[10m])) > 0
             for: 10m
             labels:
               severity: warning
