@@ -54,10 +54,12 @@ env:
     KEYCLOAK_URL: "https://auth.3istor.com"
     KEYCLOAK_CLIENT_ID: "3-istor-openid"
     VAULT_URL: "http://vault.vault.svc.cluster.local:8200"
-    # FinOps: ingest real costs now; the UI switches to them with
-    # FINOPS_PROVIDER=real once the real provider is released.
+    # FinOps: real costs. Backfill starts at the oldest day VictoriaMetrics
+    # still holds (14-day retention); days before OpenCost's install have no
+    # idle cost.
     FINOPS_INGEST_ENABLED: "true"
-    FINOPS_PROVIDER: "simulated"
+    FINOPS_PROVIDER: "real"
+    FINOPS_INGEST_SINCE: "2026-10-12"
 
 extraEnv:
   # --- OpenStack SDK ---
