@@ -290,3 +290,26 @@ data:
             annotations:
               summary: "{{ $labels.namespace }} logged {{ $value | humanize }} lines in 10 minutes"
               description: "Far above its usual volume; it is often an error loop. Check the Logs view of the project in the CMP."
+
+      # OpenCost prices are custom on-prem EUR per hour; 730 h is an average month.
+      - name: finops.rules
+        rules:
+          - alert: FinOpsBurnRateHigh
+            expr: |
+              sum(node_total_hourly_cost) * 730 > 60
+            for: 2h
+            labels:
+              severity: warning
+            annotations:
+              summary: "Projected monthly cluster cost is above 60 EUR"
+              description: "The current burn rate projects {{ $value | printf \"%.2f\" }} EUR per month. Check the FinOps dashboard for the namespaces driving it."
+
+          - alert: OpenCostDown
+            expr: |
+              absent(node_total_hourly_cost)
+            for: 30m
+            labels:
+              severity: warning
+            annotations:
+              summary: "OpenCost is not reporting node costs"
+              description: "node_total_hourly_cost is missing, so the cost dashboard and the burn-rate alert have no data."
