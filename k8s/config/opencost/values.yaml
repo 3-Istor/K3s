@@ -7,6 +7,10 @@ podAnnotations:
   prometheus.io/port: "9003"
   prometheus.io/path: /metrics
 
+extraVolumes:
+  - name: tmp
+    emptyDir: {}
+
 podSecurityContext:
   runAsNonRoot: true
   runAsUser: 1001
@@ -34,9 +38,6 @@ opencost:
     extraVolumeMounts:
       - name: tmp
         mountPath: /tmp
-    extraVolumes:
-      - name: tmp
-        emptyDir: {}
 
   # VictoriaMetrics answers the Prometheus API. The platform reads vmselect
   # directly like Grafana's platform org; vm-networkpolicies lets this
