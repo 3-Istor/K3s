@@ -11,6 +11,36 @@ resources:
   - api-jwt.yaml
   - mcp-route.yaml
 
+# FinOps inputs (finops/ at the repo root), read by the CMP ingester on every
+# pass. No hash suffix: kustomize does not rename the reference added by the
+# patch below, and the kubelet refreshes the mounted files on its own.
+configMapGenerator:
+  - name: cnp-finops
+    options:
+      disableNameSuffixHash: true
+    files:
+      - ../../../finops/onprem-tco.yaml
+      - ../../../finops/ai-prices.yaml
+      - ../../../finops/saas.yaml
+
+patches:
+  - target:
+      kind: Deployment
+      name: arcl-cmp-backend
+    patch: |
+      - op: add
+        path: /spec/template/spec/volumes/-
+        value:
+          name: cnp-finops
+          configMap:
+            name: cnp-finops
+      - op: add
+        path: /spec/template/spec/containers/0/volumeMounts/-
+        value:
+          name: cnp-finops
+          mountPath: /etc/cnp-finops
+          readOnly: true
+
 helmGlobals:
   chartHome: ../../../charts
 
