@@ -46,10 +46,21 @@ cluster:
   storage_gib: 366
   # How the hourly cost splits over resources. CPU and RAM follow the ratio of
   # OpenCost's default (GCP us-central1) prices for a node of this shape.
+  # Storage is priced at its market rate below, so the TCO splits over CPU
+  # and RAM only, in the ratio of OpenCost's default prices.
   split:
-    cpu: 0.65
-    ram: 0.30
-    storage: 0.05
+    cpu: 0.68
+    ram: 0.32
+    storage: 0
+
+# On-prem market rate for replicated block and object storage, hardware and
+# power only (no staff, like CPU and RAM above): about 500 $ per usable TB of
+# 3x-replicated Ceph amortized over 60 months, plus power. Covers Ceph RBD
+# volumes and the self-hosted S3 (RGW, Garage).
+# https://oneuptime.com/blog/post/2026-03-31-rook-total-cost-of-ownership-ceph/markdown
+storage:
+  eur_per_gib_month: 0.01
+  market_price: true
 
 # The homelab GPU server behind the AI gateway (Ollama). Not part of the K3s
 # cluster: its daily energy cost is split over the tokens it served that day.
