@@ -68,14 +68,6 @@ spec:
           targetRevision: "{{ .chartRevision }}"
           path: .
           helm:
-            # Imports keep the exact image scanned by the central pipeline.
-            values: |
-              {{- if .imageDigest }}
-              image:
-                tag: {{ printf "%s@%s" .imageTag .imageDigest | quote }}
-              {{- else }}
-              {}
-              {{- end }}
             ignoreMissingValueFiles: true
             valueFiles:
               - '{{ if eq .type "fullstack" }}$values/deploy/values-{{ .component }}.yaml{{ else }}$values/deploy/values.yaml{{ end }}'
