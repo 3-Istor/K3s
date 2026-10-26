@@ -34,3 +34,4 @@ resources:
   - argo-rollouts.yaml
   - wireguard-clouds.yaml
   - platform-clouds.yaml
+  - opencost.yaml

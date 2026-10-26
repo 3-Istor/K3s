@@ -1,0 +1,26 @@
+# The OpenCost API has no authentication: only the CMP (allocations, MCP) and
+# Alloy (metrics scrape) may reach it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: opencost-clients
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: opencost
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: arcl-cmp
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: backend
+              app.kubernetes.io/name: arcl-cmp
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alloy
