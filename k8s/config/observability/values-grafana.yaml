@@ -181,6 +181,15 @@ dashboardProviders:
         options:
           path: /var/lib/grafana/dashboards/logs
 
+      - name: "finops"
+        orgId: 1
+        folder: "FinOps"
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/finops
+
 # Grafana Links: https://grafana.com/grafana/dashboards/<gnetId>
 dashboards:
   # Cluster-wide views built on kube-state-metrics + cAdvisor + node-exporter.
@@ -265,6 +274,157 @@ dashboards:
       gnetId: 15141
       revision: 1
       datasource: Loki
+
+  # Cost from OpenCost (EUR per hour, custom on-prem pricing) and off-hours sleep state from offhours-guard.
+  finops:
+    finops-cost:
+      json: |
+        {
+          "uid": "finops-cost",
+          "title": "FinOps · coût et énergie",
+          "tags": ["finops", "opencost", "offhours"],
+          "timezone": "browser",
+          "schemaVersion": 39,
+          "version": 1,
+          "editable": true,
+          "refresh": "1m",
+          "time": { "from": "now-24h", "to": "now" },
+          "panels": [
+            {
+              "id": 1, "type": "row", "title": "Coût du cluster", "collapsed": false,
+              "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "panels": []
+            },
+            {
+              "id": 2, "type": "stat", "title": "Burn rate (€/h)",
+              "gridPos": { "h": 6, "w": 6, "x": 0, "y": 1 },
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "fieldConfig": { "defaults": { "unit": "currencyEUR", "decimals": 3 }, "overrides": [] },
+              "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
+              "targets": [
+                { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(node_total_hourly_cost)" }
+              ]
+            },
+            {
+              "id": 3, "type": "timeseries", "title": "Burn rate dans le temps (€/h)",
+              "gridPos": { "h": 6, "w": 12, "x": 6, "y": 1 },
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "fieldConfig": { "defaults": { "unit": "currencyEUR", "decimals": 3 }, "overrides": [] },
+              "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false }, "tooltip": { "mode": "single", "sort": "none" } },
+              "targets": [
+                { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(node_total_hourly_cost)", "legendFormat": "cluster" }
+              ]
+            },
+            {
+              "id": 4, "type": "stat", "title": "Projection mensuelle (730 h)",
+              "gridPos": { "h": 6, "w": 6, "x": 18, "y": 1 },
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "currencyEUR", "decimals": 0,
+                  "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "orange", "value": 60 } ] }
+                },
+                "overrides": []
+              },
+              "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "auto" },
+              "targets": [
+                { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(node_total_hourly_cost) * 730" }
+              ]
+            },
+            {
+              "id": 5, "type": "row", "title": "Allocation par namespace", "collapsed": false,
+              "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 }, "panels": []
+            },
+            {
+              "id": 6, "type": "timeseries", "title": "Coût par namespace, top 10 (€/h)",
+              "gridPos": { "h": 8, "w": 16, "x": 0, "y": 8 },
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "fieldConfig": { "defaults": { "unit": "currencyEUR", "decimals": 4, "custom": { "stacking": { "mode": "normal", "group": "A" } } }, "overrides": [] },
+              "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
+              "targets": [
+                {
+                  "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
+                  "expr": "topk(10, sum by (exported_namespace) (container_cpu_allocation * on(node) group_left node_cpu_hourly_cost) + sum by (exported_namespace) (container_memory_allocation_bytes / 2^30 * on(node) group_left node_ram_hourly_cost))",
+                  "legendFormat": "{{exported_namespace}}"
+                }
+              ]
+            },
+            {
+              "id": 7, "type": "stat", "title": "Coût inactif (€/h)",
+              "description": "Cluster burn rate minus cost allocated to containers.",
+              "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "fieldConfig": { "defaults": { "unit": "currencyEUR", "decimals": 4 }, "overrides": [] },
+              "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
+              "targets": [
+                {
+                  "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
+                  "expr": "sum(node_total_hourly_cost) - (sum(container_cpu_allocation * on(node) group_left node_cpu_hourly_cost) + sum(container_memory_allocation_bytes / 2^30 * on(node) group_left node_ram_hourly_cost))"
+                }
+              ]
+            },
+            {
+              "id": 8, "type": "row", "title": "Efficacité CPU", "collapsed": false,
+              "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 }, "panels": []
+            },
+            {
+              "id": 9, "type": "timeseries", "title": "Efficacité CPU par namespace (usage / requests)",
+              "description": "Above 100% means the namespace uses more CPU than it requests.",
+              "gridPos": { "h": 8, "w": 24, "x": 0, "y": 17 },
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "fieldConfig": { "defaults": { "unit": "percentunit", "decimals": 0 }, "overrides": [] },
+              "options": { "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
+              "targets": [
+                {
+                  "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
+                  "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{container!=\"\", namespace!=\"\"}[5m])) / sum by (namespace) (kube_pod_container_resource_requests{resource=\"cpu\", container!=\"\"})",
+                  "legendFormat": "{{namespace}}"
+                }
+              ]
+            },
+            {
+              "id": 10, "type": "row", "title": "Mise en veille (offhours-guard)", "collapsed": false,
+              "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 }, "panels": []
+            },
+            {
+              "id": 11, "type": "stat", "title": "Workloads en veille",
+              "gridPos": { "h": 6, "w": 8, "x": 0, "y": 26 },
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 }, "overrides": [] },
+              "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "auto" },
+              "targets": [
+                { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(offhours_target_asleep)" }
+              ]
+            },
+            {
+              "id": 12, "type": "stat", "title": "Replicas en veille",
+              "description": "Replicas that are scaled to zero, counted from the replicas recorded before sleep.",
+              "gridPos": { "h": 6, "w": 8, "x": 8, "y": 26 },
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 }, "overrides": [] },
+              "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "auto" },
+              "targets": [
+                {
+                  "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
+                  "expr": "sum(offhours_target_original_replicas and on(exported_namespace, schedule, target) (offhours_target_asleep == 1))"
+                }
+              ]
+            },
+            {
+              "id": 13, "type": "timeseries", "title": "Erreurs de transition sur 24 h",
+              "gridPos": { "h": 6, "w": 8, "x": 16, "y": 26 },
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 }, "overrides": [] },
+              "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+              "targets": [
+                {
+                  "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
+                  "expr": "sum by (exported_namespace) (increase(offhours_transitions_total{result=\"error\"}[24h]))",
+                  "legendFormat": "{{namespace}}"
+                }
+              ]
+            }
+          ]
+        }
 
 # The Kyverno require-resources-and-memory-limits policy needs every container,
 # including init containers, to declare requests with memory limit == request.
