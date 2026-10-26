@@ -405,7 +405,7 @@ dashboards:
               "targets": [
                 {
                   "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
-                  "expr": "sum(offhours_target_original_replicas and on(namespace, schedule, target) (offhours_target_asleep == 1))"
+                  "expr": "sum(offhours_target_original_replicas and on(exported_namespace, schedule, target) (offhours_target_asleep == 1))"
                 }
               ]
             },
@@ -418,7 +418,7 @@ dashboards:
               "targets": [
                 {
                   "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
-                  "expr": "sum by (namespace) (increase(offhours_transitions_total{result=\"error\"}[24h]))",
+                  "expr": "sum by (exported_namespace) (increase(offhours_transitions_total{result=\"error\"}[24h]))",
                   "legendFormat": "{{namespace}}"
                 }
               ]
