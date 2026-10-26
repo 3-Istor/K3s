@@ -100,3 +100,16 @@ func TestRun_PassesCheck_WhenGeneratedFileIsCurrent(t *testing.T) {
 
 	assert.NoError(t, err)
 }
+
+func TestPrices_AddsMarketStoragePricePerGiBHour(t *testing.T) {
+	tco := baseTCO()
+	tco.Cluster.Split.CPU = 0.7
+	tco.Cluster.Split.RAM = 0.3
+	tco.Cluster.Split.Storage = 0
+	tco.Storage.EURPerGiBMonth = 7.3
+
+	p, err := tco.Prices()
+
+	require.NoError(t, err)
+	assert.InDelta(t, 0.01, p.StoragePerGiBHour, 1e-9)
+}

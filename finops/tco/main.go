@@ -32,6 +32,11 @@ type TCO struct {
 		InternetEURPerMonth float64 `yaml:"internet_eur_per_month"`
 		PlatformShare       float64 `yaml:"platform_share"`
 	} `yaml:"network"`
+	// Market price of comparable on-prem storage: our disks were free, so the
+	// TCO alone would price volumes at almost nothing.
+	Storage struct {
+		EURPerGiBMonth float64 `yaml:"eur_per_gib_month"`
+	} `yaml:"storage"`
 	Cluster struct {
 		VCPU       float64 `yaml:"vcpu"`
 		RAMGiB     float64 `yaml:"ram_gib"`
@@ -86,7 +91,7 @@ func (t TCO) Prices() (HourlyPrices, error) {
 		ClusterEURPerHour: hourly,
 		CPUPerVCPUHour:    hourly * c.Split.CPU / c.VCPU,
 		RAMPerGiBHour:     hourly * c.Split.RAM / c.RAMGiB,
-		StoragePerGiBHour: hourly * c.Split.Storage / c.StorageGiB,
+		StoragePerGiBHour: hourly*c.Split.Storage/c.StorageGiB + t.Storage.EURPerGiBMonth/hoursPerMonth,
 	}, nil
 }
 
