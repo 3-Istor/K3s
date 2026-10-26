@@ -1,0 +1,22 @@
+name: FinOps
+
+on:
+  push:
+    branches: [main]
+    paths: ["finops/**", "k8s/config/opencost/**", ".github/workflows/finops.yml"]
+  pull_request:
+    paths: ["finops/**", "k8s/config/opencost/**", ".github/workflows/finops.yml"]
+
+jobs:
+  tco:
+    name: TCO and OpenCost pricing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: finops/go.mod
+      - name: Test the TCO generator
+        run: go -C finops test ./...
+      - name: OpenCost pricing matches the TCO
+        run: go -C finops run ./tco -check

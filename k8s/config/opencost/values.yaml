@@ -1,0 +1,58 @@
+# OpenCost is the allocation engine only (plan FinOps D-F1): the CMP pulls its
+# allocations every day and is the product. No UI, no ingress.
+clusterName: onprem
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9003"
+  prometheus.io/path: /metrics
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+opencost:
+  exporter:
+    defaultClusterId: onprem
+    resources:
+      requests:
+        cpu: 10m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop: [ALL]
+    # Custom pricing is read from /tmp/custom-config, and the cost model writes
+    # its caches under /tmp.
+    extraVolumeMounts:
+      - name: tmp
+        mountPath: /tmp
+    extraVolumes:
+      - name: tmp
+        emptyDir: {}
+
+  # VictoriaMetrics answers the Prometheus API. The platform reads vmselect
+  # directly like Grafana's platform org; vm-networkpolicies lets this
+  # namespace in.
+  prometheus:
+    internal:
+      enabled: false
+    external:
+      enabled: true
+      url: http://vm-victoria-metrics-cluster-vmselect.observability.svc.cluster.local:8481/select/0/prometheus
+
+  mcp:
+    enabled: true
+
+  carbonCost:
+    enabled: true
+
+  ui:
+    enabled: false
