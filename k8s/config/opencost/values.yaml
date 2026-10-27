@@ -22,6 +22,13 @@ podSecurityContext:
 opencost:
   exporter:
     defaultClusterId: onprem
+    # The clouds write to the same VictoriaMetrics (CNP-110): without this
+    # filter their pods would be priced at the on-prem TCO. Series from before
+    # 2026-10-27 have no cluster label and drop out of replays, which keeps
+    # the lines already ingested for those days.
+    extraEnv:
+      PROM_CLUSTER_ID_LABEL: cluster
+      CURRENT_CLUSTER_ID_FILTER_ENABLED: "true"
     resources:
       requests:
         cpu: 10m

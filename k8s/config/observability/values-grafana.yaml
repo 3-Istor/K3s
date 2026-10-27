@@ -301,7 +301,7 @@ dashboards:
               "fieldConfig": { "defaults": { "unit": "currencyEUR", "decimals": 3 }, "overrides": [] },
               "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
               "targets": [
-                { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(node_total_hourly_cost)" }
+                { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(node_total_hourly_cost{cluster=~\"onprem|\"})" }
               ]
             },
             {
@@ -311,7 +311,7 @@ dashboards:
               "fieldConfig": { "defaults": { "unit": "currencyEUR", "decimals": 3 }, "overrides": [] },
               "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false }, "tooltip": { "mode": "single", "sort": "none" } },
               "targets": [
-                { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(node_total_hourly_cost)", "legendFormat": "cluster" }
+                { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(node_total_hourly_cost{cluster=~\"onprem|\"})", "legendFormat": "cluster" }
               ]
             },
             {
@@ -327,7 +327,7 @@ dashboards:
               },
               "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "auto" },
               "targets": [
-                { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(node_total_hourly_cost) * 730" }
+                { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(node_total_hourly_cost{cluster=~\"onprem|\"}) * 730" }
               ]
             },
             {
@@ -343,7 +343,7 @@ dashboards:
               "targets": [
                 {
                   "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
-                  "expr": "topk(10, sum by (exported_namespace) (container_cpu_allocation * on(node) group_left node_cpu_hourly_cost) + sum by (exported_namespace) (container_memory_allocation_bytes / 2^30 * on(node) group_left node_ram_hourly_cost))",
+                  "expr": "topk(10, sum by (exported_namespace) (container_cpu_allocation{cluster=~\"onprem|\"} * on(node) group_left node_cpu_hourly_cost{cluster=~\"onprem|\"}) + sum by (exported_namespace) (container_memory_allocation_bytes{cluster=~\"onprem|\"} / 2^30 * on(node) group_left node_ram_hourly_cost{cluster=~\"onprem|\"}))",
                   "legendFormat": "{{exported_namespace}}"
                 }
               ]
@@ -358,7 +358,7 @@ dashboards:
               "targets": [
                 {
                   "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
-                  "expr": "sum(node_total_hourly_cost) - (sum(container_cpu_allocation * on(node) group_left node_cpu_hourly_cost) + sum(container_memory_allocation_bytes / 2^30 * on(node) group_left node_ram_hourly_cost))"
+                  "expr": "sum(node_total_hourly_cost{cluster=~\"onprem|\"}) - (sum(container_cpu_allocation{cluster=~\"onprem|\"} * on(node) group_left node_cpu_hourly_cost{cluster=~\"onprem|\"}) + sum(container_memory_allocation_bytes{cluster=~\"onprem|\"} / 2^30 * on(node) group_left node_ram_hourly_cost{cluster=~\"onprem|\"}))"
                 }
               ]
             },
@@ -376,7 +376,7 @@ dashboards:
               "targets": [
                 {
                   "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
-                  "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{container!=\"\", namespace!=\"\"}[5m])) / sum by (namespace) (kube_pod_container_resource_requests{resource=\"cpu\", container!=\"\"})",
+                  "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{cluster=~\"onprem|\", container!=\"\", namespace!=\"\"}[5m])) / sum by (namespace) (kube_pod_container_resource_requests{cluster=~\"onprem|\", resource=\"cpu\", container!=\"\"})",
                   "legendFormat": "{{namespace}}"
                 }
               ]
@@ -392,7 +392,7 @@ dashboards:
               "fieldConfig": { "defaults": { "unit": "short", "decimals": 0 }, "overrides": [] },
               "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "auto" },
               "targets": [
-                { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(offhours_target_asleep)" }
+                { "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(offhours_target_asleep{cluster=~\"onprem|\"})" }
               ]
             },
             {
@@ -405,7 +405,7 @@ dashboards:
               "targets": [
                 {
                   "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
-                  "expr": "sum(offhours_target_original_replicas and on(exported_namespace, schedule, target) (offhours_target_asleep == 1))"
+                  "expr": "sum(offhours_target_original_replicas{cluster=~\"onprem|\"} and on(exported_namespace, schedule, target) (offhours_target_asleep{cluster=~\"onprem|\"} == 1))"
                 }
               ]
             },
@@ -418,7 +418,7 @@ dashboards:
               "targets": [
                 {
                   "refId": "A", "datasource": { "type": "prometheus", "uid": "prometheus" },
-                  "expr": "sum by (exported_namespace) (increase(offhours_transitions_total{result=\"error\"}[24h]))",
+                  "expr": "sum by (exported_namespace) (increase(offhours_transitions_total{cluster=~\"onprem|\", result=\"error\"}[24h]))",
                   "legendFormat": "{{namespace}}"
                 }
               ]
