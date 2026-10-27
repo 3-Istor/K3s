@@ -33,9 +33,8 @@ power:
 
 network:
   internet_eur_per_month: 30
-  # Part of the home connection charged to the platform.
+  # Part of the home connection charged to the platform (confirmed by Brian, 2026-10-27).
   platform_share: 0.5
-  mock: true
 
 # OpenStack exists only to host K3s, so the cluster carries the hypervisors'
 # whole cost; OpenStack and Ceph overhead lands in OpenCost's idle cost.
