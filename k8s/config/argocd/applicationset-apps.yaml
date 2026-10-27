@@ -59,9 +59,22 @@ spec:
   # staging updater writes the staging one, a promotion from the CMP writes the
   # prod one). The patch replaces the whole sources list, so it repeats it.
   # Apps without staging get no patch and render exactly as before.
+  # Cloud apps retry forever: a sync started while their cluster is down must
+  # land after the next up (auto-sync never retries a failed revision).
+  # refresh makes the retry pick up commits pushed meanwhile. On-prem keeps a
+  # finite retry so a broken manifest still ends as a failed sync.
+  # `spec:` is only emitted with content: an empty one would null the spec.
   templatePatch: |
-    {{- if .staged }}
+    {{- if or .staged (ne .spec.targetCloud "onprem") }}
     spec:
+    {{- end }}
+    {{- if ne .spec.targetCloud "onprem" }}
+      syncPolicy:
+        retry:
+          limit: -1
+          refresh: true
+    {{- end }}
+    {{- if .staged }}
       sources:
         - repoURL: https://github.com/3-Istor/infra-templates.git
           targetRevision: HEAD
