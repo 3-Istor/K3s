@@ -37,6 +37,8 @@ spec:
         # retried on the same commit. Retry forever so it heals on the next up.
         retry:
           limit: -1
+          # Retries pick up commits pushed while the cloud was down.
+          refresh: true
           backoff:
             duration: 30s
             factor: 2
