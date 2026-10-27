@@ -22,6 +22,7 @@ configMapGenerator:
       - ../../../finops/onprem-tco.yaml
       - ../../../finops/ai-prices.yaml
       - ../../../finops/saas.yaml
+      - ../../../finops/cloud-prices.yaml
 
 patches:
   - target:
