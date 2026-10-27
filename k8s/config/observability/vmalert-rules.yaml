@@ -117,9 +117,9 @@ data:
           - alert: GatewayHighHTTP5xxRate
             expr: |
               (
-                sum(rate(envoy_http_downstream_rq_xx{envoy_response_code_class="5"}[5m]))
+                sum(rate(envoy_http_downstream_rq_xx{cluster="onprem", envoy_response_code_class="5"}[5m]))
                 /
-                sum(rate(envoy_http_downstream_rq_xx[5m]))
+                sum(rate(envoy_http_downstream_rq_xx{cluster="onprem"}[5m]))
               ) > 0.05
             for: 5m
             labels:
@@ -131,7 +131,7 @@ data:
           # Alert: Connection failures from Envoy Gateway to Backend services
           - alert: GatewayUpstreamConnectionFailures
             expr: |
-              sum(rate(envoy_cluster_upstream_cx_connect_fail{}[5m])) by (envoy_cluster_name) > 0
+              sum(rate(envoy_cluster_upstream_cx_connect_fail{cluster="onprem"}[5m])) by (envoy_cluster_name) > 0
             for: 2m
             labels:
               severity: warning
@@ -153,11 +153,12 @@ data:
       # =====================================================================
       # 4. NODE & CLUSTER HEALTH (node-exporter + kube-state-metrics)
       # =====================================================================
+      # On-prem only: EKS/GKE push their own node series (cluster="aws"/"gcp").
       - name: infrastructure.rules
         rules:
           - alert: NodeNotReady
             expr: |
-              kube_node_status_condition{condition="Ready", status="true"} == 0
+              kube_node_status_condition{cluster="onprem", condition="Ready", status="true"} == 0
             for: 5m
             labels:
               severity: critical
@@ -168,7 +169,7 @@ data:
           - alert: NodeMemoryPressure
             expr: |
               (
-                1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+                1 - (node_memory_MemAvailable_bytes{cluster="onprem"} / node_memory_MemTotal_bytes{cluster="onprem"})
               ) > 0.90
             for: 15m
             labels:
@@ -180,7 +181,7 @@ data:
           - alert: NodeDiskFillingUp
             expr: |
               (
-                1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"})
+                1 - (node_filesystem_avail_bytes{cluster="onprem", fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{cluster="onprem", fstype!~"tmpfs|overlay|squashfs"})
               ) > 0.85
             for: 15m
             labels:
@@ -192,7 +193,7 @@ data:
           - alert: NodeCPUSaturated
             expr: |
               (
-                1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))
+                1 - avg by (instance) (rate(node_cpu_seconds_total{cluster="onprem", mode="idle"}[5m]))
               ) > 0.90
             for: 30m
             labels:
@@ -203,7 +204,7 @@ data:
 
           - alert: NodeClockSkew
             expr: |
-              abs(node_timex_offset_seconds) > 0.05
+              abs(node_timex_offset_seconds{cluster="onprem"}) > 0.05
             for: 10m
             labels:
               severity: warning
@@ -216,8 +217,9 @@ data:
       # =====================================================================
       - name: observability-self.rules
         rules:
+          # On-prem targets only: a cloud cluster going down must not page here.
           - alert: ScrapeTargetDown
-            expr: up == 0
+            expr: up{cluster="onprem"} == 0
             for: 15m
             labels:
               severity: warning
@@ -227,9 +229,9 @@ data:
 
           - alert: LokiIngestionStalled
             expr: |
-              sum(rate(loki_ingester_chunks_flushed_total[15m])) == 0
+              sum(rate(loki_ingester_chunks_flushed_total{cluster="onprem"}[15m])) == 0
               and
-              sum(rate(loki_distributor_lines_received_total[15m])) > 0
+              sum(rate(loki_distributor_lines_received_total{cluster="onprem"}[15m])) > 0
             for: 15m
             labels:
               severity: critical
@@ -239,7 +241,7 @@ data:
 
           - alert: VMStorageInsertErrors
             expr: |
-              sum(rate(vm_rows_ignored_total[10m])) > 0
+              sum(rate(vm_rows_ignored_total{cluster="onprem"}[10m])) > 0
             for: 10m
             labels:
               severity: warning
@@ -296,7 +298,7 @@ data:
         rules:
           - alert: FinOpsBurnRateHigh
             expr: |
-              sum(node_total_hourly_cost) * 730 > 60
+              sum(node_total_hourly_cost{cluster="onprem"}) * 730 > 60
             for: 2h
             labels:
               severity: warning
@@ -306,7 +308,7 @@ data:
 
           - alert: OpenCostDown
             expr: |
-              absent(node_total_hourly_cost)
+              absent(node_total_hourly_cost{cluster="onprem"})
             for: 30m
             labels:
               severity: warning

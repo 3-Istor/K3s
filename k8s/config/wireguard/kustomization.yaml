@@ -9,7 +9,6 @@ resources:
   - deployment.yaml
   - deployment-gcp.yaml
   - service.yaml
-  - whoami.yaml
 
 # Generated names carry a content hash: editing settings.env or onprem.sh
 # rolls the Deployment automatically

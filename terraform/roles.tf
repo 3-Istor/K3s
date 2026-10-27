@@ -96,6 +96,16 @@ resource "vault_kubernetes_auth_backend_role" "vault_secrets_operator_role_cloud
   token_policies                   = [vault_policy.vault_secrets_operator_policy.name]
 }
 
+resource "vault_kubernetes_auth_backend_role" "observability_cloud" {
+  for_each                         = vault_auth_backend.kubernetes_cloud
+  backend                          = each.value.path
+  role_name                        = "observability-role"
+  bound_service_account_names      = ["vault-secrets-operator"]
+  bound_service_account_namespaces = ["vault-secrets-operator"]
+  token_ttl                        = 86400 # 24h
+  token_policies                   = [vault_policy.cloud_observability_policy.name]
+}
+
 # -----------------------------------------------------------------------------
 # ArgoCD Roles
 # -----------------------------------------------------------------------------
