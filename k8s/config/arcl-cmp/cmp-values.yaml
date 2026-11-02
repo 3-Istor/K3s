@@ -54,6 +54,8 @@ env:
     KEYCLOAK_URL: "https://auth.3istor.com"
     KEYCLOAK_CLIENT_ID: "3-istor-openid"
     VAULT_URL: "http://vault.vault.svc.cluster.local:8200"
+    # Import activation is a separate reviewed change after preflight.
+    IMPORT_ENABLED: "false"
     # FinOps: real costs. Backfill starts at the oldest day VictoriaMetrics
     # still holds (14-day retention); days before OpenCost's install have no
     # idle cost.
@@ -235,6 +237,118 @@ extraEnv:
       secretKeyRef:
         name: arcl-cmp-secret
         key: github-registry-token
+
+  # --- Direct GitHub OAuth; absent credentials keep linking disabled ---
+  - name: GITHUB_OAUTH_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-github-oauth
+        key: github-oauth-client-id
+        optional: true
+  - name: GITHUB_OAUTH_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-github-oauth
+        key: github-oauth-client-secret
+        optional: true
+  - name: GITHUB_OAUTH_REDIRECT_URI
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-github-oauth
+        key: github-oauth-redirect-uri
+        optional: true
+  - name: GITHUB_OAUTH_TOKEN_KEY
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-github-oauth
+        key: github-oauth-token-key
+        optional: true
+
+  # --- Repository import settings; IMPORT_ENABLED remains false above ---
+  - name: IMPORT_WORKFLOW_REPO
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-repository-import
+        key: import-workflow-repo
+        optional: true
+  - name: IMPORT_WORKFLOW_REF
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-repository-import
+        key: import-workflow-ref
+        optional: true
+  - name: IMPORT_DISPATCH_WORKFLOW
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-repository-import
+        key: import-dispatch-workflow
+        optional: true
+  - name: IMPORT_CHART_SHA
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-repository-import
+        key: import-chart-sha
+        optional: true
+  - name: IMPORT_WORKFLOW_SHA
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-repository-import
+        key: import-workflow-sha
+        optional: true
+  - name: IMPORT_OIDC_AUDIENCE
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-repository-import
+        key: import-oidc-audience
+        optional: true
+  - name: IMPORT_USER_AUDIENCE
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-repository-import
+        key: import-user-audience
+        optional: true
+  - name: IMPORT_IMAGE_PREFIX
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-repository-import
+        key: import-image-prefix
+        optional: true
+  - name: IMPORT_MAX_IMAGE_BYTES
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-repository-import
+        key: import-max-image-bytes
+        optional: true
+  - name: IMPORT_DOMAIN
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-repository-import
+        key: import-domain
+        optional: true
+  - name: IMPORT_ALLOWED_PROJECT
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-repository-import
+        key: import-allowed-project
+        optional: true
+  - name: IMPORT_CALLBACK_URL
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-repository-import
+        key: import-callback-url
+        optional: true
+  - name: IMPORT_ARGOCD_URL
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-repository-import
+        key: import-argocd-url
+        optional: true
+  - name: IMPORT_ARGOCD_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-repository-import
+        key: import-argocd-token
+        optional: true
 
   # --- Alerting ---
   - name: DISCORD_WEBHOOK_URL

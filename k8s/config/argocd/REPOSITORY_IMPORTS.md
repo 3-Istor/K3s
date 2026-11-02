@@ -86,3 +86,6 @@ pour exécuter en plus validate/can sur le fichier RBAC local, avec kubeconfig e
 configuration CLI vides. Ces commandes n'appellent pas le cluster. Le test couvre
 les connexions avec projet, les refus globaux/hors GitHub, les opérations
 update/delete et les mutations d'Applications interdites.
+
+Configuration backend, secrets OAuth et réglages CI :
+[guide CMP](../arcl-cmp/GITHUB_OAUTH_IMPORT_CONFIG.md).
