@@ -127,6 +127,10 @@ rules:
   - apiGroups: [""]
     resources: ["pods", "services"]
     verbs: ["get", "list"]
+  # Events card of the app page (CNP-196), read only.
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list"]
   - apiGroups: ["guard.3istor.com"]
     resources: ["offhoursschedules"]
     verbs: ["get", "list"]
