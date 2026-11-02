@@ -59,6 +59,9 @@ grafana.ini:
     token_url: "https://auth.3istor.com/realms/3istor/protocol/openid-connect/token"
     api_url: "https://auth.3istor.com/realms/3istor/protocol/openid-connect/userinfo"
     role_attribute_path: "contains(groups[*], 'infra') && 'Admin' || contains(groups[*], 'member') && 'Viewer'"
+    # Without an org_mapping, every OAuth login reset the user's orgs to org 1 and
+    # dropped the project orgs the CMP had added (CNP-135). The CMP owns org memberships.
+    skip_org_role_sync: true
 
 persistence:
   enabled: true
