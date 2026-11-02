@@ -22,3 +22,10 @@ resource "keycloak_group" "k3s_view" {
   realm_id = keycloak_realm.kube_lab.id
   name     = "k3s-view"
 }
+
+# FinOps finance role (plan FinOps I5): read and export every project's costs
+# in the CMP, close months, deploy nothing.
+resource "keycloak_group" "cnp_finance" {
+  realm_id = keycloak_realm.kube_lab.id
+  name     = "cnp-finance"
+}

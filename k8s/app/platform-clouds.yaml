@@ -34,6 +34,8 @@ spec:
           selfHeal: true
         retry:
           limit: -1
+          # Retries pick up commits pushed while the cloud was down.
+          refresh: true
           backoff:
             duration: 30s
             factor: 2

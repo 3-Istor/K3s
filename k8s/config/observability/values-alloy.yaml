@@ -161,6 +161,8 @@ alloy:
       }
 
       loki.write "local_loki" {
+        external_labels = {cluster = "onprem"}
+
         endpoint {
           url       = "http://loki-gateway.observability.svc.cluster.local/loki/api/v1/push"
           tenant_id = "default"
@@ -342,6 +344,8 @@ alloy:
       }
 
       prometheus.remote_write "vmauth" {
+        external_labels = {cluster = "onprem"}
+
         endpoint {
           url = "http://vm-victoria-metrics-cluster-vminsert.observability.svc.cluster.local:8480/insert/0/prometheus/api/v1/write"
         }

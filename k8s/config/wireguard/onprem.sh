@@ -45,9 +45,11 @@ socat "TCP4-LISTEN:$ONPREM_TO_CLOUD_PORT,bind=$POD_IP,reuseaddr,fork" \
 PIDS="$PIDS $!"
 
 # cloud-to-onprem: only reachable through the tunnel IP
-socat "TCP4-LISTEN:$CLOUD_TO_ONPREM_PORT,bind=${ONPREM_TUNNEL_ADDRESS%/*},reuseaddr,fork" \
-  "TCP4:$CLOUD_TO_ONPREM_TARGET" &
-PIDS="$PIDS $!"
+for flow in $CLOUD_TO_ONPREM_FLOWS; do
+  socat "TCP4-LISTEN:${flow%%=*},bind=${ONPREM_TUNNEL_ADDRESS%/*},reuseaddr,fork" \
+    "TCP4:${flow#*=}" &
+  PIDS="$PIDS $!"
+done
 
 # Exit (and let Kubernetes restart the container) if a relay dies
 i=0

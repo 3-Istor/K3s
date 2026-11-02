@@ -22,6 +22,10 @@ The Secret's `name` key is what Applications address. It must match the
 Applications address `destination.name`, never `destination.server`: the URL
 changes when a cluster is rebuilt, the name does not (D-03).
 
+Never delete an Application targeting a cloud while that cloud is down: its
+`resources-finalizer` waits on the unreachable cluster and the deletion hangs.
+Syncs started during a down keep retrying and land after the next up.
+
 ## Registering a new cluster
 
 The cluster team provides the API server endpoint, the cluster CA, and a service
