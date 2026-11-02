@@ -24,7 +24,8 @@ changes when a cluster is rebuilt, the name does not (D-03).
 
 Never delete an Application targeting a cloud while that cloud is down: its
 `resources-finalizer` waits on the unreachable cluster and the deletion hangs.
-Syncs started during a down keep retrying and land after the next up.
+A sync that failed during a down is resynced by the CMP once the cloud is up
+again (`wireguard-<cloud>` retries forever instead: the CMP reads the state from it).
 
 ## Registering a new cluster
 
