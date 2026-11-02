@@ -63,7 +63,7 @@ class ApplicationImportTests(unittest.TestCase):
                "environments": ["prod", "staging"]}
         elements = json.loads(render(self.expression, {"spec": {"apps": [app]}}))
         self.assertEqual([e["env"] for e in elements], ["prod", "staging"])
-        patch = yaml.safe_load(render(self.spec["templatePatch"], elements[1]))
+        patch = yaml.safe_load(render(self.spec["templatePatch"], {**elements[1], "spec": {"targetCloud": "onprem"}}))
         self.assertEqual(patch["spec"]["sources"][0]["targetRevision"], "HEAD")
         self.assertIn("$values/deploy/env/staging/app.yaml",
                       patch["spec"]["sources"][0]["helm"]["valueFiles"])
@@ -72,7 +72,54 @@ class ApplicationImportTests(unittest.TestCase):
         elements = json.loads(render(self.expression, {"spec": {"apps": [imported]}}))
         self.assertEqual([e["env"] for e in elements], ["prod"])
         self.assertFalse(elements[0]["staged"])
-        self.assertFalse(render(self.spec["templatePatch"], elements[0]).strip())
+        self.assertFalse(render(self.spec["templatePatch"], {**elements[0], "spec": {"targetCloud": "onprem"}}).strip())
+
+    def test_base_generators_keep_main_and_pass_registered_external_sources(self):
+        documents = []
+        for filename in ("applicationset-projects.yaml", "applicationset-apps.yaml",
+                         "applicationset-image-updaters.yaml"):
+            documents.extend(yaml.safe_load_all((ROOT / "k8s/config/argocd" / filename).read_text()))
+        self.assertCountEqual([item["metadata"]["name"] for item in documents],
+                              ["cnp-project-appprojects", "cnp-project-systems",
+                               "cnp-apps", "cnp-image-updaters"])
+        for document in documents:
+            generator = document["spec"]["generators"][0]
+            if "matrix" in generator:
+                generator = generator["matrix"]["generators"][0]
+            self.assertEqual(generator["git"], {
+                "repoURL": "https://github.com/3-Istor/cnp-projects.git",
+                "revision": "main", "files": [{"path": "registry/projects/*.yaml"}],
+            })
+        projects = next(item for item in documents if item["metadata"]["name"] == "cnp-project-appprojects")
+        source = projects["spec"]["template"]["spec"]["source"]
+        self.assertEqual(source["repoURL"], "https://github.com/3-Istor/cnp-project-base.git")
+        repository = "https://github.com/external/original"
+        values = yaml.safe_load(render(source["helm"]["values"], {
+            "metadata": {"name": "tenant"},
+            "spec": {"targetCloud": "onprem", "apps": [{"name": "imported", "repoURL": repository}]},
+        }))
+        self.assertEqual(values["apps"], [{"name": "imported", "repoURL": repository, "environments": ["prod"]}])
+
+    def test_cloud_retries_are_preserved_without_replacing_import_sources(self):
+        app = {"name": "web", "type": "static", "repoURL": "https://github.com/example/web"}
+        imported = {**app, "environments": ["prod", "staging"],
+                    "sourceRevision": "a" * 40, "chartRevision": "b" * 40,
+                    "imageTag": "import-test", "imageDigest": "sha256:" + "c" * 64}
+        for cloud in ("aws", "gcp"):
+            for entry in (app, imported):
+                with self.subTest(cloud=cloud, imported="sourceRevision" in entry):
+                    element = json.loads(render(self.expression, {"spec": {"apps": [entry]}}))[0]
+                    patch = yaml.safe_load(render(self.spec["templatePatch"],
+                                                  {**element, "spec": {"targetCloud": cloud}}))
+                    self.assertEqual(patch, {"spec": {"syncPolicy": {
+                        "retry": {"limit": -1, "refresh": True}}}})
+        staged = {**app, "environments": ["prod", "staging"]}
+        element = json.loads(render(self.expression, {"spec": {"apps": [staged]}}))[1]
+        patch = yaml.safe_load(render(self.spec["templatePatch"],
+                                      {**element, "spec": {"targetCloud": "aws"}}))
+        self.assertEqual(patch["spec"]["syncPolicy"]["retry"], {"limit": -1, "refresh": True})
+        self.assertIn("$values/deploy/env/staging/app.yaml",
+                      patch["spec"]["sources"][0]["helm"]["valueFiles"])
 
     def test_image_updaters_do_not_write_imported_repositories(self):
         with tempfile.TemporaryDirectory() as directory:
