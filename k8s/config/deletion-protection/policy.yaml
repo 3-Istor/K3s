@@ -1,0 +1,39 @@
+# Denies deleting objects labelled "true" and removing that label (Argo CD excepted).
+# An absent label or any other value is unprotected.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: cnp-deletion-protection
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - { apiGroups: [""], apiVersions: ["v1"], resources: [namespaces], operations: [DELETE, UPDATE] }
+      - { apiGroups: [argoproj.io], apiVersions: ["*"], resources: [applications, appprojects], operations: [DELETE, UPDATE] }
+      - { apiGroups: [postgresql.cnpg.io], apiVersions: ["*"], resources: [clusters], operations: [DELETE] }
+  variables:
+    - name: key
+      expression: "'cnp.3istor.com/deletion-protected'"
+    - name: was
+      expression: "oldObject != null && has(oldObject.metadata.labels) && variables.key in oldObject.metadata.labels && oldObject.metadata.labels[variables.key] == 'true'"
+    - name: still
+      expression: "object != null && has(object.metadata.labels) && variables.key in object.metadata.labels && object.metadata.labels[variables.key] == 'true'"
+    - name: inProtectedNamespace
+      expression: "namespaceObject != null && has(namespaceObject.metadata.labels) && variables.key in namespaceObject.metadata.labels && namespaceObject.metadata.labels[variables.key] == 'true'"
+    - name: argocd
+      expression: "request.userInfo.username in ['system:serviceaccount:argocd:argocd-application-controller', 'system:serviceaccount:argocd:argocd-applicationset-controller']"
+  validations:
+    - expression: "!(request.operation == 'DELETE' && request.resource.resource != 'clusters' && variables.was)"
+      message: Deletion protection is on for this project. Turn it off in the CMP first.
+    - expression: "!(request.operation == 'DELETE' && request.resource.resource == 'clusters' && variables.inProtectedNamespace)"
+      message: Deletion protection is on for this project. Turn it off in the CMP first.
+    - expression: "!(request.operation == 'UPDATE' && variables.was && !variables.still && !variables.argocd)"
+      message: Only Argo CD removes the deletion protection label. Turn it off in the CMP.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: cnp-deletion-protection
+spec:
+  policyName: cnp-deletion-protection
+  validationActions: [Deny]

@@ -57,7 +57,7 @@ data:
         continue
       fi
       echo "delete $appproject: project $project is no longer registered"
-      kubectl delete appproject "$appproject"
+      kubectl delete appproject "$appproject" || echo "keep $appproject: delete refused"
     done
 ---
 apiVersion: batch/v1
