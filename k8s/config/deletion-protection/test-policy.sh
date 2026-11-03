@@ -28,7 +28,7 @@ check() {
 
 # Same cases for namespaces, Applications and AppProjects.
 run() { # run <apiVersion> <kind> <resource> <namespace> <spec|->
-  local api=$1 kind=$2 res=$3 ns=$4 spec=$5 n=$P-${2,,} x
+  local api=$1 kind=$2 res=$3 ns=$4 spec=$5 n=$P-${2,,} x who
   local k="kubectl -n $ns"
   for x in t:true f:false u:- a:true s:true e:-; do
     check allow "$kind create ${x%:*} (label ${x#*:})" mk "$api" "$kind" "$n-${x%:*}" "$ns" "${x#*:}" "$spec"
@@ -44,7 +44,9 @@ run() { # run <apiVersion> <kind> <resource> <namespace> <spec|->
   check allow "$kind enable protection as admin"        $k label "$res" "$n-e" $L=true
   check deny  "$kind delete after enabling"             $k delete "$res" "$n-e" --wait=false
   check allow "$kind remove label as application-controller"       $k label "$res" "$n-a" $L- $APP
-  check allow "$kind set false as applicationset-controller"       $k label "$res" "$n-s" $L=false --overwrite $APPSET
+  # Upstream Argo CD RBAC gives the applicationset-controller write access to Applications only.
+  [ "$kind" = Application ] && who=$APPSET || who=$APP
+  check allow "$kind set false as ${who#--as=system:serviceaccount:argocd:}" $k label "$res" "$n-s" $L=false --overwrite $who
   check allow "$kind delete after Argo CD removed the label"       $k delete "$res" "$n-a" --wait=false
 }
 
