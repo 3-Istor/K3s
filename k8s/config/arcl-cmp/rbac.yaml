@@ -127,6 +127,10 @@ rules:
   - apiGroups: [""]
     resources: ["pods", "services"]
     verbs: ["get", "list"]
+  # Events card of the app page (CNP-196), read only.
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list"]
   - apiGroups: ["guard.3istor.com"]
     resources: ["offhoursschedules"]
     verbs: ["get", "list"]
@@ -146,3 +150,70 @@ roleRef:
   kind: ClusterRole
   name: cmp-environment-operator
   apiGroup: rbac.authorization.k8s.io
+---
+# Restart button of an app (CNP-197): patch the restart marker of its Deployment
+# or Argo Rollout. Scoped by the admission policy below, not by this role.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cmp-app-restarter
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["patch"]
+  - apiGroups: ["argoproj.io"]
+    resources: ["rollouts"]
+    verbs: ["patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cmp-app-restarter
+subjects:
+  - kind: ServiceAccount
+    name: arcl-cmp
+    namespace: arcl-cmp
+roleRef:
+  kind: ClusterRole
+  name: cmp-app-restarter
+  apiGroup: rbac.authorization.k8s.io
+---
+# The CMP may only restart project workloads: project namespaces only, and the
+# workload spec must stay the same apart from the restart marker.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: cmp-app-restart-only
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["apps"]
+        apiVersions: ["*"]
+        resources: ["deployments"]
+        operations: ["UPDATE"]
+      - apiGroups: ["argoproj.io"]
+        apiVersions: ["*"]
+        resources: ["rollouts"]
+        operations: ["UPDATE"]
+  matchConditions:
+    - name: cmp-service-account
+      expression: request.userInfo.username == "system:serviceaccount:arcl-cmp:arcl-cmp"
+  validations:
+    - expression: >-
+        has(namespaceObject.metadata.labels) &&
+        "cnp.3istor.com/project" in namespaceObject.metadata.labels
+      message: The CMP only changes workloads in project namespaces.
+    - expression: >-
+        object.spec.template.spec == oldObject.spec.template.spec &&
+        (has(object.spec.replicas) ? object.spec.replicas : 1) ==
+        (has(oldObject.spec.replicas) ? oldObject.spec.replicas : 1)
+      message: The CMP may only restart a workload, not change it.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: cmp-app-restart-only
+spec:
+  policyName: cmp-app-restart-only
+  validationActions: ["Deny"]

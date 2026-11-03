@@ -35,6 +35,8 @@ spec:
           selfHeal: true
         # The clouds are ephemeral: a sync that failed while a cluster was down is never
         # retried on the same commit. Retry forever so it heals on the next up.
+        # Unlike the other cloud apps: the CMP reads the cloud's state from this
+        # app's health, so it cannot resync it while it is failed.
         retry:
           limit: -1
           # Retries pick up commits pushed while the cloud was down.

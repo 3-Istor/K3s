@@ -32,13 +32,13 @@ spec:
         automated:
           prune: true
           selfHeal: true
+        # Finite like on-prem: the CMP resyncs it once the cloud is up again.
         retry:
-          limit: -1
-          # Retries pick up commits pushed while the cloud was down.
+          limit: 10
           refresh: true
           backoff:
-            duration: 30s
+            duration: 5s
             factor: 2
-            maxDuration: 3m
+            maxDuration: 1m
         syncOptions:
           - ServerSideApply=true

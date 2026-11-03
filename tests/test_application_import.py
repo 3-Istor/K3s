@@ -100,7 +100,7 @@ class ApplicationImportTests(unittest.TestCase):
         }))
         self.assertEqual(values["apps"], [{"name": "imported", "repoURL": repository, "environments": ["prod"]}])
 
-    def test_cloud_retries_are_preserved_without_replacing_import_sources(self):
+    def test_finite_cloud_retries_are_preserved_without_replacing_import_sources(self):
         app = {"name": "web", "type": "static", "repoURL": "https://github.com/example/web"}
         imported = {**app, "environments": ["prod", "staging"],
                     "sourceRevision": "a" * 40, "chartRevision": "b" * 40,
@@ -111,13 +111,15 @@ class ApplicationImportTests(unittest.TestCase):
                     element = json.loads(render(self.expression, {"spec": {"apps": [entry]}}))[0]
                     patch = yaml.safe_load(render(self.spec["templatePatch"],
                                                   {**element, "spec": {"targetCloud": cloud}}))
-                    self.assertEqual(patch, {"spec": {"syncPolicy": {
-                        "retry": {"limit": -1, "refresh": True}}}})
+                    self.assertIsNone(patch)
+                    retry = self.spec["template"]["spec"]["syncPolicy"]["retry"]
+                    self.assertEqual(retry["limit"], 10)
+                    self.assertTrue(retry["refresh"])
         staged = {**app, "environments": ["prod", "staging"]}
         element = json.loads(render(self.expression, {"spec": {"apps": [staged]}}))[1]
         patch = yaml.safe_load(render(self.spec["templatePatch"],
                                       {**element, "spec": {"targetCloud": "aws"}}))
-        self.assertEqual(patch["spec"]["syncPolicy"]["retry"], {"limit": -1, "refresh": True})
+        self.assertNotIn("syncPolicy", patch["spec"])
         self.assertIn("$values/deploy/env/staging/app.yaml",
                       patch["spec"]["sources"][0]["helm"]["valueFiles"])
 

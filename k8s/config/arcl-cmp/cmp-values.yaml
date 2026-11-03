@@ -175,6 +175,18 @@ extraEnv:
         name: arcl-cmp-secret
         key: avatars-s3-public-url-base
 
+  # --- App icons (CNP-198): private bucket on the same Garage endpoint ---
+  - name: ICONS_S3_ACCESS_KEY_ID
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: icons-s3-access-key-id
+  - name: ICONS_S3_SECRET_ACCESS_KEY
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: icons-s3-secret-access-key
+
   # --- Cloudflare API & Account ---
   - name: CLOUDFLARE_API_TOKEN
     valueFrom:
