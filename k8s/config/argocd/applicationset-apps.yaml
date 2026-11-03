@@ -84,6 +84,8 @@ spec:
         cnp.3istor.com/cloud: "{{ .spec.targetCloud }}"
         cnp.3istor.com/app: "{{ .name }}"
         cnp.3istor.com/env: "{{ .env }}"
+        # Prod only: staging Applications are never protected.
+        cnp.3istor.com/deletion-protected: '{{ and (dig "deletionProtection" false .spec) (eq .env "prod") }}'
       annotations:
         # Required for Kyverno compliance and to prevent sync-loops with
         # mutating webhooks.
