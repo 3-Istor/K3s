@@ -60,6 +60,9 @@ env:
     FINOPS_INGEST_ENABLED: "true"
     FINOPS_PROVIDER: "real"
     FINOPS_INGEST_SINCE: "2026-10-12"
+    # Platform admins (is_cnp_admin), comma-separated Keycloak usernames:
+    # admin on every project, not only FinOps.
+    FINOPS_ADMIN_USERS: "hugo.guillet"
 
 extraEnv:
   # --- OpenStack SDK ---
