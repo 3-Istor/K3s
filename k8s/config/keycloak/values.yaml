@@ -4,7 +4,7 @@ enableServiceLinks: false
 
 image:
   repository: quay.io/keycloak/keycloak
-  tag: "26.5.5"
+  tag: "26.8.1"
 
 rbac:
   create: false
@@ -105,8 +105,9 @@ extraVolumeMounts: |
 
 extraInitContainers: |
   - name: theme-provider-init
-    image: ghcr.io/thegostsniperfr/keycloak-theme-kube-lab:latest
-    imagePullPolicy: Always
+    # Pinned: the theme overrides internal login templates and must be retested on every Keycloak bump.
+    image: ghcr.io/thegostsniperfr/keycloak-theme-kube-lab@sha256:c31626bb1de27aea9339e6d8fab99d0d4b395c6165ee52f10698083e522dd37a
+    imagePullPolicy: IfNotPresent
     volumeMounts:
       - name: theme-providers
         mountPath: /providers
