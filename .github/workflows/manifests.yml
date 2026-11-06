@@ -14,6 +14,14 @@ jobs:
 
       - uses: azure/setup-helm@v4
 
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Verify import revision and image pinning
+        run: |
+          pip install pyyaml
+          python -m unittest discover -s tests
+
       - name: Install kubeconform
         run: |
           curl -sSLo /tmp/kubeconform.tar.gz \

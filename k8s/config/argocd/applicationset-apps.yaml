@@ -46,10 +46,11 @@ spec:
                   {{- $components := list "app" -}}
                   {{- if eq $app.type "fullstack" -}}{{- $components = list "frontend" "backend" -}}{{- end -}}
                   {{- $envs := dig "environments" (list "prod") $app -}}
+                  {{- if hasKey $app "sourceRevision" -}}{{- $envs = list "prod" -}}{{- end -}}
                   {{- $staged := has "staging" $envs -}}
                   {{- range $env := $envs -}}
                     {{- range $c := $components -}}
-                      {{- $out = append $out (dict "name" $app.name "type" $app.type "repoURL" $app.repoURL "component" $c "env" $env "suffix" (ternary "" "-stg" (eq $env "prod")) "staged" $staged) -}}
+                      {{- $out = append $out (dict "name" $app.name "type" $app.type "repoURL" $app.repoURL "component" $c "env" $env "suffix" (ternary "" "-stg" (eq $env "prod")) "staged" $staged "sourceRevision" (dig "sourceRevision" "HEAD" $app) "chartRevision" (dig "chartRevision" "HEAD" $app) "imageTag" (dig "imageTag" "" $app) "imageDigest" (dig "imageDigest" "" $app)) -}}
                     {{- end -}}
                   {{- end -}}
                 {{- end -}}
@@ -60,11 +61,11 @@ spec:
   # prod one). The patch replaces the whole sources list, so it repeats it.
   # Apps without staging get no patch and render exactly as before.
   templatePatch: |
-    {{- if .staged }}
+    {{- if and .staged (not .imageDigest) }}
     spec:
       sources:
         - repoURL: https://github.com/3-Istor/infra-templates.git
-          targetRevision: HEAD
+          targetRevision: "{{ .chartRevision }}"
           path: .
           helm:
             ignoreMissingValueFiles: true
@@ -72,7 +73,7 @@ spec:
               - '{{ if eq .type "fullstack" }}$values/deploy/values-{{ .component }}.yaml{{ else }}$values/deploy/values.yaml{{ end }}'
               - '$values/deploy/env/{{ .env }}/{{ .component }}.yaml'
         - repoURL: "{{ .repoURL }}"
-          targetRevision: HEAD
+          targetRevision: "{{ .sourceRevision }}"
           path: ""
           ref: values
     {{- end }}
@@ -96,13 +97,21 @@ spec:
       project: "{{ .metadata.name }}"
       sources:
         - repoURL: https://github.com/3-Istor/infra-templates.git
-          targetRevision: HEAD
+          targetRevision: "{{ .chartRevision }}"
           path: .
           helm:
+            # Imports keep the exact image scanned by the central pipeline.
+            values: |
+              {{- if .imageDigest }}
+              image:
+                tag: {{ printf "%s@%s" .imageTag .imageDigest | quote }}
+              {{- else }}
+              {}
+              {{- end }}
             valueFiles:
               - '{{ if eq .type "fullstack" }}$values/deploy/values-{{ .component }}.yaml{{ else }}$values/deploy/values.yaml{{ end }}'
         - repoURL: "{{ .repoURL }}"
-          targetRevision: HEAD
+          targetRevision: "{{ .sourceRevision }}"
           path: ""
           ref: values
       destination:

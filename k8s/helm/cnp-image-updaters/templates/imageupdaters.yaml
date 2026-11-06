@@ -11,6 +11,7 @@
   ran in staging. A final X.Y.Z pushed by hand is built but deployed nowhere.
 */}}
 {{- range $app := .Values.apps }}
+{{- if not (hasKey $app "sourceRevision") }}
 {{- $owner := regexReplaceAll "^https://github.com/([^/]+)/.*$" $app.repoURL "${1}" | lower }}
 {{- $components := ternary (list "frontend" "backend") (list "app") (eq $app.type "fullstack") }}
 {{- $staged := has "staging" ($app.environments | default (list "prod")) }}
@@ -65,5 +66,6 @@ spec:
           {{- else }}
           writeBackTarget: {{ printf "helmvalues:/deploy/%s" (ternary "values.yaml" (printf "values-%s.yaml" $component) (eq $component "app")) | quote }}
           {{- end }}
+{{- end }}
 {{- end }}
 {{- end }}

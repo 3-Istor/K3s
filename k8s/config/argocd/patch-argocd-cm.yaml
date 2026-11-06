@@ -19,6 +19,8 @@ data:
     ignoreAggregatedRoles: true
 
   admin.enabled: "false"
+  # API-only service account for the portal import integration; no password login.
+  accounts.cmp-import: apiKey
   url: "https://argocd.3istor.com"
   timeout.reconciliation: "30s"
   oidc.config: |
