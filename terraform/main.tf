@@ -57,11 +57,31 @@ resource "keycloak_realm" "kube_lab" {
     }
   }
 
-  # TODO
+  # Passkeys: https://www.keycloak.org/docs/latest/server_admin/index.html#passkeys_server_administration_guide
+  # The RP ID is the registrable domain, not auth.<domain>, so passkeys survive a Keycloak
+  # hostname change. Changing it later invalidates every registered passkey.
+  # passwordless_passkeys_enabled makes every username/password form offer the passkey
+  # (autofill and a "Sign in with Passkey" button), in all the realm's browser flows.
+  web_authn_passwordless_policy {
+    relying_party_entity_name         = "3Istor ID"
+    relying_party_id                  = var.base_domain
+    signature_algorithms              = ["ES256", "RS256"]
+    user_verification_requirement     = "required"
+    discoverable_credential           = "required"
+    attestation_conveyance_preference = "none"
+    avoid_same_authenticator_register = true
+    passwordless_passkeys_enabled     = true
+  }
+
+  # Second-factor security keys are not used by the browser flows. The policy only held the
+  # example RP ID, which made any registration fail.
   web_authn_policy {
-    relying_party_entity_name = "Example"
-    relying_party_id          = "keycloak.example.com"
-    signature_algorithms      = ["ES256", "RS256"]
+    relying_party_entity_name         = "3Istor ID"
+    relying_party_id                  = var.base_domain
+    signature_algorithms              = ["ES256", "RS256"]
+    user_verification_requirement     = "preferred"
+    attestation_conveyance_preference = "none"
+    avoid_same_authenticator_register = true
   }
 }
 
@@ -71,6 +91,16 @@ resource "keycloak_required_action" "totp" {
   enabled        = true
   default_action = true
   name           = "Configure OTP"
+}
+
+# Not a default action: new accounts, demo-* included, keep password plus TOTP. A user adds a
+# passkey from the account console (Account security, Signing in) or an admin assigns it.
+resource "keycloak_required_action" "webauthn_register_passwordless" {
+  realm_id       = keycloak_realm.kube_lab.id
+  alias          = "webauthn-register-passwordless"
+  name           = "Webauthn Register Passwordless"
+  enabled        = true
+  default_action = false
 }
 
 resource "keycloak_realm_user_profile" "kube_lab_profile" {

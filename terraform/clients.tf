@@ -48,13 +48,13 @@ resource "keycloak_openid_client" "openid_client" {
     "https://cmp.${var.base_domain}",
     "https://mepa.${var.base_domain}",
     "https://qcm.${var.base_domain}",
-    "http://localhost:3000/",
+    "http://localhost:3000",
     "http://localhost:3001",
-    "https://grafana.${var.base_domain}/"
+    "https://grafana.${var.base_domain}"
   ]
 
   authentication_flow_binding_overrides {
-    browser_id = keycloak_authentication_flow.browser_openid_client.id
+    browser_id = keycloak_authentication_flow.browser_v5.id
   }
 }
 
@@ -110,7 +110,7 @@ resource "keycloak_openid_client" "vault" {
   ]
 
   authentication_flow_binding_overrides {
-    browser_id = keycloak_authentication_flow.browser_openid_client.id
+    browser_id = keycloak_authentication_flow.browser_v5.id
   }
 }
 
@@ -132,7 +132,9 @@ resource "keycloak_openid_client_service_account_role" "cmp_manage_users" {
   role                    = "manage-users"
 }
 data "keycloak_openid_client" "realm_management" {
-  realm_id  = keycloak_realm.kube_lab.id
+  # A literal, not keycloak_realm.kube_lab.id: any pending realm change would defer this read
+  # to apply time and force a replacement of cmp_manage_users, removing the role meanwhile.
+  realm_id  = "3istor"
   client_id = "realm-management"
 }
 
