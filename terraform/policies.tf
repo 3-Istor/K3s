@@ -99,6 +99,26 @@ resource "vault_policy" "arcl_cmp_policy" {
   policy = templatefile("${path.module}/policies/arcl_cmp.hcl", {})
 }
 
+resource "vault_policy" "cmp_backend" {
+  name = "cmp-backend"
+  policy = templatefile("${path.module}/policies/cmp_backend.hcl", {
+    kv_mount             = vault_mount.kvv2.path
+    auth_mounts          = local.cmp_backend_auth_mounts
+    platform_group_ids   = [for group in local.platform_identity_groups : group.id]
+    platform_group_names = [for group in local.platform_identity_groups : group.name]
+    platform_group_alias_ids = [
+      vault_identity_group_alias.infra_alias.id,
+      vault_identity_group_alias.member_alias.id,
+    ]
+    denied_roles = {
+      for mount in local.cmp_backend_auth_mounts : mount => sort(distinct(concat(
+        [for role in local.platform_kubernetes_roles : role.role_name if role.backend == mount],
+        mount == vault_auth_backend.kubernetes.path ? [local.cmp_backend_role_name] : [],
+      )))
+    }
+  })
+}
+
 # -----------------------------------------------------------------------------
 # n8n Policies
 # -----------------------------------------------------------------------------

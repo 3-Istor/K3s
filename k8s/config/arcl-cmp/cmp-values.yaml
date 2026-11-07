@@ -57,6 +57,9 @@ env:
     # KEYCLOAK_CLIENT_ID, which is also the backend's admin client.
     KEYCLOAK_ALLOWED_CLIENTS: "3-istor-openid"
     VAULT_URL: "http://vault.vault.svc.cluster.local:8200"
+    # Log in as Vault role cmp-backend with the pod's ServiceAccount (arcl-cmp)
+    # instead of VAULT_TOKEN. Empty switches back to the static token.
+    VAULT_AUTH: "kubernetes"
     # FinOps: real costs. Backfill starts at the oldest day VictoriaMetrics
     # still holds (14-day retention); days before OpenCost's install have no
     # idle cost.
@@ -205,7 +208,19 @@ extraEnv:
         name: arcl-cmp-secret
         key: cloudflare-account-id
 
-  # --- Keycloak Admin client ---
+  # --- Keycloak master realm: cmp-provisioner wins over the admin user ---
+  - name: KEYCLOAK_PROVISIONER_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: keycloak-provisioner-client-id
+        optional: true
+  - name: KEYCLOAK_PROVISIONER_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: keycloak-provisioner-client-secret
+        optional: true
   - name: KEYCLOAK_ADMIN_USERNAME
     valueFrom:
       secretKeyRef:
