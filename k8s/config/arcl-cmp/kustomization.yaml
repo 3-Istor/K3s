@@ -48,7 +48,7 @@ helmGlobals:
 helmCharts:
   - name: arcl-cmp
     repo: oci://ghcr.io/3-istor/charts
-    version: 0.2.3
+    version: 0.2.4
     releaseName: arcl-cmp
     namespace: arcl-cmp
     valuesFile: cmp-values.yaml
