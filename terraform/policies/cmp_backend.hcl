@@ -3,9 +3,17 @@
 # create or change is named project-* except app auth roles, which carry no
 # prefix: the platform roles are denied by name below.
 #
-# The policy-name globs on roles and groups only stop naming a platform policy
-# directly: a comma-separated string passes the glob, and the CMP writes the
-# content of project-* policies anyway. They are a guard rail, not a bound.
+# Limits, on purpose spelled out:
+# - The CMP writes the content of project-* policies, so it can grant itself
+#   anything through one of them: this policy keeps it off the platform
+#   objects, it does not bound what a compromised CMP can reach.
+# - The kubernetes auth plugin lowercases role names and policy paths are
+#   case-sensitive: the name denies stop exact names only. A mixed-case write
+#   can still overwrite a platform role, but only with the bindings the
+#   allowed_parameters below permit (vault-secrets-operator, project-*
+#   policies); a mixed-case delete is not stopped.
+# - "*,*" (contains a comma) blocks comma-separated lists, which Vault splits
+#   after the parameter check.
 
 path "sys/mounts" {
   capabilities = ["read"]
@@ -36,9 +44,20 @@ path "sys/mounts/auth/oidc" {
 path "auth/${mount}/role/*" {
   capabilities = ["create", "read", "update", "delete"]
   allowed_parameters = {
-    "token_policies" = ["project-*"]
-    "policies"       = ["project-*"]
-    "*"              = []
+    "token_policies"                   = ["project-*"]
+    "policies"                         = ["project-*"]
+    "bound_service_account_names"      = ["vault-secrets-operator"]
+    "bound_service_account_namespaces" = ["vault-secrets-operator"]
+    # Sent by the provider on every write, empty; a selector would widen the
+    # namespace binding.
+    "bound_service_account_namespace_selector" = [""]
+    "*"                                        = []
+  }
+  denied_parameters = {
+    "token_policies"                   = ["*,*"]
+    "policies"                         = ["*,*"]
+    "bound_service_account_names"      = ["*,*"]
+    "bound_service_account_namespaces" = ["*,*"]
   }
 }
 
@@ -58,7 +77,14 @@ path "identity/group" {
   allowed_parameters = {
     "name"     = ["project-*"]
     "policies" = ["project-*"]
+    "type"     = ["external"]
     "*"        = []
+  }
+  denied_parameters = {
+    "id"                = []
+    "member_entity_ids" = []
+    "member_group_ids"  = []
+    "policies"          = ["*,*"]
   }
 }
 
@@ -67,13 +93,20 @@ path "identity/group/id/*" {
   allowed_parameters = {
     "name"     = ["project-*"]
     "policies" = ["project-*"]
+    "type"     = ["external"]
     "*"        = []
+  }
+  denied_parameters = {
+    "member_entity_ids" = []
+    "member_group_ids"  = []
+    "policies"          = ["*,*"]
   }
 }
 
 path "identity/group-alias" {
   capabilities = ["create", "update"]
   denied_parameters = {
+    "id"           = []
     "canonical_id" = ${jsonencode(platform_group_ids)}
   }
 }
