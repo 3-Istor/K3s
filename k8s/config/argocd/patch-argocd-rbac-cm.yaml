@@ -11,4 +11,5 @@ data:
   scopes: "[groups]"
   policy.csv: |
     g, infra, role:admin
+    g, security-auditor, role:readonly
     g, member, role:readonly
