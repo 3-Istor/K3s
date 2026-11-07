@@ -208,7 +208,19 @@ extraEnv:
         name: arcl-cmp-secret
         key: cloudflare-account-id
 
-  # --- Keycloak Admin client ---
+  # --- Keycloak master realm: cmp-provisioner wins over the admin user ---
+  - name: KEYCLOAK_PROVISIONER_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: keycloak-provisioner-client-id
+        optional: true
+  - name: KEYCLOAK_PROVISIONER_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: keycloak-provisioner-client-secret
+        optional: true
   - name: KEYCLOAK_ADMIN_USERNAME
     valueFrom:
       secretKeyRef:
