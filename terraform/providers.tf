@@ -10,8 +10,9 @@ terraform {
 
   required_providers {
     keycloak = {
-      source  = "keycloak/keycloak"
-      version = "5.9.0"
+      source = "keycloak/keycloak"
+      # 5.10.0 reads realm-management without its secret, which Keycloak 26.6.4+ answers 403.
+      version = "5.10.0"
     }
 
     vault = {

@@ -162,3 +162,125 @@ resource "keycloak_authentication_execution" "deny_access" {
   requirement       = "REQUIRED"
   priority          = 20
 }
+
+# =============================================================================
+# BROWSER FLOW v5: PASSKEY FIRST
+# The username/password form also takes a passkey (passwordless_passkeys_enabled on the
+# realm). A passkey with user verification is already two factors, so it skips the OTP.
+# The password path always ends with the OTP form: a user without OTP sets it up before the
+# session opens, so a password alone never logs in. v4 stays defined until v5 is validated,
+# so a rollback is only the client bindings.
+# =============================================================================
+
+resource "keycloak_authentication_flow" "browser_v5" {
+  realm_id    = keycloak_realm.kube_lab.id
+  alias       = "Browser-3-istor-Login-v5"
+  description = "Passkey first, password plus OTP as fallback, then RBAC"
+}
+
+resource "keycloak_authentication_subflow" "v5_login" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_flow.browser_v5.alias
+  alias             = "3-istor-v5-login"
+  provider_id       = "basic-flow"
+  requirement       = "REQUIRED"
+  priority          = 10
+}
+
+resource "keycloak_authentication_execution" "v5_cookie" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v5_login.alias
+  authenticator     = "auth-cookie"
+  requirement       = "ALTERNATIVE"
+  priority          = 10
+}
+
+resource "keycloak_authentication_subflow" "v5_forms" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v5_login.alias
+  alias             = "3-istor-v5-forms"
+  provider_id       = "basic-flow"
+  requirement       = "ALTERNATIVE"
+  priority          = 20
+}
+
+resource "keycloak_authentication_execution" "v5_username_password" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v5_forms.alias
+  authenticator     = "auth-username-password-form"
+  requirement       = "REQUIRED"
+  priority          = 10
+}
+
+resource "keycloak_authentication_subflow" "v5_second_factor" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v5_forms.alias
+  alias             = "3-istor-v5-second-factor"
+  provider_id       = "basic-flow"
+  requirement       = "CONDITIONAL"
+  priority          = 20
+}
+
+resource "keycloak_authentication_execution" "v5_condition_no_passkey" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v5_second_factor.alias
+  authenticator     = "conditional-credential"
+  requirement       = "REQUIRED"
+  priority          = 10
+}
+
+resource "keycloak_authentication_execution_config" "v5_condition_no_passkey" {
+  realm_id     = keycloak_realm.kube_lab.id
+  execution_id = keycloak_authentication_execution.v5_condition_no_passkey.id
+  alias        = "v5-otp-unless-passkey"
+  config = {
+    credentials = "webauthn-passwordless"
+    included    = "false"
+  }
+}
+
+# REQUIRED, not ALTERNATIVE with other second factors: alternatives that the user has not
+# configured fail with "credential setup required", while a REQUIRED OTP form sends a user
+# without OTP to the QR code setup.
+resource "keycloak_authentication_execution" "v5_otp" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v5_second_factor.alias
+  authenticator     = "auth-otp-form"
+  requirement       = "REQUIRED"
+  priority          = 20
+}
+
+resource "keycloak_authentication_subflow" "v5_rbac" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_flow.browser_v5.alias
+  alias             = "3-istor-v5-rbac"
+  provider_id       = "basic-flow"
+  requirement       = "CONDITIONAL"
+  priority          = 20
+}
+
+resource "keycloak_authentication_execution" "v5_condition_role" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v5_rbac.alias
+  authenticator     = "conditional-user-role"
+  requirement       = "REQUIRED"
+  priority          = 10
+}
+
+resource "keycloak_authentication_execution_config" "v5_condition_role" {
+  realm_id     = keycloak_realm.kube_lab.id
+  execution_id = keycloak_authentication_execution.v5_condition_role.id
+  alias        = "v5-deny-if-not-3-istor-access"
+  config = {
+    condUserRole = keycloak_role.openid_client_access.name
+    negate       = "true"
+  }
+}
+
+resource "keycloak_authentication_execution" "v5_deny_access" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v5_rbac.alias
+  authenticator     = "deny-access-authenticator"
+  requirement       = "REQUIRED"
+  priority          = 20
+}
