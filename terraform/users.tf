@@ -22,12 +22,12 @@
 # USERS
 locals {
   team_members = {
-    "hugo.guillet"  = { first = "Hugo", last = "Guillet", is_infra = false }
-    "newfel.levrel" = { first = "Newfel", last = "Levrel", is_infra = false }
-    "joe.bejjani"   = { first = "Joe", last = "Bejjani", is_infra = false }
-    "raphael.ye"    = { first = "Raphael", last = "Ye", is_infra = false }
-    "arthur.presle" = { first = "Arthur", last = "Presle", is_infra = false }
-    "brian.perret"  = { first = "Brian", last = "Perret", is_infra = true }
+    "hugo.guillet"  = { first = "Hugo", last = "Guillet" }
+    "newfel.levrel" = { first = "Newfel", last = "Levrel" }
+    "joe.bejjani"   = { first = "Joe", last = "Bejjani" }
+    "raphael.ye"    = { first = "Raphael", last = "Ye" }
+    "arthur.presle" = { first = "Arthur", last = "Presle" }
+    "brian.perret"  = { first = "Brian", last = "Perret" }
   }
 }
 
@@ -69,12 +69,8 @@ resource "keycloak_user_groups" "team_groups" {
   realm_id = keycloak_realm.kube_lab.id
   user_id  = keycloak_user.team[each.key].id
 
-  group_ids = each.value.is_infra ? [
-    keycloak_group.member.id,
-    keycloak_group.infra.id
-    ] : [
-    keycloak_group.member.id
-  ]
+  # Project groups are added by the CMP, platform groups in groups.tf.
+  group_ids = [keycloak_group.member.id]
 
   lifecycle {
     ignore_changes = [
