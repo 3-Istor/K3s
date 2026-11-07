@@ -53,6 +53,9 @@ env:
     TF_BACKEND_S3_ENABLED: "true"
     KEYCLOAK_URL: "https://auth.3istor.com"
     KEYCLOAK_CLIENT_ID: "3-istor-openid"
+    # Clients whose access tokens the API accepts (azp). Set apart from
+    # KEYCLOAK_CLIENT_ID, which is also the backend's admin client.
+    KEYCLOAK_ALLOWED_CLIENTS: "3-istor-openid"
     VAULT_URL: "http://vault.vault.svc.cluster.local:8200"
     # FinOps: real costs. Backfill starts at the oldest day VictoriaMetrics
     # still holds (14-day retention); days before OpenCost's install have no
@@ -60,9 +63,6 @@ env:
     FINOPS_INGEST_ENABLED: "true"
     FINOPS_PROVIDER: "real"
     FINOPS_INGEST_SINCE: "2026-10-12"
-    # Platform admins (is_cnp_admin), comma-separated Keycloak usernames:
-    # admin on every project, not only FinOps.
-    FINOPS_ADMIN_USERS: "hugo.guillet"
 
 extraEnv:
   # --- OpenStack SDK ---

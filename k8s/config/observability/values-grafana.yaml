@@ -59,8 +59,12 @@ grafana.ini:
     token_url: "https://auth.3istor.com/realms/3istor/protocol/openid-connect/token"
     api_url: "https://auth.3istor.com/realms/3istor/protocol/openid-connect/userinfo"
     # The CMP owns org memberships; role sync would reset them to org 1 on every login.
-    # It also disables role_attribute_path, so new users join org 1 as Viewer.
+    # It also disables role_attribute_path.
     skip_org_role_sync: true
+  users:
+    # Org 1 reads every namespace's metrics: a new login gets no role there.
+    # The CMP makes infra Admin and security-auditor Viewer (CNP-228).
+    auto_assign_org_role: None
 
 persistence:
   enabled: true
