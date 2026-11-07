@@ -302,3 +302,57 @@ resource "vault_kubernetes_auth_backend_role" "trois_istor_sessions_role" {
   token_ttl                        = 86400
   token_policies                   = [vault_policy.trois_istor_sessions_policy.name]
 }
+
+# -----------------------------------------------------------------------------
+# CMP backend: its own Vault identity, in place of a static token
+# -----------------------------------------------------------------------------
+locals {
+  cmp_backend_role_name = "cmp-backend"
+
+  # The CMP manages app auth roles on these mounts, named "<project>-<app>-role"
+  # with no prefix of their own: every platform role there is denied to it by
+  # name. A role added to one of these mounts must be listed here.
+  cmp_backend_auth_mounts = concat(
+    [vault_auth_backend.kubernetes.path],
+    [for mount in vault_auth_backend.kubernetes_cloud : mount.path],
+  )
+  platform_kubernetes_roles = concat(
+    [
+      vault_kubernetes_auth_backend_role.cert_manager_role,
+      vault_kubernetes_auth_backend_role.keycloak_role,
+      vault_kubernetes_auth_backend_role.cloudflared_role,
+      vault_kubernetes_auth_backend_role.wireguard_role,
+      vault_kubernetes_auth_backend_role.demo_app_role,
+      vault_kubernetes_auth_backend_role.vault_secrets_operator_role,
+      vault_kubernetes_auth_backend_role.argocd_role,
+      vault_kubernetes_auth_backend_role.arcl_cmp_role,
+      vault_kubernetes_auth_backend_role.n8n_role,
+      vault_kubernetes_auth_backend_role.roadmap_role,
+      vault_kubernetes_auth_backend_role.offhours_guard_role,
+      vault_kubernetes_auth_backend_role.mepa_role,
+      vault_kubernetes_auth_backend_role.qcm_role,
+      vault_kubernetes_auth_backend_role.status_role,
+      vault_kubernetes_auth_backend_role.linmap_bot_role,
+      vault_kubernetes_auth_backend_role.observability_role,
+      vault_kubernetes_auth_backend_role.rook_ceph_role,
+      vault_kubernetes_auth_backend_role.trois_istor_sessions_role,
+    ],
+    values(vault_kubernetes_auth_backend_role.vault_secrets_operator_role_cloud),
+    values(vault_kubernetes_auth_backend_role.observability_cloud),
+  )
+  platform_identity_groups = [
+    vault_identity_group.infra,
+    vault_identity_group.member,
+  ]
+}
+
+resource "vault_kubernetes_auth_backend_role" "cmp_backend" {
+  backend                          = vault_auth_backend.kubernetes.path
+  role_name                        = local.cmp_backend_role_name
+  bound_service_account_names      = ["arcl-cmp"]
+  bound_service_account_namespaces = ["arcl-cmp"]
+  token_ttl                        = 3600
+  # Renewed by the CMP up to this, then it logs in again.
+  token_max_ttl  = 14400
+  token_policies = [vault_policy.cmp_backend.name]
+}
