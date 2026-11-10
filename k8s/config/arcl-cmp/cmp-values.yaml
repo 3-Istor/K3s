@@ -77,9 +77,8 @@ env:
     FINOPS_GCP_PROJECT: "project-94dabc15-3981-4317-8da"
     FINOPS_GCP_BILLING_TABLE: "project-94dabc15-3981-4317-8da.cnp_billing.gcp_billing_export_resource_v1_*"
     FINOPS_GCP_SERVICE_ACCOUNT: "cnp-finops-reader@project-94dabc15-3981-4317-8da.iam.gserviceaccount.com"
-    # Output finops_wif_audience of the GCP billing root; empty until it is
-    # applied, which leaves the GCP invoice unread.
-    FINOPS_GCP_WIF_AUDIENCE: ""
+    # Output finops_wif_audience of the GCP billing root.
+    FINOPS_GCP_WIF_AUDIENCE: "//iam.googleapis.com/projects/943089725730/locations/global/workloadIdentityPools/cnp-finops/providers/keycloak"
 
 extraEnv:
   # --- FinOps: Keycloak client federated to AWS STS and GCP WIF ---
