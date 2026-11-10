@@ -66,8 +66,28 @@ env:
     FINOPS_INGEST_ENABLED: "true"
     FINOPS_PROVIDER: "real"
     FINOPS_INGEST_SINCE: "2026-10-12"
+    # Cloud clusters' OpenCost through the WireGuard flow 18081. Probed once
+    # per pass: a stopped cloud is skipped in seconds.
+    FINOPS_OPENCOST_CLUSTERS: "aws=http://aws-apps.wireguard.svc.cluster.local:18081,gcp=http://gcp-apps.wireguard.svc.cluster.local:18081"
+    # Invoices, read with the Keycloak token of client cnp-finops (no cloud
+    # key): Cloud repo terraform/public/{aws,gcp}/billing.
+    FINOPS_AWS_ROLE_ARN: "arn:aws:iam::947554757826:role/cnp-finops-reader"
+    FINOPS_AWS_EXPORT_BUCKET: "cnp-billing-exports-757826"
+    FINOPS_AWS_EXPORT_PREFIX: "focus/cnp-focus"
+    FINOPS_GCP_PROJECT: "project-94dabc15-3981-4317-8da"
+    FINOPS_GCP_BILLING_TABLE: "project-94dabc15-3981-4317-8da.cnp_billing.gcp_billing_export_resource_v1_*"
+    FINOPS_GCP_SERVICE_ACCOUNT: "cnp-finops-reader@project-94dabc15-3981-4317-8da.iam.gserviceaccount.com"
+    # Output finops_wif_audience of the GCP billing root; empty until it is
+    # applied, which leaves the GCP invoice unread.
+    FINOPS_GCP_WIF_AUDIENCE: ""
 
 extraEnv:
+  # --- FinOps: Keycloak client federated to AWS STS and GCP WIF ---
+  - name: FINOPS_OIDC_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-finops-oidc
+        key: client-secret
   # --- OpenStack SDK ---
   - name: OS_AUTH_URL
     valueFrom:
