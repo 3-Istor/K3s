@@ -268,6 +268,28 @@ data:
               summary: "Audit archive run {{ $labels.job_name }} failed"
               description: "An hour of audit logs may be missing from the cnp-audit-archive bucket; check the job's export and upload logs."
 
+      # cnp_secret_age_days comes from the hourly secret-age CronJob, pushed
+      # rather than scraped: the 2h window rides over one missed run.
+      - name: static-secrets.rules
+        rules:
+          - alert: StaticSecretOlderThan90Days
+            expr: |
+              max by (path) (max_over_time(cnp_secret_age_days{path!~"kvv2/projects/.*"}[2h])) > 90
+            labels:
+              severity: warning
+            annotations:
+              summary: "{{ $labels.path }} has not been rotated for {{ $value | printf \"%.0f\" }} days"
+              description: "Rotate it at the source, write the new value to Vault, or replace it with a dynamic or federated credential. See cnp-docs, Static secrets."
+
+          - alert: SecretAgeExporterFailed
+            expr: |
+              max by (job_name) (kube_job_status_failed{namespace="observability", job_name=~"secret-age-.*"}) > 0
+            labels:
+              severity: warning
+            annotations:
+              summary: "Secret age run {{ $labels.job_name }} failed"
+              description: "cnp_secret_age_days is no longer refreshed; check the job logs (Vault login or the push to vminsert)."
+
       # Project logs live in per-project Loki tenants, which the Loki ruler
       # (tenant "default") does not see; Alloy counts them as metrics instead.
       - name: project-logs.rules

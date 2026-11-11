@@ -1,0 +1,58 @@
+# Privileged bindings come from Git: only Argo CD (and system:masters, the
+# break-glass k3s admin kubeconfig) may create or change a binding to a role
+# that can take over the cluster. An OIDC cluster-admin still holds "bind",
+# so without this a stolen session could grant itself a durable foothold.
+#
+# A policy cannot read a ClusterRole, so the privileged ones are listed by
+# name: those holding escalate, bind, impersonate or a wildcard verb in the
+# rendered manifests, plus admin and edit, which impersonate service accounts
+# (harmless in one namespace, cluster-admin through a ClusterRoleBinding).
+# Add a ClusterRole here when a chart introduces one of those verbs.
+#
+# Audit first: failures land in the API audit log (Loki, {job="k8s-audit"}),
+# annotation validation.policy.admission.k8s.io/validation_failure. Once a
+# week shows no legitimate caller, set validationActions to [Deny] and
+# failurePolicy to Fail.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: cnp-privileged-bindings-from-git
+spec:
+  failurePolicy: Ignore
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        apiVersions: ["*"]
+        resources: ["clusterrolebindings", "rolebindings"]
+        operations: ["CREATE", "UPDATE"]
+  matchConditions:
+    - name: not-argocd
+      expression: request.userInfo.username != "system:serviceaccount:argocd:argocd-application-controller"
+    - name: not-system-masters
+      expression: '!(has(request.userInfo.groups) && "system:masters" in request.userInfo.groups)'
+  variables:
+    - name: role
+      expression: object.roleRef.name
+    - name: privileged
+      expression: >-
+        object.roleRef.kind == "ClusterRole" && (
+          variables.role in [
+            "cluster-admin",
+            "argocd-application-controller",
+            "system:controller:clusterrole-aggregation-controller"
+          ] ||
+          (request.kind.kind == "ClusterRoleBinding" && variables.role in ["admin", "edit"])
+        )
+  validations:
+    - expression: "!variables.privileged"
+      messageExpression: >-
+        "A binding to the ClusterRole " + variables.role +
+        " is applied by Argo CD from the K3s repository, not by hand."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: cnp-privileged-bindings-from-git
+spec:
+  policyName: cnp-privileged-bindings-from-git
+  validationActions: [Warn, Audit]

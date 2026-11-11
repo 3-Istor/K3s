@@ -9,6 +9,7 @@ resources:
   - loki-security-rules.yaml
   - loki-log-rules.yaml
   - audit-archive.yaml
+  - secret-age.yaml
   - loki-networkpolicy.yaml
   - cmp-archive-status.yaml
   - vmauth-projects.yaml
