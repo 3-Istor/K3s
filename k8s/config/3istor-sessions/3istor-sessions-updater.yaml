@@ -21,3 +21,7 @@ spec:
         gitConfig:
           branch: "main"
           writeBackTarget: "helmvalues:/k8s/config/3istor-sessions/3istor-sessions-values.yaml"
+          # A pull request like the other platform apps: main only takes reviewed
+          # changes once the ruleset is on (terraform/github).
+          pullRequest:
+            github: {}
