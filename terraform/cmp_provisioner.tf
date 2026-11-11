@@ -17,7 +17,7 @@
 variable "cmp_provisioner_existing_project_realms" {
   description = "Project realms (and <project>-staging realms) created by the master admin before cmp-provisioner existed. Remove a realm once its project is deleted: the read of its <realm>-realm client fails once the realm is gone."
   type        = list(string)
-  default     = ["iot", "joetest", "self-runner", "self-runner-staging", "test-link"]
+  default     = ["iot", "iot-staging", "joetest", "self-runner", "self-runner-staging", "test-link"]
 }
 
 locals {
