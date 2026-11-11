@@ -231,6 +231,13 @@ resource "vault_policy" "trois_istor_sessions_policy" {
 # -----------------------------------------------------------------------------
 # Cloud Observability Policies
 # -----------------------------------------------------------------------------
+resource "vault_policy" "secret_age" {
+  name = "secret-age"
+  policy = templatefile("${path.module}/policies/secret_age.hcl", {
+    mount_path = vault_mount.kvv2.path
+  })
+}
+
 resource "vault_policy" "cloud_observability_policy" {
   name   = "cloud-observability-policy"
   policy = templatefile("${path.module}/policies/cloud-observability.hcl", {})

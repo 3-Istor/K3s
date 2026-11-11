@@ -279,6 +279,18 @@ resource "vault_kubernetes_auth_backend_role" "observability_role" {
   token_policies                   = [vault_policy.observability_policy.name]
 }
 
+# The secret-age CronJob (observability) logs in as its own service account,
+# not through the operator: it reads KV metadata, which no VaultSecret needs.
+resource "vault_kubernetes_auth_backend_role" "secret_age" {
+  backend                          = vault_auth_backend.kubernetes.path
+  role_name                        = "secret-age"
+  bound_service_account_names      = ["secret-age"]
+  bound_service_account_namespaces = ["observability"]
+  token_ttl                        = 300
+  token_max_ttl                    = 600
+  token_policies                   = [vault_policy.secret_age.name]
+}
+
 # -----------------------------------------------------------------------------
 # Rook Ceph Roles
 # -----------------------------------------------------------------------------
@@ -336,6 +348,7 @@ locals {
       vault_kubernetes_auth_backend_role.observability_role,
       vault_kubernetes_auth_backend_role.rook_ceph_role,
       vault_kubernetes_auth_backend_role.trois_istor_sessions_role,
+      vault_kubernetes_auth_backend_role.secret_age,
     ],
     values(vault_kubernetes_auth_backend_role.vault_secrets_operator_role_cloud),
     values(vault_kubernetes_auth_backend_role.observability_cloud),

@@ -72,6 +72,9 @@ spec:
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: victoria-metrics-alert
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: secret-age
         # Cloud clusters through the WireGuard tunnel (aws, gcp).
         - namespaceSelector:
             matchLabels:
