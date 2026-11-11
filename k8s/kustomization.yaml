@@ -23,3 +23,4 @@ resources:
   - config/3istor-sessions/
   - config/wireguard/
   - config/deletion-protection/
+  - config/rbac-guardrails/
