@@ -205,6 +205,16 @@ variable "avatars_s3_secret_key" {
   sensitive = true
 }
 
+variable "icons_s3_access_key_id" {
+  type      = string
+  sensitive = true
+}
+
+variable "icons_s3_secret_key" {
+  type      = string
+  sensitive = true
+}
+
 variable "avatars_s3_endpoint" {
   type    = string
   default = "https://s3.3istor.com"
@@ -263,6 +273,8 @@ resource "vault_kv_secret_v2" "arcl_cmp_creds" {
     "avatars-s3-bucket"            = var.avatars_s3_bucket
     "avatars-s3-region"            = var.avatars_s3_region
     "avatars-s3-public-url-base"   = var.avatars_s3_public_url_base
+    "icons-s3-access-key-id"       = var.icons_s3_access_key_id
+    "icons-s3-secret-access-key"   = var.icons_s3_secret_key
     "cloudflare-api-token"         = var.cloudflare_api_token_secret_var
     "cloudflare-zone-id"           = var.cloudflare_zone_id
     "discord-webhook-url"          = var.discord_webhook_url
