@@ -51,6 +51,10 @@ env:
   backend:
     DATABASE_URL: "sqlite:////app/db/arcl.db"
     TF_BACKEND_S3_ENABLED: "true"
+    # State bucket through role cnp-tfstate-cmp with the Keycloak token of
+    # client cnp-tfstate (Cloud repo, terraform/public/aws/cmp-iam). Empty
+    # falls back to the static cmp-tfstate key below.
+    TF_BACKEND_AWS_ROLE_ARN: "arn:aws:iam::947554757826:role/cnp-tfstate-cmp"
     KEYCLOAK_URL: "https://auth.3istor.com"
     KEYCLOAK_CLIENT_ID: "3-istor-openid"
     # Clients whose access tokens the API accepts (azp). Set apart from
@@ -87,6 +91,13 @@ extraEnv:
       secretKeyRef:
         name: arcl-cmp-finops-oidc
         key: client-secret
+  # --- Terraform state: Keycloak client federated to AWS STS ---
+  - name: TF_BACKEND_OIDC_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-tfstate-oidc
+        key: client-secret
+        optional: true
   # --- OpenStack SDK ---
   - name: OS_AUTH_URL
     valueFrom:
@@ -125,6 +136,8 @@ extraEnv:
         key: os-endpoint-type
 
   # --- AWS SDK & Terraform S3 Backend ---
+  # Static key of IAM user cmp-tfstate: only the rollback path once
+  # TF_BACKEND_AWS_ROLE_ARN is set. Removed with the user.
   - name: AWS_ACCESS_KEY_ID
     valueFrom:
       secretKeyRef:
