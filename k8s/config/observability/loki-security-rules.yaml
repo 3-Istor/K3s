@@ -57,6 +57,25 @@ data:
             annotations:
               summary: "Keycloak {{ $labels.operation }} on {{ $labels.resource }}"
 
+          # Someone put in or taken out of an elevated-* group by anything but
+          # the CMP (CNP-124). Admin events carry ids only: the two lists are
+          # `terraform output -raw elevated_group_ids_regex` and
+          # `cmp_service_account_user_id` (plus the cmp-provisioner service
+          # account once the CMP uses it). Until they are filled in the rule
+          # matches nothing; the CMP's own sweep still removes and reports
+          # such members within 30 s while it runs.
+          - alert: KeycloakElevatedGroupChangedOutsideCmp
+            expr: |
+              sum by (operation, actor) (count_over_time({namespace=~"keycloak|.+-system"}
+                |= `resourceType="GROUP_MEMBERSHIP"`
+                | regexp `operationType="(?P<operation>[A-Z]+)".*userId="(?P<actor>[^"]*)".*resourcePath="users/[^/]+/groups/(?P<group>[^"]+)"`
+                | group =~ "__ELEVATED_GROUP_IDS__"
+                | actor !~ "__CMP_USER_IDS__" [5m])) > 0
+            labels:
+              severity: critical
+            annotations:
+              summary: "Elevated group membership {{ $labels.operation }} by {{ $labels.actor }} outside the CMP"
+
           # Any shell into a pod, people and service accounts alike.
           - alert: KubernetesPodExec
             expr: |

@@ -129,6 +129,11 @@ resource "vault_jwt_auth_backend_role" "default" {
   user_claim     = "preferred_username"
   role_type      = "oidc"
   groups_claim   = "groups"
+  # External group membership is read at login only, so an elevation ended in
+  # Keycloak lasts in Vault until the token dies: the max TTL bounds that lag
+  # (CNP-124). Renewals do not re-read the groups.
+  token_ttl     = 900
+  token_max_ttl = 3600
   allowed_redirect_uris = [
     "https://vault.${var.base_domain}/ui/vault/auth/oidc/oidc/callback",
     "http://localhost:8250/oidc/callback"
@@ -145,6 +150,20 @@ resource "vault_identity_group_alias" "infra_alias" {
   name           = "infra"
   mount_accessor = vault_jwt_auth_backend.keycloak.accessor
   canonical_id   = vault_identity_group.infra.id
+}
+
+# Just-in-time vault-data elevation (CNP-124): the alias matches the Keycloak
+# group the CMP fills while a grant is active.
+resource "vault_identity_group" "elevated_vault_data" {
+  name     = "elevated-vault-data"
+  type     = "external"
+  policies = [vault_policy.vault_data_admin.name]
+}
+
+resource "vault_identity_group_alias" "elevated_vault_data" {
+  name           = keycloak_group.elevated["vault-data"].name
+  mount_accessor = vault_jwt_auth_backend.keycloak.accessor
+  canonical_id   = vault_identity_group.elevated_vault_data.id
 }
 
 # -----------------------------------------------------------------------------
@@ -353,9 +372,12 @@ locals {
     values(vault_kubernetes_auth_backend_role.vault_secrets_operator_role_cloud),
     values(vault_kubernetes_auth_backend_role.observability_cloud),
   )
+  # Out of the CMP's reach in cmp_backend.hcl: it may not edit them or alias
+  # anything to them.
   platform_identity_groups = [
     vault_identity_group.infra,
     vault_identity_group.member,
+    vault_identity_group.elevated_vault_data,
   ]
 }
 

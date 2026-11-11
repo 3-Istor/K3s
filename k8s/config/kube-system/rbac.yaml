@@ -1,6 +1,9 @@
 # ---------------------------------------------------------
-# 1. ADMINS: Full Access (Cluster Admin)
+# 1. ADMINS: cluster-admin, just in time (CNP-124)
 # ---------------------------------------------------------
+# Nobody is in elevated-k3s-admin at rest: the CMP adds a platform admin for
+# the length of an approved grant. Break-glass when the CMP or Keycloak is
+# down: see "Just-in-time access and break-glass" in the README.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -11,12 +14,13 @@ roleRef:
   name: cluster-admin
 subjects:
   - kind: Group
-    name: "oidc:k3s-admin"
+    name: "oidc:elevated-k3s-admin"
 
 ---
 # ---------------------------------------------------------
-# 2. VIEWERS + DEVS: Read-only across the entire cluster
+# 2. PLATFORM ADMINS: read-only across the cluster, standing
 # ---------------------------------------------------------
+# The view ClusterRole excludes Secrets.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -27,6 +31,4 @@ roleRef:
   name: view
 subjects:
   - kind: Group
-    name: "oidc:k3s-view"
-  - kind: Group
-    name: "oidc:k3s-dev"
+    name: "oidc:infra"

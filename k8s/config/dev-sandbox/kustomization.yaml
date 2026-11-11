@@ -5,5 +5,4 @@ namespace: dev-sandbox
 
 resources:
   - namespace.yaml
-  - rbac.yaml
   - offhours-guard.yaml
