@@ -284,3 +284,308 @@ resource "keycloak_authentication_execution" "v5_deny_access" {
   requirement       = "REQUIRED"
   priority          = 20
 }
+
+# =============================================================================
+# BROWSER FLOW v6: LEVELS OF AUTHENTICATION (STEP-UP)
+# LoA 1 (acr "silver"): password plus OTP, or a passkey.
+# LoA 2 (acr "gold"): a passkey used in this authentication. Clients ask for it with
+# acr_values=gold, usually with max_age, before a destructive action.
+# Members of a group holding the passkey-required role (infra, security-auditor) must use a
+# passkey even at LoA 1. Their acr stays "silver" unless gold is asked: the passkey is a
+# login requirement for them, not a standing step-up.
+# v5 stays defined: rolling back is only the client bindings.
+# =============================================================================
+
+resource "keycloak_role" "passkey_required" {
+  realm_id    = keycloak_realm.kube_lab.id
+  name        = "passkey-required"
+  description = "Must log in with a passkey (browser flow v6)"
+}
+
+# Not exhaustive: roles added to these groups elsewhere stay.
+resource "keycloak_group_roles" "passkey_required" {
+  for_each = {
+    infra            = keycloak_group.infra.id
+    security-auditor = keycloak_group.security_auditor.id
+  }
+  realm_id   = keycloak_realm.kube_lab.id
+  group_id   = each.value
+  role_ids   = [keycloak_role.passkey_required.id]
+  exhaustive = false
+}
+
+resource "keycloak_authentication_flow" "browser_v6" {
+  realm_id    = keycloak_realm.kube_lab.id
+  alias       = "Browser-3-istor-Login-v6"
+  description = "Levels of authentication: 1 password plus OTP or passkey, 2 passkey; then RBAC"
+}
+
+resource "keycloak_authentication_subflow" "v6_login" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_flow.browser_v6.alias
+  alias             = "3-istor-v6-login"
+  provider_id       = "basic-flow"
+  requirement       = "REQUIRED"
+  priority          = 10
+}
+
+# The cookie does not satisfy a request for a level the session has not reached (or reached
+# longer ago than the level's max age): the user then goes through the levels below.
+resource "keycloak_authentication_execution" "v6_cookie" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_login.alias
+  authenticator     = "auth-cookie"
+  requirement       = "ALTERNATIVE"
+  priority          = 10
+}
+
+resource "keycloak_authentication_subflow" "v6_levels" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_login.alias
+  alias             = "3-istor-v6-levels"
+  provider_id       = "basic-flow"
+  requirement       = "ALTERNATIVE"
+  priority          = 20
+}
+
+# --- LoA 1 -------------------------------------------------------------------
+
+resource "keycloak_authentication_subflow" "v6_loa1" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_levels.alias
+  alias             = "3-istor-v6-loa1"
+  provider_id       = "basic-flow"
+  requirement       = "CONDITIONAL"
+  priority          = 10
+}
+
+resource "keycloak_authentication_execution" "v6_loa1_condition" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_loa1.alias
+  authenticator     = "conditional-level-of-authentication"
+  requirement       = "REQUIRED"
+  priority          = 10
+}
+
+# Max age of LoA 1 = the SSO idle timeout, so the cookie keeps working as in v5.
+resource "keycloak_authentication_execution_config" "v6_loa1_condition" {
+  realm_id     = keycloak_realm.kube_lab.id
+  execution_id = keycloak_authentication_execution.v6_loa1_condition.id
+  alias        = "v6-loa1"
+  config = {
+    "loa-condition-level" = "1"
+    "loa-max-age"         = "36000"
+  }
+}
+
+resource "keycloak_authentication_execution" "v6_username_password" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_loa1.alias
+  authenticator     = "auth-username-password-form"
+  requirement       = "REQUIRED"
+  priority          = 20
+}
+
+resource "keycloak_authentication_subflow" "v6_otp" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_loa1.alias
+  alias             = "3-istor-v6-otp"
+  provider_id       = "basic-flow"
+  requirement       = "CONDITIONAL"
+  priority          = 30
+}
+
+resource "keycloak_authentication_execution" "v6_otp_condition" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_otp.alias
+  authenticator     = "conditional-credential"
+  requirement       = "REQUIRED"
+  priority          = 10
+}
+
+resource "keycloak_authentication_execution_config" "v6_otp_condition" {
+  realm_id     = keycloak_realm.kube_lab.id
+  execution_id = keycloak_authentication_execution.v6_otp_condition.id
+  alias        = "v6-otp-unless-passkey"
+  config = {
+    credentials = "webauthn-passwordless"
+    included    = "false"
+  }
+}
+
+# Same as v5: REQUIRED so a user without OTP is sent to the QR code setup.
+resource "keycloak_authentication_execution" "v6_otp" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_otp.alias
+  authenticator     = "auth-otp-form"
+  requirement       = "REQUIRED"
+  priority          = 20
+}
+
+# An admin who came in with password plus OTP still has to present a passkey. The OTP runs
+# first on purpose: an admin without a passkey registers one only after the second factor,
+# so a stolen password alone cannot enrol the attacker's passkey.
+resource "keycloak_authentication_subflow" "v6_admin_passkey" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_loa1.alias
+  alias             = "3-istor-v6-admin-passkey"
+  provider_id       = "basic-flow"
+  requirement       = "CONDITIONAL"
+  priority          = 40
+}
+
+resource "keycloak_authentication_execution" "v6_admin_condition_role" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_admin_passkey.alias
+  authenticator     = "conditional-user-role"
+  requirement       = "REQUIRED"
+  priority          = 10
+}
+
+resource "keycloak_authentication_execution_config" "v6_admin_condition_role" {
+  realm_id     = keycloak_realm.kube_lab.id
+  execution_id = keycloak_authentication_execution.v6_admin_condition_role.id
+  alias        = "v6-admin-if-passkey-required"
+  config = {
+    condUserRole = keycloak_role.passkey_required.name
+    negate       = "false"
+  }
+}
+
+resource "keycloak_authentication_execution" "v6_admin_condition_no_passkey" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_admin_passkey.alias
+  authenticator     = "conditional-credential"
+  requirement       = "REQUIRED"
+  priority          = 20
+}
+
+resource "keycloak_authentication_execution_config" "v6_admin_condition_no_passkey" {
+  realm_id     = keycloak_realm.kube_lab.id
+  execution_id = keycloak_authentication_execution.v6_admin_condition_no_passkey.id
+  alias        = "v6-admin-unless-passkey"
+  config = {
+    credentials = "webauthn-passwordless"
+    included    = "false"
+  }
+}
+
+resource "keycloak_authentication_execution" "v6_admin_passkey" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_admin_passkey.alias
+  authenticator     = "webauthn-authenticator-passwordless"
+  requirement       = "REQUIRED"
+  priority          = 30
+}
+
+# --- LoA 2 -------------------------------------------------------------------
+
+resource "keycloak_authentication_subflow" "v6_loa2" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_levels.alias
+  alias             = "3-istor-v6-loa2"
+  provider_id       = "basic-flow"
+  requirement       = "CONDITIONAL"
+  priority          = 20
+}
+
+resource "keycloak_authentication_execution" "v6_loa2_condition" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_loa2.alias
+  authenticator     = "conditional-level-of-authentication"
+  requirement       = "REQUIRED"
+  priority          = 10
+}
+
+# Must not exceed the CMP's STEP_UP_MAX_AGE, or a request for gold within this window is
+# answered from the cookie with an auth_time the CMP then refuses.
+resource "keycloak_authentication_execution_config" "v6_loa2_condition" {
+  realm_id     = keycloak_realm.kube_lab.id
+  execution_id = keycloak_authentication_execution.v6_loa2_condition.id
+  alias        = "v6-loa2"
+  config = {
+    "loa-condition-level" = "2"
+    "loa-max-age"         = "300"
+  }
+}
+
+# A first login that asks for gold and already used a passkey at LoA 1 is not asked twice.
+resource "keycloak_authentication_subflow" "v6_loa2_passkey" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_loa2.alias
+  alias             = "3-istor-v6-loa2-passkey"
+  provider_id       = "basic-flow"
+  requirement       = "CONDITIONAL"
+  priority          = 20
+}
+
+resource "keycloak_authentication_execution" "v6_loa2_condition_no_passkey" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_loa2_passkey.alias
+  authenticator     = "conditional-credential"
+  requirement       = "REQUIRED"
+  priority          = 10
+}
+
+resource "keycloak_authentication_execution_config" "v6_loa2_condition_no_passkey" {
+  realm_id     = keycloak_realm.kube_lab.id
+  execution_id = keycloak_authentication_execution.v6_loa2_condition_no_passkey.id
+  alias        = "v6-loa2-unless-passkey"
+  config = {
+    credentials = "webauthn-passwordless"
+    included    = "false"
+  }
+}
+
+# A user without a passkey is sent to register one here, behind a session that already
+# passed LoA 1 with password plus OTP.
+resource "keycloak_authentication_execution" "v6_loa2_passkey" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_loa2_passkey.alias
+  authenticator     = "webauthn-authenticator-passwordless"
+  requirement       = "REQUIRED"
+  priority          = 20
+}
+
+# --- RBAC (same as v5) ---------------------------------------------------------
+
+resource "keycloak_authentication_subflow" "v6_rbac" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_flow.browser_v6.alias
+  alias             = "3-istor-v6-rbac"
+  provider_id       = "basic-flow"
+  requirement       = "CONDITIONAL"
+  priority          = 20
+}
+
+resource "keycloak_authentication_execution" "v6_condition_role" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_rbac.alias
+  authenticator     = "conditional-user-role"
+  requirement       = "REQUIRED"
+  priority          = 10
+}
+
+resource "keycloak_authentication_execution_config" "v6_condition_role" {
+  realm_id     = keycloak_realm.kube_lab.id
+  execution_id = keycloak_authentication_execution.v6_condition_role.id
+  alias        = "v6-deny-if-not-3-istor-access"
+  config = {
+    condUserRole = keycloak_role.openid_client_access.name
+    negate       = "true"
+  }
+}
+
+resource "keycloak_authentication_execution" "v6_deny_access" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_rbac.alias
+  authenticator     = "deny-access-authenticator"
+  requirement       = "REQUIRED"
+  priority          = 20
+}
+
+# acr claim <-> level. Set per client because the realm-wide map is not exposed by the
+# provider as a typed field; both clients bound to v6 carry the same map.
+locals {
+  acr_loa_map = jsonencode({ silver = 1, gold = 2 })
+}

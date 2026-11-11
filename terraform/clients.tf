@@ -53,8 +53,12 @@ resource "keycloak_openid_client" "openid_client" {
     "https://grafana.${var.base_domain}"
   ]
 
+  extra_config = {
+    "acr.loa.map" = local.acr_loa_map
+  }
+
   authentication_flow_binding_overrides {
-    browser_id = keycloak_authentication_flow.browser_v5.id
+    browser_id = keycloak_authentication_flow.browser_v6.id
   }
 }
 
@@ -109,8 +113,12 @@ resource "keycloak_openid_client" "vault" {
     "http://localhost:8250/oidc/callback"
   ]
 
+  extra_config = {
+    "acr.loa.map" = local.acr_loa_map
+  }
+
   authentication_flow_binding_overrides {
-    browser_id = keycloak_authentication_flow.browser_v5.id
+    browser_id = keycloak_authentication_flow.browser_v6.id
   }
 }
 

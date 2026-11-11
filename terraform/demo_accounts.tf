@@ -2,16 +2,19 @@
 # whole team uses them to show the segregation; passwords are in Vault at
 # kvv2/demo-accounts, readable by every team member. MFA stays mandatory: the
 # first login sets up TOTP, then its secret is stored next to the password.
+# demo-auditor is in security-auditor, so flow v6 also asks it for a passkey: it
+# has to live in a password manager the team shares.
 # No demo platform admin: a shared one would make every member admin.
+# Platform groups are in groups.tf; the CMP adds the project groups of the demo-roles project.
 locals {
-  demo_accounts = {
-    "demo-auditor" = [keycloak_group.member.id, keycloak_group.security_auditor.id]
-    "demo-finops"  = [keycloak_group.member.id, keycloak_group.finops.id]
-    "demo-owner"   = [keycloak_group.member.id]
-    "demo-admin"   = [keycloak_group.member.id]
-    "demo-dev"     = [keycloak_group.member.id]
-    "demo-guest"   = [keycloak_group.member.id]
-  }
+  demo_accounts = toset([
+    "demo-auditor",
+    "demo-finops",
+    "demo-owner",
+    "demo-admin",
+    "demo-dev",
+    "demo-guest",
+  ])
 }
 
 resource "random_password" "demo" {
@@ -41,20 +44,21 @@ resource "keycloak_user" "demo" {
   }
 }
 
-# Not exhaustive: the CMP adds the project groups of the demo-roles project.
-resource "keycloak_user_groups" "demo" {
-  for_each   = local.demo_accounts
-  realm_id   = keycloak_realm.kube_lab.id
-  user_id    = keycloak_user.demo[each.key].id
-  group_ids  = each.value
-  exhaustive = false
+# Replaced by keycloak_group_memberships.platform. destroy = false: destroying it would have
+# removed the demo accounts from member and their platform group.
+removed {
+  from = keycloak_user_groups.demo
+
+  lifecycle {
+    destroy = false
+  }
 }
 
 resource "vault_kv_secret_v2" "demo_accounts" {
   mount = vault_mount.kvv2.path
   name  = "demo-accounts"
   data_json = jsonencode({
-    for name, _ in local.demo_accounts : name => random_password.demo[name].result
+    for name in local.demo_accounts : name => random_password.demo[name].result
   })
 
   lifecycle {
