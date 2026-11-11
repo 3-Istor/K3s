@@ -227,17 +227,17 @@ extraEnv:
         name: arcl-cmp-secret
         key: cloudflare-account-id
 
-  # --- Keycloak Admin client ---
-  - name: KEYCLOAK_ADMIN_USERNAME
+  # --- Keycloak master realm: cmp-provisioner client, never the admin user ---
+  - name: KEYCLOAK_PROVISIONER_CLIENT_ID
     valueFrom:
       secretKeyRef:
-        name: arcl-cmp-secret
-        key: keycloak-admin-username
-  - name: KEYCLOAK_ADMIN_PASSWORD
+        name: arcl-cmp-keycloak-provisioner
+        key: client-id
+  - name: KEYCLOAK_PROVISIONER_CLIENT_SECRET
     valueFrom:
       secretKeyRef:
-        name: arcl-cmp-secret
-        key: keycloak-admin-password
+        name: arcl-cmp-keycloak-provisioner
+        key: client-secret
 
   # --- HashiCorp Vault Client ---
   - name: VAULT_TOKEN
