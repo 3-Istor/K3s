@@ -131,6 +131,14 @@ resource "keycloak_openid_client_service_account_role" "cmp_manage_users" {
   client_id               = data.keycloak_openid_client.realm_management.id
   role                    = "manage-users"
 }
+
+# Access reviews read login events to date each user's last login.
+resource "keycloak_openid_client_service_account_role" "cmp_view_events" {
+  realm_id                = keycloak_realm.kube_lab.id
+  service_account_user_id = keycloak_openid_client.openid_client.service_account_user_id
+  client_id               = data.keycloak_openid_client.realm_management.id
+  role                    = "view-events"
+}
 data "keycloak_openid_client" "realm_management" {
   # A literal, not keycloak_realm.kube_lab.id: any pending realm change would defer this read
   # to apply time and force a replacement of cmp_manage_users, removing the role meanwhile.
