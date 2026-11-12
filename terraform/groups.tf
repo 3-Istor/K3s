@@ -44,17 +44,49 @@ resource "keycloak_group" "security_auditor" {
   name     = "security-auditor"
 }
 
-# Platform admins (infra and portal alike) and cluster-admin kubectl. These two
-# groups are authoritative here: a member added by hand in the console is
-# removed at the next apply.
-resource "keycloak_group_memberships" "infra" {
-  realm_id = keycloak_realm.kube_lab.id
-  group_id = keycloak_group.infra.id
-  members  = ["brian.perret", "hugo.guillet"]
+# Platform group members. Each keycloak_group_memberships is authoritative for its group: a
+# member added by hand in the console is removed at the next apply. Project groups are not
+# listed here, the CMP owns them.
+locals {
+  platform_admins = ["brian.perret", "hugo.guillet"]
+
+  platform_group_members = {
+    infra            = local.platform_admins
+    k3s-admin        = local.platform_admins
+    security-auditor = ["demo-auditor"]
+    finops           = ["demo-finops"]
+    member           = concat(keys(local.team_members), tolist(local.demo_accounts), ["manager.test"])
+  }
+
+  platform_groups = {
+    infra            = keycloak_group.infra.id
+    k3s-admin        = keycloak_group.k3s_admin.id
+    security-auditor = keycloak_group.security_auditor.id
+    finops           = keycloak_group.finops.id
+    member           = keycloak_group.member.id
+  }
+
+  managed_usernames = merge(
+    { for name, user in keycloak_user.team : name => user.username },
+    { for name, user in keycloak_user.demo : name => user.username },
+    { "manager.test" = keycloak_user.manager_test.username },
+  )
 }
 
-resource "keycloak_group_memberships" "k3s_admin" {
+resource "keycloak_group_memberships" "platform" {
+  for_each = local.platform_groups
   realm_id = keycloak_realm.kube_lab.id
-  group_id = keycloak_group.k3s_admin.id
-  members  = ["brian.perret", "hugo.guillet"]
+  group_id = each.value
+  # Through managed_usernames so a typo fails the plan and users exist before membership.
+  members = [for name in local.platform_group_members[each.key] : local.managed_usernames[name]]
+}
+
+moved {
+  from = keycloak_group_memberships.infra
+  to   = keycloak_group_memberships.platform["infra"]
+}
+
+moved {
+  from = keycloak_group_memberships.k3s_admin
+  to   = keycloak_group_memberships.platform["k3s-admin"]
 }
