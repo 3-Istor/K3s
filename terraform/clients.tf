@@ -58,7 +58,7 @@ resource "keycloak_openid_client" "openid_client" {
   }
 
   authentication_flow_binding_overrides {
-    browser_id = keycloak_authentication_flow.browser_v6.id
+    browser_id = keycloak_authentication_flow.browser_v5.id
   }
 }
 
@@ -118,7 +118,7 @@ resource "keycloak_openid_client" "vault" {
   }
 
   authentication_flow_binding_overrides {
-    browser_id = keycloak_authentication_flow.browser_v6.id
+    browser_id = keycloak_authentication_flow.browser_v5.id
   }
 }
 
