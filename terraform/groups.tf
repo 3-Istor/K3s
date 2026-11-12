@@ -8,19 +8,14 @@ resource "keycloak_group" "member" {
   name     = "member"
 }
 
-resource "keycloak_group" "k3s_admin" {
+# Just-in-time elevations (CNP-124). Nobody is a member at rest: the CMP adds
+# a platform admin after another one approves, and removes them at expiry. It
+# also removes, and reports, anyone it finds here without an active grant, so
+# these groups take no keycloak_group_memberships.
+resource "keycloak_group" "elevated" {
+  for_each = toset(["vault-data", "k3s-admin"])
   realm_id = keycloak_realm.kube_lab.id
-  name     = "k3s-admin"
-}
-
-resource "keycloak_group" "k3s_dev" {
-  realm_id = keycloak_realm.kube_lab.id
-  name     = "k3s-dev"
-}
-
-resource "keycloak_group" "k3s_view" {
-  realm_id = keycloak_realm.kube_lab.id
-  name     = "k3s-view"
+  name     = "elevated-${each.key}"
 }
 
 # Platform identities of the access matrix (cnp-docs model.yaml, CNP-228).
@@ -46,13 +41,13 @@ resource "keycloak_group" "security_auditor" {
 
 # Platform group members. Each keycloak_group_memberships is authoritative for its group: a
 # member added by hand in the console is removed at the next apply. Project groups are not
-# listed here, the CMP owns them.
+# listed here, the CMP owns them. cluster-admin kubectl is not standing: it is
+# the elevated-k3s-admin grant, brokered by the CMP.
 locals {
   platform_admins = ["brian.perret", "hugo.guillet"]
 
   platform_group_members = {
     infra            = local.platform_admins
-    k3s-admin        = local.platform_admins
     security-auditor = ["demo-auditor"]
     finops           = ["demo-finops"]
     member           = concat(keys(local.team_members), tolist(local.demo_accounts), ["manager.test"])
@@ -60,7 +55,6 @@ locals {
 
   platform_groups = {
     infra            = keycloak_group.infra.id
-    k3s-admin        = keycloak_group.k3s_admin.id
     security-auditor = keycloak_group.security_auditor.id
     finops           = keycloak_group.finops.id
     member           = keycloak_group.member.id
@@ -84,9 +78,4 @@ resource "keycloak_group_memberships" "platform" {
 moved {
   from = keycloak_group_memberships.infra
   to   = keycloak_group_memberships.platform["infra"]
-}
-
-moved {
-  from = keycloak_group_memberships.k3s_admin
-  to   = keycloak_group_memberships.platform["k3s-admin"]
 }

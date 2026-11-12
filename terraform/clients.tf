@@ -167,6 +167,11 @@ resource "keycloak_openid_client" "k3s_api" {
   standard_flow_enabled        = true
   direct_access_grants_enabled = true
 
+  # kube-apiserver reads the groups from the ID token on every call, so an
+  # ended elevated-k3s-admin grant lasts until the token expires: 5 minutes
+  # instead of the realm's hour (CNP-124). kubelogin refreshes silently.
+  access_token_lifespan = "300"
+
   valid_redirect_uris = [
     "http://localhost:8000",
     "http://localhost:18000"

@@ -91,6 +91,11 @@ resource "vault_policy" "vault_admin" {
   })
 }
 
+resource "vault_policy" "vault_data_admin" {
+  name   = "vault_data_admin"
+  policy = file("${path.module}/policies/vault_data_admin.hcl")
+}
+
 # -----------------------------------------------------------------------------
 # CMP Policies
 # -----------------------------------------------------------------------------
@@ -109,6 +114,7 @@ resource "vault_policy" "cmp_backend" {
     platform_group_alias_ids = [
       vault_identity_group_alias.infra_alias.id,
       vault_identity_group_alias.member_alias.id,
+      vault_identity_group_alias.elevated_vault_data.id,
     ]
     denied_roles = {
       for mount in local.cmp_backend_auth_mounts : mount => sort(distinct(concat(
