@@ -57,8 +57,12 @@ resource "keycloak_openid_client" "openid_client" {
     "acr.loa.map" = local.acr_loa_map
   }
 
+  # Flow v6 (step-up) once the theme serving the passkey scripts is deployed: swap the two
+  # browser_id lines, here and on the vault client, together with STEP_UP_ENABLED in
+  # k8s/config/arcl-cmp/cmp-values.yaml.
   authentication_flow_binding_overrides {
     browser_id = keycloak_authentication_flow.browser_v5.id
+    # browser_id = keycloak_authentication_flow.browser_v6.id
   }
 }
 
@@ -117,8 +121,10 @@ resource "keycloak_openid_client" "vault" {
     "acr.loa.map" = local.acr_loa_map
   }
 
+  # Flow v6: switch with the 3-istor-openid client above.
   authentication_flow_binding_overrides {
     browser_id = keycloak_authentication_flow.browser_v5.id
+    # browser_id = keycloak_authentication_flow.browser_v6.id
   }
 }
 
