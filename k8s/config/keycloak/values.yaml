@@ -106,7 +106,7 @@ extraVolumeMounts: |
 extraInitContainers: |
   - name: theme-provider-init
     # Pinned: the theme overrides internal login templates and must be retested on every Keycloak bump.
-    image: ghcr.io/thegostsniperfr/keycloak-theme-kube-lab@sha256:8091c71c1c55c8e5177c3149942a3754824b930f9bd890388f7c43dbf4dcb6fd
+    image: ghcr.io/thegostsniperfr/keycloak-theme-kube-lab@sha256:c18a504a49b706e721a94c38e60402584de8b897444a1e585fb7f73f7d71c61d
     imagePullPolicy: IfNotPresent
     volumeMounts:
       - name: theme-providers
