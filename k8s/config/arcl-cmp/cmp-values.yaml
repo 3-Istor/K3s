@@ -66,7 +66,10 @@ env:
     VAULT_AUTH: "kubernetes"
     # Destructive actions and elevated access ask for a passkey used in the
     # last 5 minutes (Keycloak LoA 2, flow v6). "false" turns the check off.
+    # Back to "true" when the Keycloak clients are bound to flow v6 again
+    # (K3s terraform/clients.tf).
     STEP_UP_ENABLED: "false"
+    # STEP_UP_ENABLED: "true"
     # FinOps: real costs. Backfill starts at the oldest day VictoriaMetrics
     # still holds (14-day retention); days before OpenCost's install have no
     # idle cost.

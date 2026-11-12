@@ -291,8 +291,16 @@ resource "keycloak_authentication_execution" "v5_deny_access" {
 # LoA 2 (acr "gold"): a passkey used in this authentication. Clients ask for it with
 # acr_values=gold, usually with max_age, before a destructive action.
 # Members of a group holding the passkey-required role (infra, security-auditor) must use a
-# passkey even at LoA 1. Their acr stays "silver" unless gold is asked: the passkey is a
-# login requirement for them, not a standing step-up.
+# passkey even at LoA 1 once they have one. Their acr stays "silver" unless gold is asked:
+# the passkey is a login requirement for them, not a standing step-up.
+# webauthn-authenticator-passwordless never sends a user without a passkey to register one
+# (its factory refuses user setup): reached by such a user it fails the whole login with
+# "credential setup required". Every step that runs it is therefore guarded by
+# conditional-user-configured, and enrolment goes through the webauthn-register-passwordless
+# required action (set on team accounts at creation, users.tf).
+# A CONDITIONAL subflow whose condition holds but whose steps are all skipped does not
+# succeed, and fails its parent: LoA 2 ends with allow-access so that a passkey already used
+# at LoA 1 (or a re-authentication by passkey) satisfies it.
 # v5 stays defined: rolling back is only the client bindings.
 # =============================================================================
 
@@ -422,9 +430,10 @@ resource "keycloak_authentication_execution" "v6_otp" {
   priority          = 20
 }
 
-# An admin who came in with password plus OTP still has to present a passkey. The OTP runs
-# first on purpose: an admin without a passkey registers one only after the second factor,
-# so a stolen password alone cannot enrol the attacker's passkey.
+# An admin who came in with password plus OTP still has to present a passkey. An admin
+# without one logs in with password plus OTP and registers one through the required action,
+# which only runs after the second factor: a stolen password alone cannot enrol the
+# attacker's passkey. Without a passkey the admin cannot reach LoA 2.
 resource "keycloak_authentication_subflow" "v6_admin_passkey" {
   realm_id          = keycloak_realm.kube_lab.id
   parent_flow_alias = keycloak_authentication_subflow.v6_loa1.alias
@@ -468,6 +477,14 @@ resource "keycloak_authentication_execution_config" "v6_admin_condition_no_passk
     credentials = "webauthn-passwordless"
     included    = "false"
   }
+}
+
+resource "keycloak_authentication_execution" "v6_admin_condition_has_passkey" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_admin_passkey.alias
+  authenticator     = "conditional-user-configured"
+  requirement       = "REQUIRED"
+  priority          = 25
 }
 
 resource "keycloak_authentication_execution" "v6_admin_passkey" {
@@ -537,14 +554,74 @@ resource "keycloak_authentication_execution_config" "v6_loa2_condition_no_passke
   }
 }
 
-# A user without a passkey is sent to register one here, behind a session that already
-# passed LoA 1 with password plus OTP.
+resource "keycloak_authentication_execution" "v6_loa2_condition_has_passkey" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_loa2_passkey.alias
+  authenticator     = "conditional-user-configured"
+  requirement       = "REQUIRED"
+  priority          = 15
+}
+
 resource "keycloak_authentication_execution" "v6_loa2_passkey" {
   realm_id          = keycloak_realm.kube_lab.id
   parent_flow_alias = keycloak_authentication_subflow.v6_loa2_passkey.alias
   authenticator     = "webauthn-authenticator-passwordless"
   requirement       = "REQUIRED"
   priority          = 20
+}
+
+# Still no passkey used at this point: the user has none. Refuse gold with a message instead
+# of the generic error; the session at LoA 1 stays open.
+resource "keycloak_authentication_subflow" "v6_loa2_no_passkey" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_loa2.alias
+  alias             = "3-istor-v6-loa2-no-passkey"
+  provider_id       = "basic-flow"
+  requirement       = "CONDITIONAL"
+  priority          = 30
+}
+
+resource "keycloak_authentication_execution" "v6_loa2_condition_still_no_passkey" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_loa2_no_passkey.alias
+  authenticator     = "conditional-credential"
+  requirement       = "REQUIRED"
+  priority          = 10
+}
+
+resource "keycloak_authentication_execution_config" "v6_loa2_condition_still_no_passkey" {
+  realm_id     = keycloak_realm.kube_lab.id
+  execution_id = keycloak_authentication_execution.v6_loa2_condition_still_no_passkey.id
+  alias        = "v6-loa2-no-passkey"
+  config = {
+    credentials = "webauthn-passwordless"
+    included    = "false"
+  }
+}
+
+resource "keycloak_authentication_execution" "v6_loa2_deny" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_loa2_no_passkey.alias
+  authenticator     = "deny-access-authenticator"
+  requirement       = "REQUIRED"
+  priority          = 20
+}
+
+resource "keycloak_authentication_execution_config" "v6_loa2_deny" {
+  realm_id     = keycloak_realm.kube_lab.id
+  execution_id = keycloak_authentication_execution.v6_loa2_deny.id
+  alias        = "v6-loa2-passkey-needed"
+  config = {
+    denyErrorMessage = "This action needs a passkey. Add one in your account (Signing in), then try again."
+  }
+}
+
+resource "keycloak_authentication_execution" "v6_loa2_done" {
+  realm_id          = keycloak_realm.kube_lab.id
+  parent_flow_alias = keycloak_authentication_subflow.v6_loa2.alias
+  authenticator     = "allow-access-authenticator"
+  requirement       = "REQUIRED"
+  priority          = 40
 }
 
 # --- RBAC (same as v5) ---------------------------------------------------------
