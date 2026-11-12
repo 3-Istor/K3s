@@ -61,8 +61,7 @@ resource "keycloak_openid_client" "openid_client" {
   # browser_id lines, here and on the vault client, together with STEP_UP_ENABLED in
   # k8s/config/arcl-cmp/cmp-values.yaml.
   authentication_flow_binding_overrides {
-    browser_id = keycloak_authentication_flow.browser_v5.id
-    # browser_id = keycloak_authentication_flow.browser_v6.id
+    browser_id = keycloak_authentication_flow.browser_v6.id
   }
 }
 
@@ -123,8 +122,7 @@ resource "keycloak_openid_client" "vault" {
 
   # Flow v6: switch with the 3-istor-openid client above.
   authentication_flow_binding_overrides {
-    browser_id = keycloak_authentication_flow.browser_v5.id
-    # browser_id = keycloak_authentication_flow.browser_v6.id
+    browser_id = keycloak_authentication_flow.browser_v6.id
   }
 }
 
