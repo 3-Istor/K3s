@@ -55,7 +55,7 @@ locals {
     k3s-admin        = local.platform_admins
     security-auditor = ["demo-auditor"]
     finops           = ["demo-finops"]
-    member           = concat(keys(local.team_members), tolist(local.demo_accounts))
+    member           = concat(keys(local.team_members), tolist(local.demo_accounts), ["manager.test"])
   }
 
   platform_groups = {
@@ -69,6 +69,7 @@ locals {
   managed_usernames = merge(
     { for name, user in keycloak_user.team : name => user.username },
     { for name, user in keycloak_user.demo : name => user.username },
+    { "manager.test" = keycloak_user.manager_test.username },
   )
 }
 
