@@ -259,6 +259,26 @@ variable "security_discord_webhook_url" {
 }
 
 
+# OAuth client of the CNP-Portal GitHub App, for GitHub account linking on the
+# CMP. Empty leaves linking off without breaking the plan.
+variable "github_oauth_client_id" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "github_oauth_client_secret" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+# Fernet key encrypting the GitHub user tokens the CMP stores. Replacing it
+# makes every stored token unreadable: rotate by prepending a new key to
+# github-token-encryption-keys and keeping this one after it.
+resource "random_bytes" "cmp_github_token_key" {
+  length = 32
+}
 
 resource "vault_kv_secret_v2" "arcl_cmp_creds" {
   mount = vault_mount.kvv2.path
@@ -300,6 +320,9 @@ resource "vault_kv_secret_v2" "arcl_cmp_creds" {
     "vault-token"                  = var.vault_token
     "grafana-admin-password"       = var.grafana_admin_password
     "keycloak-client-secret"       = keycloak_openid_client.openid_client.client_secret
+    "github-oauth-client-id"       = var.github_oauth_client_id
+    "github-oauth-client-secret"   = var.github_oauth_client_secret
+    "github-token-encryption-keys" = replace(replace(random_bytes.cmp_github_token_key.base64, "+", "-"), "/", "_")
   })
 }
 
