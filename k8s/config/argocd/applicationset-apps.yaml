@@ -40,6 +40,8 @@ spec:
               # A fullstack app renders a frontend and a backend, each with its
               # own values file and its own image; a static app renders one
               # component. Same split the Terraform module makes today.
+              # Imported apps (service, backing) render one component too and
+              # have no repoURL.
               elementsYaml: |
                 {{- $out := list -}}
                 {{- range $app := dig "apps" (list) .spec -}}
@@ -49,7 +51,7 @@ spec:
                   {{- $staged := has "staging" $envs -}}
                   {{- range $env := $envs -}}
                     {{- range $c := $components -}}
-                      {{- $out = append $out (dict "name" $app.name "type" $app.type "repoURL" $app.repoURL "component" $c "env" $env "suffix" (ternary "" "-stg" (eq $env "prod")) "staged" $staged) -}}
+                      {{- $out = append $out (dict "name" $app.name "type" $app.type "repoURL" (dig "repoURL" "" $app) "component" $c "env" $env "suffix" (ternary "" "-stg" (eq $env "prod")) "staged" $staged "public" (dig "public" false $app) "hostname" (dig "hostnames" $env "" $app) "dependsOn" (dig "dependsOn" (list) $app)) -}}
                     {{- end -}}
                   {{- end -}}
                 {{- end -}}
@@ -59,6 +61,17 @@ spec:
   # staging updater writes the staging one, a promotion from the CMP writes the
   # prod one). The patch replaces the whole sources list, so it repeats it.
   # Apps without staging get no patch and render exactly as before.
+  #
+  # Imported apps (service, backing) never read their source repo (D1): the
+  # chart comes from infra-templates and the values from cnp-projects
+  # apps/<project>/<app>/values.yaml, written by the CMP. The inline values,
+  # which win over the file, carry what the registry decides: names, links
+  # from dependsOn, the route only for a public app (on the project's own
+  # Gateway and connector, like template apps since D-05/D-06), and the pull secret
+  # (the project's GHCR credential for a service, none for a backing app
+  # whose image is public). fullnameOverride names every object after the
+  # app, which is the Service name a link in another namespace points to
+  # (infra-templates templates/links.yaml).
   templatePatch: |
     {{- if .staged }}
     spec:
@@ -74,6 +87,37 @@ spec:
         - repoURL: "{{ .repoURL }}"
           targetRevision: HEAD
           path: ""
+          ref: values
+    {{- else if or (eq .type "service") (eq .type "backing") }}
+    {{- $links := list }}
+    {{- range .dependsOn }}
+    {{- $links = append $links (dict "alias" (dig "alias" .app .) "app" .app "port" .port) }}
+    {{- end }}
+    {{- $ingress := dict "enabled" .public }}
+    {{- if .public }}
+    {{- $_ := set $ingress "hostname" .hostname }}
+    {{- $_ := set $ingress "tunnel" (dict "perRelease" false) }}
+    {{- $_ := set $ingress "gateway" (dict "name" (printf "%s-gateway" .metadata.name) "namespace" (printf "%s-system" .metadata.name)) }}
+    {{- end }}
+    {{- $values := dict "project_name" .metadata.name "app_name" .name "fullnameOverride" .name "links" $links "ingress" $ingress }}
+    {{- if eq .type "backing" }}
+    {{- $_ := set $values "imagePullSecrets" (list) }}
+    {{- $_ := set $values "registrySecret" (dict "create" false) }}
+    {{- else }}
+    {{- $_ := set $values "imagePullSecrets" (list (dict "name" "app-registry")) }}
+    {{- $_ := set $values "registrySecret" (dict "create" true "scope" "project") }}
+    {{- end }}
+    spec:
+      sources:
+        - repoURL: https://github.com/3-Istor/infra-templates.git
+          targetRevision: HEAD
+          path: .
+          helm:
+            valueFiles:
+              - '$values/apps/{{ .metadata.name }}/{{ .name }}/values.yaml'
+            values: {{ $values | toJson | toJson }}
+        - repoURL: https://github.com/3-Istor/cnp-projects.git
+          targetRevision: main
           ref: values
     {{- end }}
   template:
