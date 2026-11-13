@@ -4,11 +4,23 @@ metadata:
   name: compliance-scripts
 data:
   # The k3s CIS profiles read the API server, kubelet and scheduler flags from
-  # the k3s unit's journal. The kube-bench image (Alpine) has no journalctl, so
-  # this runs the node's own, chrooted into the read-only host root.
+  # the "Running kube-..." lines k3s logs when it starts, with an unbounded
+  # `journalctl -m -u k3s | grep`. The kube-bench image (Alpine) has no
+  # journalctl, so this runs the node's own, chrooted into the read-only host
+  # root. Unbounded, each call walks the whole journal (1 to 4 GB) for minutes;
+  # the window around the running k3s process's start answers in a second.
   journalctl: |
     #!/bin/sh
-    exec chroot /host /usr/bin/journalctl "$@"
+    pid=$(pgrep -o -f '^/usr/local/bin/k3s (server|agent)')
+    if [ -z "$pid" ]; then
+      echo "journalctl wrapper: no k3s server or agent process found" >&2
+      exit 1
+    fi
+    # Field 22 of /proc/<pid>/stat is the start time in clock ticks since boot
+    # (USER_HZ, 100 on Linux).
+    started=$(( $(awk '/^btime/ {print $2}' /proc/stat) + $(awk '{print $22}' "/proc/$pid/stat") / 100 ))
+    exec timeout 60 chroot /host /usr/bin/journalctl --no-pager \
+      --since "@$((started - 60))" --until "@$((started + 600))" "$@" </dev/null
   upload.sh: |
     set -eu
     bucket=cnp-audit-archive

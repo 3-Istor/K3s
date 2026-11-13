@@ -60,7 +60,13 @@ spec:
           initContainers:
             - name: kube-bench
               image: docker.io/aquasec/kube-bench:v0.16.0@sha256:75506f222d1eb6ce2a751a5533bdc0a3b54c898e2e49e7751d0ee22cfb862679
+              # The server run takes about 8 minutes (journal windows on a 4 GB
+              # journal, one kubectl per pod in section 5). A check that hangs
+              # past 25 minutes leaves no result file: the upload fails and
+              # ComplianceScanFailed fires, before activeDeadlineSeconds.
               command:
+                - timeout
+                - "1500"
                 - kube-bench
                 - run
                 # Picks the profile. kube-bench still logs "Assuming default
@@ -202,7 +208,13 @@ spec:
           initContainers:
             - name: kube-bench
               image: docker.io/aquasec/kube-bench:v0.16.0@sha256:75506f222d1eb6ce2a751a5533bdc0a3b54c898e2e49e7751d0ee22cfb862679
+              # The server run takes about 8 minutes (journal windows on a 4 GB
+              # journal, one kubectl per pod in section 5). A check that hangs
+              # past 25 minutes leaves no result file: the upload fails and
+              # ComplianceScanFailed fires, before activeDeadlineSeconds.
               command:
+                - timeout
+                - "1500"
                 - kube-bench
                 - run
                 # Picks the profile. kube-bench still logs "Assuming default
