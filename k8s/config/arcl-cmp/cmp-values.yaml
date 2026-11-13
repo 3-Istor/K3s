@@ -322,6 +322,14 @@ extraEnv:
         name: arcl-cmp-secret
         key: github-token-encryption-keys
         optional: true
+  # Push webhook of the CNP-Portal app. Optional: without it the CMP refuses
+  # every delivery and imported apps rebuild only through the reconciler.
+  - name: GITHUB_WEBHOOK_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: github-webhook-secret
+        optional: true
 
   # --- Alerting ---
   - name: DISCORD_WEBHOOK_URL

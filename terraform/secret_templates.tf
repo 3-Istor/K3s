@@ -273,6 +273,14 @@ variable "github_oauth_client_secret" {
   default   = ""
 }
 
+# Secret of the CNP-Portal GitHub App webhook (push events). Empty makes the
+# CMP refuse every delivery: rebuilds then only come from the reconciler.
+variable "github_webhook_secret" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
 # Fernet key encrypting the GitHub user tokens the CMP stores. Replacing it
 # makes every stored token unreadable: rotate by prepending a new key to
 # github-token-encryption-keys and keeping this one after it.
@@ -323,6 +331,7 @@ resource "vault_kv_secret_v2" "arcl_cmp_creds" {
     "github-oauth-client-id"       = var.github_oauth_client_id
     "github-oauth-client-secret"   = var.github_oauth_client_secret
     "github-token-encryption-keys" = replace(replace(random_bytes.cmp_github_token_key.base64, "+", "-"), "/", "_")
+    "github-webhook-secret"        = var.github_webhook_secret
   })
 }
 
