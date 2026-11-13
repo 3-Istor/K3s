@@ -61,7 +61,8 @@ spec:
             apps:
             {{- range dig "apps" (list) .spec }}
               - name: "{{ .name }}"
-                repoURL: "{{ .repoURL }}"
+                type: "{{ .type }}"
+                repoURL: "{{ dig "repoURL" "" . }}"
                 environments: {{ dig "environments" (list "prod") . | toJson }}
             {{- end }}
             syncWindows: {{ dig "syncWindows" (list) .spec | toJson }}
