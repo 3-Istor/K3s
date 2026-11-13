@@ -11,13 +11,20 @@ data:
     exec chroot /host /usr/bin/journalctl "$@"
   upload.sh: |
     set -eu
-    s3() { aws --endpoint-url "$Endpoint" "$@"; }
-    export AWS_ACCESS_KEY_ID="$AccessKey" AWS_SECRET_ACCESS_KEY="$SecretKey"
     bucket=cnp-audit-archive
     day=$(date -u +%Y-%m-%d)
     result="compliance/$TOOL/$day/$TARGET.json"
     python /scripts/summarize.py "$TOOL" "$TOOL_VERSION" "$TARGET" "$day" "$result" /work/result.json > /work/summary.json
     cat /work/summary.json
+    # Rook only creates the secret once it reconciles the CephObjectStoreUser,
+    # which it skips while Ceph is unhealthy. The summary above stays in Loki;
+    # failing makes ComplianceScanFailed fire.
+    if [ -z "${Endpoint:-}" ]; then
+      echo "no RGW credentials (secret rook-ceph-object-user-openstack-rgw-compliance-scans missing): $result not archived" >&2
+      exit 1
+    fi
+    s3() { aws --endpoint-url "$Endpoint" "$@"; }
+    export AWS_ACCESS_KEY_ID="$AccessKey" AWS_SECRET_ACCESS_KEY="$SecretKey"
     put() {
       s3 s3api put-object --bucket "$bucket" --key "$1" --body "$2" \
         --content-type application/json --output text --query VersionId

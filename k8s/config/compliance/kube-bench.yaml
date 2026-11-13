@@ -63,6 +63,9 @@ spec:
               command:
                 - kube-bench
                 - run
+                # Picks the profile. kube-bench still logs "Assuming default
+                # version 1.18" when it cannot reach the API (agent): it only
+                # reports the detected version, the profile stays k3s-cis-1.9.
                 - --benchmark=k3s-cis-1.9
                 - --targets=master,controlplane,node,policies
                 - --include-test-output
@@ -90,10 +93,11 @@ spec:
                   readOnly: true
               resources:
                 requests:
-                  cpu: 100m
-                  memory: 256Mi
+                  cpu: 10m
+                  memory: 128Mi
                 limits:
-                  memory: 256Mi
+                  cpu: 500m
+                  memory: 128Mi
               securityContext:
                 runAsUser: 0
                 runAsNonRoot: false
@@ -122,6 +126,7 @@ spec:
               envFrom:
                 - secretRef:
                     name: rook-ceph-object-user-openstack-rgw-compliance-scans
+                    optional: true
               volumeMounts:
                 - name: work
                   mountPath: /work
@@ -129,9 +134,10 @@ spec:
                   mountPath: /scripts
               resources:
                 requests:
-                  cpu: 50m
+                  cpu: 10m
                   memory: 128Mi
                 limits:
+                  cpu: 200m
                   memory: 128Mi
               securityContext:
                 runAsUser: 65534
@@ -199,6 +205,9 @@ spec:
               command:
                 - kube-bench
                 - run
+                # Picks the profile. kube-bench still logs "Assuming default
+                # version 1.18" when it cannot reach the API (agent): it only
+                # reports the detected version, the profile stays k3s-cis-1.9.
                 - --benchmark=k3s-cis-1.9
                 - --targets=node
                 - --include-test-output
@@ -223,10 +232,11 @@ spec:
                   readOnly: true
               resources:
                 requests:
-                  cpu: 100m
-                  memory: 256Mi
+                  cpu: 10m
+                  memory: 128Mi
                 limits:
-                  memory: 256Mi
+                  cpu: 500m
+                  memory: 128Mi
               securityContext:
                 runAsUser: 0
                 runAsNonRoot: false
@@ -255,6 +265,7 @@ spec:
               envFrom:
                 - secretRef:
                     name: rook-ceph-object-user-openstack-rgw-compliance-scans
+                    optional: true
               volumeMounts:
                 - name: work
                   mountPath: /work
@@ -262,9 +273,10 @@ spec:
                   mountPath: /scripts
               resources:
                 requests:
-                  cpu: 50m
+                  cpu: 10m
                   memory: 128Mi
                 limits:
+                  cpu: 200m
                   memory: 128Mi
               securityContext:
                 runAsUser: 65534
