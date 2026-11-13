@@ -1,0 +1,43 @@
+# Hubble metrics name every workload of every project, so only Alloy may read
+# them. The agents serve :9965 on the host network and the host firewall is
+# off, so the port cannot be closed on the receiving side: every other pod is
+# denied egress to it instead. enableDefaultDeny stays off so these deny-only
+# rules change nothing else for the pods they select. Off-cluster access is
+# limited by the OpenStack security group to the node subnet.
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: hubble-metrics-alloy-only
+specs:
+  - description: Pods outside observability cannot read Hubble metrics.
+    endpointSelector:
+      matchExpressions:
+        - key: k8s:io.kubernetes.pod.namespace
+          operator: NotIn
+          values: [observability]
+    enableDefaultDeny:
+      ingress: false
+      egress: false
+    egressDeny:
+      - toEntities: [host, remote-node, kube-apiserver]
+        toPorts:
+          - ports:
+              - port: "9965"
+                protocol: TCP
+  - description: In observability, only Alloy reads Hubble metrics.
+    endpointSelector:
+      matchLabels:
+        k8s:io.kubernetes.pod.namespace: observability
+      matchExpressions:
+        - key: k8s:app.kubernetes.io/name
+          operator: NotIn
+          values: [alloy]
+    enableDefaultDeny:
+      ingress: false
+      egress: false
+    egressDeny:
+      - toEntities: [host, remote-node, kube-apiserver]
+        toPorts:
+          - ports:
+              - port: "9965"
+                protocol: TCP
