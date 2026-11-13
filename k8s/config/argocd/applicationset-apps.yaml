@@ -66,7 +66,8 @@ spec:
   # chart comes from infra-templates and the values from cnp-projects
   # apps/<project>/<app>/values.yaml, written by the CMP. The inline values,
   # which win over the file, carry what the registry decides: names, links
-  # from dependsOn, the route only for a public app, and the pull secret
+  # from dependsOn, the route only for a public app (on the project's own
+  # Gateway and connector, like template apps since D-05/D-06), and the pull secret
   # (the project's GHCR credential for a service, none for a backing app
   # whose image is public). fullnameOverride names every object after the
   # app, which is the Service name a link in another namespace points to
@@ -95,6 +96,8 @@ spec:
     {{- $ingress := dict "enabled" .public }}
     {{- if .public }}
     {{- $_ := set $ingress "hostname" .hostname }}
+    {{- $_ := set $ingress "tunnel" (dict "perRelease" false) }}
+    {{- $_ := set $ingress "gateway" (dict "name" (printf "%s-gateway" .metadata.name) "namespace" (printf "%s-system" .metadata.name)) }}
     {{- end }}
     {{- $values := dict "project_name" .metadata.name "app_name" .name "fullnameOverride" .name "links" $links "ingress" $ingress }}
     {{- if eq .type "backing" }}
