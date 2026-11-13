@@ -1,0 +1,11 @@
+# kube-bench reads the node it runs on (host PIDs, K3s files, the systemd
+# journal), which no Pod Security level below privileged allows. Nothing else
+# runs here: no Service, ingress denied, and the RGW user can only add objects
+# under compliance/ in the audit archive.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: compliance
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: restricted

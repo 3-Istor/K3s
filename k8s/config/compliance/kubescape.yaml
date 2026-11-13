@@ -1,0 +1,102 @@
+# Weekly posture scan of the cluster's API objects against CIS Kubernetes
+# v1.12.0, NSA-CISA and MITRE ATT&CK. Host checks are off (--host-scan=false):
+# they would deploy a privileged sensor, and kube-bench covers the nodes.
+# --controls-version pins the regolibrary release, so two weeks compare the
+# cluster and not the rules; it is downloaded from GitHub at each run.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: kubescape
+spec:
+  schedule: "30 3 * * 0"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 1800
+      template:
+        spec:
+          restartPolicy: Never
+          serviceAccountName: kubescape
+          # One UID for both containers: kubescape writes its report 0600.
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            seccompProfile:
+              type: RuntimeDefault
+          volumes:
+            - name: work
+              emptyDir: {}
+            - name: scripts
+              configMap:
+                name: compliance-scripts
+          initContainers:
+            - name: kubescape
+              image: quay.io/kubescape/kubescape-cli:v4.0.20@sha256:03e67c0d2db2c0f06827d7c58684f57e333e6ae3e888609334cb19344d3ba947
+              args:
+                - scan
+                - framework
+                - cis-v1.12.0,nsa,mitre
+                - --controls-version=v2.0.39
+                - --host-scan=false
+                - --keep-local
+                - --cluster-name=onprem
+                - --format=json
+                - --output=/work/result.json
+                - --logger=warning
+              env:
+                - name: HOME
+                  value: /work
+                - name: KS_SKIP_UPDATE_CHECK
+                  value: "true"
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+              resources:
+                requests:
+                  cpu: 250m
+                  memory: 1Gi
+                limits:
+                  memory: 1Gi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+          containers:
+            - name: upload
+              image: docker.io/amazon/aws-cli:2.27.0@sha256:e3e329e1d2894b7b4bbb0aacacd0a155262159b2e7a3b4275eb1f24046d3e06c
+              command: ["bash", "/scripts/upload.sh"]
+              env:
+                - name: TOOL
+                  value: kubescape
+                - name: TOOL_VERSION
+                  value: v4.0.20
+                - name: TARGET
+                  value: onprem
+                - name: HOME
+                  value: /work
+                - name: AWS_DEFAULT_REGION
+                  value: us-east-1
+              envFrom:
+                - secretRef:
+                    name: rook-ceph-object-user-openstack-rgw-compliance-scans
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+                - name: scripts
+                  mountPath: /scripts
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 256Mi
+                limits:
+                  memory: 256Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]

@@ -268,6 +268,15 @@ data:
               summary: "Audit archive run {{ $labels.job_name }} failed"
               description: "An hour of audit logs may be missing from the cnp-audit-archive bucket; check the job's export and upload logs."
 
+          - alert: ComplianceScanFailed
+            expr: |
+              max by (job_name) (kube_job_status_failed{namespace="compliance"}) > 0
+            labels:
+              severity: warning
+            annotations:
+              summary: "Compliance scan {{ $labels.job_name }} failed"
+              description: "This week's kube-bench or Kubescape evidence is missing from cnp-audit-archive/compliance; check the scan and upload container logs."
+
       # cnp_secret_age_days comes from the hourly secret-age CronJob, pushed
       # rather than scraped: the 2h window rides over one missed run.
       - name: static-secrets.rules

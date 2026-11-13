@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compliance-scripts
+data:
+  # The k3s CIS profiles read the API server, kubelet and scheduler flags from
+  # the k3s unit's journal. The kube-bench image (Alpine) has no journalctl, so
+  # this runs the node's own, chrooted into the read-only host root.
+  journalctl: |
+    #!/bin/sh
+    exec chroot /host /usr/bin/journalctl "$@"
+  upload.sh: |
+    set -eu
+    s3() { aws --endpoint-url "$Endpoint" "$@"; }
+    export AWS_ACCESS_KEY_ID="$AccessKey" AWS_SECRET_ACCESS_KEY="$SecretKey"
+    bucket=cnp-audit-archive
+    day=$(date -u +%Y-%m-%d)
+    result="compliance/$TOOL/$day/$TARGET.json"
+    python /scripts/summarize.py "$TOOL" "$TOOL_VERSION" "$TARGET" "$day" "$result" /work/result.json > /work/summary.json
+    cat /work/summary.json
+    put() {
+      s3 s3api put-object --bucket "$bucket" --key "$1" --body "$2" \
+        --content-type application/json --output text --query VersionId
+      echo "uploaded $1"
+    }
+    put "$result" /work/result.json
+    put "compliance/summary/$day/$TOOL-$TARGET.json" /work/summary.json
+  # Python 2.7 is what the aws-cli image ships.
+  summarize.py: |
+    import json
+    import sys
+
+    tool, version, target, day, result, path = sys.argv[1:7]
+    with open(path) as f:
+        report = json.load(f)
+    summary = {"tool": tool, "version": version, "target": target, "date": day, "result": result}
+
+    if tool == "kube-bench":
+        controls = report.get("Controls", [])
+        totals = report.get("Totals", {})
+        summary["benchmark"] = controls[0]["version"] if controls else None
+        summary["targets"] = [c["id"] + " " + c["text"] for c in controls]
+        for key in ("pass", "fail", "warn", "info"):
+            summary[key] = totals.get("total_" + key, 0)
+    else:
+        # Kubescape statuses per control: passed, failed, or skipped (needs a
+        # manual review or a resource kind it was not allowed to list).
+        def counts(controls):
+            statuses = [c["status"] for c in controls.values()]
+            return {
+                "pass": statuses.count("passed"),
+                "fail": statuses.count("failed"),
+                "warn": statuses.count("skipped"),
+            }
+
+        details = report["summaryDetails"]
+        summary.update(counts(details["controls"]))
+        summary["complianceScore"] = round(details["complianceScore"], 1)
+        summary["frameworks"] = []
+        for framework in details["frameworks"]:
+            entry = {"name": framework["name"], "complianceScore": round(framework["complianceScore"], 1)}
+            entry.update(counts(framework["controls"]))
+            summary["frameworks"].append(entry)
+
+    json.dump(summary, sys.stdout, indent=2, sort_keys=True)
+    sys.stdout.write("\n")

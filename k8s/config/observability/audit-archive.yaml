@@ -54,6 +54,23 @@ data:
         --content-type application/gzip --output text --query VersionId
       echo "uploaded $key"
     done
+    # After the uploads, so a policy error cannot cost an archived hour.
+    s3 s3api put-bucket-policy --bucket "$bucket" --policy file:///scripts/bucket-policy.json
+  # The compliance namespace's RGW user may add scan results under
+  # compliance/, nothing else: no read, no delete, no retention change.
+  bucket-policy.json: |
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Sid": "ComplianceScansWrite",
+          "Effect": "Allow",
+          "Principal": {"AWS": ["arn:aws:iam:::user/compliance-scans"]},
+          "Action": ["s3:PutObject"],
+          "Resource": ["arn:aws:s3:::cnp-audit-archive/compliance/*"]
+        }
+      ]
+    }
 ---
 apiVersion: batch/v1
 kind: CronJob

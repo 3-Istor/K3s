@@ -37,3 +37,4 @@ resources:
   - wireguard-clouds.yaml
   - platform-clouds.yaml
   - opencost.yaml
+  - compliance.yaml
