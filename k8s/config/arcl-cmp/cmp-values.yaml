@@ -91,6 +91,20 @@ env:
     FINOPS_GCP_SERVICE_ACCOUNT: "cnp-finops-reader@project-94dabc15-3981-4317-8da.iam.gserviceaccount.com"
     # Output finops_wif_audience of the GCP billing root.
     FINOPS_GCP_WIF_AUDIENCE: "//iam.googleapis.com/projects/943089725730/locations/global/workloadIdentityPools/cnp-finops/providers/keycloak"
+    # Repository import. Off until the CNP-Portal OAuth client is in
+    # Vault and the CNP-Portal GitHub App settings are changed.
+    IMPORT_ENABLED: "false"
+    # Numeric ids of 3-Istor/extern-project-analyzer and of the 3-Istor org,
+    # pinned in the workflow's OIDC token: a recreated repository gets new ids.
+    IMPORT_WORKFLOW_REPO_ID: "1267361656"
+    IMPORT_WORKFLOW_OWNER_ID: "271529816"
+    # Commits of .github/workflows/import.yml allowed to call the worker API,
+    # comma separated. A workflow change is live only once its commit is here.
+    IMPORT_WORKFLOW_SHAS: "a2cf73ad26ffdd80bee6e93f050a7d6a16dba12a"
+    IMPORT_OIDC_AUDIENCE: "cmp-import"
+    # "self-hosted" only for a runner group of ephemeral, one-job runners: a
+    # persistent runner lets one import read the next one's source and tokens.
+    IMPORT_ALLOWED_RUNNER_ENVIRONMENTS: '["github-hosted"]'
 
 extraEnv:
   # --- FinOps: Keycloak client federated to AWS STS and GCP WIF ---
@@ -285,6 +299,27 @@ extraEnv:
       secretKeyRef:
         name: arcl-cmp-secret
         key: github-registry-token
+  # GitHub account linking for repository import. Optional: the CMP keeps
+  # linking off while one is missing, and the keys only exist in Vault once
+  # terraform/secret_templates.tf is applied.
+  - name: GITHUB_OAUTH_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: github-oauth-client-id
+        optional: true
+  - name: GITHUB_OAUTH_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: github-oauth-client-secret
+        optional: true
+  - name: GITHUB_TOKEN_ENCRYPTION_KEYS
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: github-token-encryption-keys
+        optional: true
 
   # --- Alerting ---
   - name: DISCORD_WEBHOOK_URL
