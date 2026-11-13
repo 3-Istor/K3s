@@ -52,8 +52,9 @@ env:
     DATABASE_URL: "sqlite:////app/db/arcl.db"
     TF_BACKEND_S3_ENABLED: "true"
     # State bucket through role cnp-tfstate-cmp with the Keycloak token of
-    # client cnp-tfstate (Cloud repo, terraform/public/aws/cmp-iam). Empty
-    # falls back to the static cmp-tfstate key below.
+    # client cnp-tfstate (Cloud repo, terraform/public/aws/cmp-iam). Also the
+    # identity of the AWS provider and of the ASG/ALB health checks: the pod
+    # carries no static AWS key.
     TF_BACKEND_AWS_ROLE_ARN: "arn:aws:iam::947554757826:role/cnp-tfstate-cmp"
     KEYCLOAK_URL: "https://auth.3istor.com"
     KEYCLOAK_CLIENT_ID: "3-istor-openid"
@@ -139,33 +140,11 @@ extraEnv:
         key: os-endpoint-type
 
   # --- AWS SDK & Terraform S3 Backend ---
-  # Static key of IAM user cmp-tfstate: only the rollback path once
-  # TF_BACKEND_AWS_ROLE_ARN is set. Removed with the user.
-  - name: AWS_ACCESS_KEY_ID
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: aws-access-key-id
-  - name: AWS_SECRET_ACCESS_KEY
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: aws-secret-access-key
   - name: AWS_DEFAULT_REGION
     valueFrom:
       secretKeyRef:
         name: arcl-cmp-secret
         key: aws-region
-  - name: TF_BACKEND_AWS_ACCESS_KEY_ID
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: aws-access-key-id
-  - name: TF_BACKEND_AWS_SECRET_ACCESS_KEY
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: aws-secret-access-key
   - name: TF_BACKEND_AWS_REGION
     valueFrom:
       secretKeyRef:

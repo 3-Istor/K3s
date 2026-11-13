@@ -262,11 +262,9 @@ resource "vault_kv_secret_v2" "arcl_cmp_creds" {
     "os-project-domain-name"       = var.os_project_domain_name
     "os-endpoint-type"             = var.os_endpoint_type
     "os-user-domain-name"          = var.os_user_domain_name
-    "aws-access-key-id"            = var.aws_access_key_id
     "aws-region"                   = var.aws_region
     "aws-s3-bucket"                = var.aws_s3_bucket
     "aws-s3-key-prefix"            = var.aws_s3_key_prefix
-    "aws-secret-access-key"        = var.aws_secret_key
     "avatars-s3-access-key-id"     = var.avatars_s3_access_key_id
     "avatars-s3-secret-access-key" = var.avatars_s3_secret_key
     "avatars-s3-endpoint"          = var.avatars_s3_endpoint
