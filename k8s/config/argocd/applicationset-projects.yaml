@@ -131,6 +131,9 @@ spec:
             apps:
             {{- range dig "apps" (list) .spec }}
               - name: "{{ .name }}"
+                {{- if has (dig "type" "" .) (list "service" "backing") }}
+                type: "{{ .type }}"
+                {{- end }}
                 environments: {{ dig "environments" (list "prod") . | toJson }}
             {{- end }}
             tunnel:
