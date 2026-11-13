@@ -26,6 +26,7 @@ resources:
   - cnpg.yaml
   - deletion-protection.yaml
   - rbac-guardrails.yaml
+  - tenant-vault-guardrails.yaml
   - cnp-projects-db.yaml
   - status.yaml
   - cnp-projects-root.yaml
