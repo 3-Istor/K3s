@@ -221,3 +221,44 @@ metadata:
 spec:
   policyName: cmp-app-restart-only
   validationActions: ["Deny"]
+---
+# Project export (EU Data Act, B1): reads what a project's namespaces hold,
+# on top of what the roles above already read (secrets, services, pods,
+# rollouts, CNPG clusters, VaultSecrets, offhours schedules, Applications).
+# Read only: an export never changes the cluster.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cmp-project-exporter
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "persistentvolumeclaims", "serviceaccounts"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets"]
+    verbs: ["get", "list"]
+  - apiGroups: ["batch"]
+    resources: ["cronjobs"]
+    verbs: ["get", "list"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list"]
+  - apiGroups: ["gateway.envoyproxy.io"]
+    resources: ["securitypolicies"]
+    verbs: ["get", "list"]
+  - apiGroups: ["objectbucket.io"]
+    resources: ["objectbucketclaims"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cmp-project-exporter
+subjects:
+  - kind: ServiceAccount
+    name: arcl-cmp
+    namespace: arcl-cmp
+roleRef:
+  kind: ClusterRole
+  name: cmp-project-exporter
+  apiGroup: rbac.authorization.k8s.io
