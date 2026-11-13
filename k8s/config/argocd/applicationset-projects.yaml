@@ -75,6 +75,8 @@ spec:
           selfHeal: true
         syncOptions:
           - ServerSideApply=true
+          # A project named after a platform AppProject must not take it over.
+          - FailOnSharedResource=true
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
@@ -156,3 +158,9 @@ spec:
         syncOptions:
           - CreateNamespace=true
           - ServerSideApply=true
+          # A project or app name whose namespace another Application already
+          # manages (envoy + gateway-system = envoy-gateway-system) fails the
+          # sync instead of relabelling it and binding the project's admins
+          # there. Untracked namespaces (kube-system) are refused upstream, by
+          # the CMP and the registry validator.
+          - FailOnSharedResource=true

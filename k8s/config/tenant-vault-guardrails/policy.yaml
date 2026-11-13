@@ -1,0 +1,69 @@
+# A VaultSecret's vaultRole is the authorization decision: every Vault
+# Kubernetes-auth role binds the same vault-secrets-operator service account,
+# and the operator logs in with whatever role the object names. So in a tenant
+# namespace (labelled cnp.3istor.com/project by cnp-project-base) a VaultSecret
+# may only use that namespace's own roles and read under its project's mount:
+#   <project>-system   project-<project>-system-role
+#   <project>-<app>    <project>-<app>-role or project-<project>-system-role
+#   <project>-<app>-stg <project>-<app>-staging-role or project-<project>-system-role
+# and spec.path must start with project-<project>/. An empty vaultRole is
+# refused: the operator would fall back to its own vault-secrets-operator-role.
+#
+# The chart (infra-templates) already renders only these; this is the backstop
+# for anything else that reaches the namespace (a manual sync of an older chart
+# revision, a manifest in an app repo, kubectl as a project operator).
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: cnp-tenant-vault-secrets
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["ricoberger.de"]
+        apiVersions: ["*"]
+        resources: ["vaultsecrets"]
+        operations: ["CREATE", "UPDATE"]
+    namespaceSelector:
+      matchExpressions:
+        - { key: cnp.3istor.com/project, operator: Exists }
+  variables:
+    - name: project
+      expression: namespaceObject.metadata.labels["cnp.3istor.com/project"]
+    - name: ns
+      expression: request.namespace
+    - name: systemRole
+      expression: "'project-' + variables.project + '-system-role'"
+    - name: ownRole
+      expression: >-
+        variables.ns == variables.project + '-system' ? variables.systemRole :
+        variables.ns.endsWith('-stg') ?
+          variables.ns.substring(0, size(variables.ns) - 4) + '-staging-role' :
+          variables.ns + '-role'
+    - name: path
+      expression: "has(object.spec.path) ? object.spec.path : ''"
+    - name: role
+      expression: "has(object.spec.vaultRole) ? object.spec.vaultRole : ''"
+  validations:
+    - expression: variables.ns.startsWith(variables.project + '-')
+      messageExpression: >-
+        "Namespace " + variables.ns + " is labelled for project " +
+        variables.project + " but is not one of its namespaces."
+    - expression: >-
+        variables.path.startsWith('project-' + variables.project + '/') &&
+        !variables.path.split('/').exists(s, s == '..' || s == '.' || s == '')
+      messageExpression: >-
+        "spec.path " + variables.path + " is outside project-" + variables.project +
+        "/. A VaultSecret in a project namespace reads only its project's Vault mount."
+    - expression: variables.role in [variables.ownRole, variables.systemRole]
+      messageExpression: >-
+        "spec.vaultRole '" + variables.role + "' is not allowed in " + variables.ns +
+        ". Use " + variables.ownRole + " (or " + variables.systemRole + " for the project's shared secrets)."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: cnp-tenant-vault-secrets
+spec:
+  policyName: cnp-tenant-vault-secrets
+  validationActions: [Deny]
