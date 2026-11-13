@@ -332,6 +332,60 @@ alloy:
       }
 
       // ---------------------------------------------------------------
+      // Metrics: Hubble flows for the CMP Topology view
+      // ---------------------------------------------------------------
+
+      // Each Alloy pod scrapes only the agent on its own node: Alloy runs
+      // unclustered, so a cluster-wide target list would be scraped twice.
+      discovery.kubernetes "cilium_agents" {
+        role = "pod"
+        namespaces {
+          names = ["kube-system"]
+        }
+        selectors {
+          role  = "pod"
+          label = "k8s-app=cilium"
+          field = "spec.nodeName=" + sys.env("HOSTNAME")
+        }
+      }
+
+      discovery.relabel "hubble" {
+        targets = discovery.kubernetes.cilium_agents.targets
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_port_name"]
+          regex         = "hubble-metrics"
+          action        = "keep"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_node_name"]
+          target_label  = "node"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_node_name"]
+          target_label  = "instance"
+        }
+      }
+
+      prometheus.scrape "hubble" {
+        targets         = discovery.relabel.hubble.output
+        job_name        = "hubble"
+        scrape_interval = "30s"
+        forward_to      = [prometheus.relabel.hubble.receiver]
+      }
+
+      prometheus.relabel "hubble" {
+        rule {
+          source_labels = ["__name__"]
+          regex         = "hubble_flows_processed_total|hubble_drop_total"
+          action        = "keep"
+        }
+        forward_to = [prometheus.remote_write.vmauth.receiver]
+      }
+
+      // ---------------------------------------------------------------
       // Metrics: ServiceMonitor / PodMonitor CRDs
       // ---------------------------------------------------------------
 
