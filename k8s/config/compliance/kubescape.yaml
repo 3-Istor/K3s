@@ -84,6 +84,7 @@ spec:
               envFrom:
                 - secretRef:
                     name: rook-ceph-object-user-openstack-rgw-compliance-scans
+                    optional: true
               volumeMounts:
                 - name: work
                   mountPath: /work
