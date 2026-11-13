@@ -1,0 +1,276 @@
+# CIS benchmark of each K3s node, weekly, with kube-bench's newest K3s profile
+# (k3s-cis-1.9). The server runs the control plane, kubelet and policy checks;
+# the etcd target is left out because this server keeps its state in SQLite
+# (kine), where every etcd check is not applicable. The agent runs the worker
+# node checks only. One CronJob per node role: a new agent needs its own copy.
+#
+# The scan container is root with host PIDs and read-only host mounts, which
+# the CIS checks need (process flags, file owners and modes, the journal). It
+# keeps only two capabilities: SYS_CHROOT for the journalctl wrapper, and
+# DAC_READ_SEARCH so a file mode never hides a check. Results go through an
+# emptyDir to an unprivileged upload container.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: kube-bench-server
+spec:
+  schedule: "0 3 * * 0"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 1800
+      template:
+        spec:
+          restartPolicy: Never
+          serviceAccountName: kube-bench
+          hostPID: true
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: "true"
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          volumes:
+            - name: work
+              emptyDir: {}
+            - name: scripts
+              configMap:
+                name: compliance-scripts
+            - name: wrappers
+              configMap:
+                name: compliance-scripts
+                defaultMode: 0555
+                items:
+                  - key: journalctl
+                    path: journalctl
+            - name: host-root
+              hostPath:
+                path: /
+                type: Directory
+            - name: var-lib-rancher
+              hostPath:
+                path: /var/lib/rancher
+                type: Directory
+            - name: etc-rancher
+              hostPath:
+                path: /etc/rancher
+                type: Directory
+          initContainers:
+            - name: kube-bench
+              image: docker.io/aquasec/kube-bench:v0.16.0@sha256:75506f222d1eb6ce2a751a5533bdc0a3b54c898e2e49e7751d0ee22cfb862679
+              command:
+                - kube-bench
+                - run
+                - --benchmark=k3s-cis-1.9
+                - --targets=master,controlplane,node,policies
+                - --include-test-output
+                - --json
+                - --outputfile=/work/result.json
+              env:
+                - name: PATH
+                  value: /opt/wrappers:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+                - name: HOME
+                  value: /work
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+                - name: wrappers
+                  mountPath: /opt/wrappers
+                - name: host-root
+                  mountPath: /host
+                  readOnly: true
+                  recursiveReadOnly: IfPossible
+                - name: var-lib-rancher
+                  mountPath: /var/lib/rancher
+                  readOnly: true
+                - name: etc-rancher
+                  mountPath: /etc/rancher
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  memory: 256Mi
+              securityContext:
+                runAsUser: 0
+                runAsNonRoot: false
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+                  add: ["SYS_CHROOT", "DAC_READ_SEARCH"]
+          containers:
+            - name: upload
+              image: docker.io/amazon/aws-cli:2.27.0@sha256:e3e329e1d2894b7b4bbb0aacacd0a155262159b2e7a3b4275eb1f24046d3e06c
+              command: ["bash", "/scripts/upload.sh"]
+              env:
+                - name: TOOL
+                  value: kube-bench
+                - name: TOOL_VERSION
+                  value: v0.16.0
+                - name: TARGET
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
+                - name: HOME
+                  value: /work
+                - name: AWS_DEFAULT_REGION
+                  value: us-east-1
+              envFrom:
+                - secretRef:
+                    name: rook-ceph-object-user-openstack-rgw-compliance-scans
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+                - name: scripts
+                  mountPath: /scripts
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  memory: 128Mi
+              securityContext:
+                runAsUser: 65534
+                runAsGroup: 65534
+                runAsNonRoot: true
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: kube-bench-agent
+spec:
+  schedule: "0 3 * * 0"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 1800
+      template:
+        spec:
+          restartPolicy: Never
+          serviceAccountName: kube-bench
+          # Worker node checks never call the API.
+          automountServiceAccountToken: false
+          hostPID: true
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: node-role.kubernetes.io/control-plane
+                        operator: DoesNotExist
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          volumes:
+            - name: work
+              emptyDir: {}
+            - name: scripts
+              configMap:
+                name: compliance-scripts
+            - name: wrappers
+              configMap:
+                name: compliance-scripts
+                defaultMode: 0555
+                items:
+                  - key: journalctl
+                    path: journalctl
+            - name: host-root
+              hostPath:
+                path: /
+                type: Directory
+            - name: var-lib-rancher
+              hostPath:
+                path: /var/lib/rancher
+                type: Directory
+          initContainers:
+            - name: kube-bench
+              image: docker.io/aquasec/kube-bench:v0.16.0@sha256:75506f222d1eb6ce2a751a5533bdc0a3b54c898e2e49e7751d0ee22cfb862679
+              command:
+                - kube-bench
+                - run
+                - --benchmark=k3s-cis-1.9
+                - --targets=node
+                - --include-test-output
+                - --json
+                - --outputfile=/work/result.json
+              env:
+                - name: PATH
+                  value: /opt/wrappers:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+                - name: HOME
+                  value: /work
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+                - name: wrappers
+                  mountPath: /opt/wrappers
+                - name: host-root
+                  mountPath: /host
+                  readOnly: true
+                  recursiveReadOnly: IfPossible
+                - name: var-lib-rancher
+                  mountPath: /var/lib/rancher
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  memory: 256Mi
+              securityContext:
+                runAsUser: 0
+                runAsNonRoot: false
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+                  add: ["SYS_CHROOT", "DAC_READ_SEARCH"]
+          containers:
+            - name: upload
+              image: docker.io/amazon/aws-cli:2.27.0@sha256:e3e329e1d2894b7b4bbb0aacacd0a155262159b2e7a3b4275eb1f24046d3e06c
+              command: ["bash", "/scripts/upload.sh"]
+              env:
+                - name: TOOL
+                  value: kube-bench
+                - name: TOOL_VERSION
+                  value: v0.16.0
+                - name: TARGET
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.nodeName
+                - name: HOME
+                  value: /work
+                - name: AWS_DEFAULT_REGION
+                  value: us-east-1
+              envFrom:
+                - secretRef:
+                    name: rook-ceph-object-user-openstack-rgw-compliance-scans
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+                - name: scripts
+                  mountPath: /scripts
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  memory: 128Mi
+              securityContext:
+                runAsUser: 65534
+                runAsGroup: 65534
+                runAsNonRoot: true
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]

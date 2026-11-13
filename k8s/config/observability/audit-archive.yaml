@@ -1,6 +1,7 @@
 # Hourly copy of the audit streams (Kubernetes API, Vault, Keycloak events) to
 # a bucket with Object Lock in COMPLIANCE mode: nothing holding S3 or Kubernetes
-# credentials can delete or shorten an archived hour for 30 days. A Ceph admin
+# credentials can delete or shorten an archived hour for its retention period
+# (audit-archive-retention.sh sets it on the existing bucket). A Ceph admin
 # on the OpenStack nodes still can (radosgw-admin), so this covers a compromised
 # cluster, not a compromised storage host.
 apiVersion: ceph.rook.io/v1
@@ -45,7 +46,7 @@ data:
     if ! s3 s3api head-bucket --bucket "$bucket" 2>/dev/null; then
       s3 s3api create-bucket --bucket "$bucket" --object-lock-enabled-for-bucket
       s3 s3api put-object-lock-configuration --bucket "$bucket" \
-        --object-lock-configuration '{"ObjectLockEnabled":"Enabled","Rule":{"DefaultRetention":{"Mode":"COMPLIANCE","Days":30}}}'
+        --object-lock-configuration '{"ObjectLockEnabled":"Enabled","Rule":{"DefaultRetention":{"Mode":"COMPLIANCE","Days":180}}}'
     fi
     hour=$(cat /work/hour)
     for f in /work/*.jsonl.gz; do
@@ -54,6 +55,23 @@ data:
         --content-type application/gzip --output text --query VersionId
       echo "uploaded $key"
     done
+    # After the uploads, so a policy error cannot cost an archived hour.
+    s3 s3api put-bucket-policy --bucket "$bucket" --policy file:///scripts/bucket-policy.json
+  # The compliance namespace's RGW user may add scan results under
+  # compliance/, nothing else: no read, no delete, no retention change.
+  bucket-policy.json: |
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Sid": "ComplianceScansWrite",
+          "Effect": "Allow",
+          "Principal": {"AWS": ["arn:aws:iam:::user/compliance-scans"]},
+          "Action": ["s3:PutObject"],
+          "Resource": ["arn:aws:s3:::cnp-audit-archive/compliance/*"]
+        }
+      ]
+    }
 ---
 apiVersion: batch/v1
 kind: CronJob
