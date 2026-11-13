@@ -67,7 +67,9 @@ env:
     VAULT_AUTH: "kubernetes"
     # Destructive actions and elevated access ask for a passkey used in the
     # last 5 minutes (Keycloak LoA 2, flow v6). "false" turns the check off.
-    STEP_UP_ENABLED: "true"
+    # Off while the gold access token is refused after a fresh passkey (CNP-124):
+    # back to "true" once the token check passes again.
+    STEP_UP_ENABLED: "false"
     # Project export dump Jobs upload to Garage through its Service, so a
     # database dump never leaves the cluster. Download links use the public
     # endpoint (the avatars one).
