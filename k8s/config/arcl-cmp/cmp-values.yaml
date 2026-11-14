@@ -24,12 +24,13 @@ securityContext:
   runAsUser: 1001
 
 resources:
+  # The backend averages ~520m and reaches ~880m at p95 over 7 days (CNP-272).
   backend:
     limits:
       cpu: 1000m
       memory: "1Gi"
     requests:
-      cpu: 50m
+      cpu: 500m
       memory: "1Gi"
 
   frontend:

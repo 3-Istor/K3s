@@ -10,3 +10,14 @@ data:
   # Disables TLS on the Argo CD server, as TLS termination is performed by the Gateway API (TLS offloading).
   # Doc: https://argo-cd.readthedocs.io/en/latest/operator-manual/ingress/#ambassador
   server.insecure: "true"
+
+  # Every app here is `kustomize build --enable-helm`, which Argo CD runs
+  # concurrently. Two builds of one app pull the same chart into the same
+  # charts/ directory, and the loser fails with "failed to untar ... already
+  # exists", leaving the app Unknown until the cached error expires. One
+  # generation at a time removes the race; a full refresh of every app takes
+  # under a minute.
+  reposerver.parallelism.limit: "1"
+  # Requests queued behind that limit count against the caller's timeout.
+  controller.repo.server.timeout.seconds: "180"
+  server.repo.server.timeout.seconds: "180"
