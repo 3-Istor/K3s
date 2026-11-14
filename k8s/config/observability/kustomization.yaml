@@ -14,6 +14,7 @@ resources:
   - cmp-archive-status.yaml
   - vmauth-projects.yaml
   - vm-networkpolicies.yaml
+  - alertmanager-networkpolicy.yaml
   - exporters.yaml
   - vmalert-rules.yaml
 
