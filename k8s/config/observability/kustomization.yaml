@@ -26,6 +26,22 @@ resources:
   - vmagent-scrapes.yaml
   - vmauth.yaml
 
+# Upstream alerts kept from the default set: node-exporter, kube-state-metrics,
+# VictoriaMetrics self-health and Alertmanager. The rest of the Kubernetes
+# mixin fires all the time on two nodes, and K3s has no etcd, scheduler or
+# controller-manager endpoints.
+configMapGenerator:
+  - name: vmalert-default-rules
+    files:
+      - default-rules/alertmanager.yaml
+      - default-rules/kube-state-metrics.yaml
+      - default-rules/node-exporter.yaml
+      - default-rules/vm-health.yaml
+      - default-rules/vmagent.yaml
+      - default-rules/vmalert.yaml
+      - default-rules/vmoperator.yaml
+      - default-rules/vmsingle.yaml
+
 # CNP-185 V1 cutover: points the old VictoriaMetrics Service names at the new
 # stack. Uncomment only after the checks of the V1 PR; comment out to roll back.
 # patches:
