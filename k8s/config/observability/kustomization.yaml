@@ -25,6 +25,10 @@ resources:
   - vmagent.yaml
   - vmagent-scrapes.yaml
   - vmauth.yaml
+  # V2 logs (CNP-185): VictoriaLogs, Fluent Bit, vmalert for LogsQL rules
+  - vlogs.yaml
+  - fluent-bit.yaml
+  - vlogs-networkpolicies.yaml
 
 # Upstream alerts kept from the default set: node-exporter, kube-state-metrics,
 # VictoriaMetrics self-health and Alertmanager. The rest of the Kubernetes
