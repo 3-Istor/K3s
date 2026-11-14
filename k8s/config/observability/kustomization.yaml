@@ -31,6 +31,7 @@ resources:
   - vlogs-networkpolicies.yaml
   - vlogs-rules.yaml
   - vmalert-vlogs.yaml
+  - audit-archive-vlogs.yaml
 
 # Upstream alerts kept from the default set: node-exporter, kube-state-metrics,
 # VictoriaMetrics self-health and Alertmanager. The rest of the Kubernetes
