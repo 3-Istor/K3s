@@ -1,0 +1,17 @@
+# Upstream asks 250m and 512Mi; the controller uses ~10m and ~120Mi.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-image-updater-controller
+spec:
+  template:
+    spec:
+      containers:
+        - name: argocd-image-updater-controller
+          resources:
+            requests:
+              cpu: 25m
+              memory: 192Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
