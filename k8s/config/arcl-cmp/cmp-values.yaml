@@ -93,16 +93,15 @@ env:
     FINOPS_GCP_SERVICE_ACCOUNT: "cnp-finops-reader@project-94dabc15-3981-4317-8da.iam.gserviceaccount.com"
     # Output finops_wif_audience of the GCP billing root.
     FINOPS_GCP_WIF_AUDIENCE: "//iam.googleapis.com/projects/943089725730/locations/global/workloadIdentityPools/cnp-finops/providers/keycloak"
-    # Repository import. Off until the CNP-Portal OAuth client is in
-    # Vault and the CNP-Portal GitHub App settings are changed.
-    IMPORT_ENABLED: "false"
+    # Repository import.
+    IMPORT_ENABLED: "true"
     # Numeric ids of 3-Istor/extern-project-analyzer and of the 3-Istor org,
     # pinned in the workflow's OIDC token: a recreated repository gets new ids.
     IMPORT_WORKFLOW_REPO_ID: "1267361656"
     IMPORT_WORKFLOW_OWNER_ID: "271529816"
     # Commits of .github/workflows/import.yml allowed to call the worker API,
     # comma separated. A workflow change is live only once its commit is here.
-    IMPORT_WORKFLOW_SHAS: "710937a68f0e2333a0e7c39c24947d0e71e3469a"
+    IMPORT_WORKFLOW_SHAS: "710937a68f0e2333a0e7c39c24947d0e71e3469a,fe348b4edd2ef9f57d6111fe24cd392013e0d4fc"
     IMPORT_OIDC_AUDIENCE: "cmp-import"
     # "self-hosted" only for a runner group of ephemeral, one-job runners: a
     # persistent runner lets one import read the next one's source and tokens.
