@@ -245,6 +245,7 @@ resource "vault_policy" "secret_age" {
 }
 
 resource "vault_policy" "cloud_observability_policy" {
-  name   = "cloud-observability-policy"
-  policy = templatefile("${path.module}/policies/cloud-observability.hcl", {})
+  for_each = toset(["aws", "gcp"])
+  name     = "cloud-observability-${each.key}"
+  policy   = templatefile("${path.module}/policies/cloud-observability.hcl", { cloud = each.key })
 }
