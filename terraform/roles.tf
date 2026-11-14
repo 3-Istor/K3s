@@ -103,7 +103,7 @@ resource "vault_kubernetes_auth_backend_role" "observability_cloud" {
   bound_service_account_names      = ["vault-secrets-operator"]
   bound_service_account_namespaces = ["vault-secrets-operator"]
   token_ttl                        = 86400 # 24h
-  token_policies                   = [vault_policy.cloud_observability_policy.name]
+  token_policies                   = [vault_policy.cloud_observability_policy[each.key].name]
 }
 
 # -----------------------------------------------------------------------------
