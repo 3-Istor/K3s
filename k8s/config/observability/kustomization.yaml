@@ -37,6 +37,7 @@ resources:
   - otelcol-gateway-deploy.yaml
   - traces-networkpolicies.yaml
   - traces-scrapes.yaml
+  - hubble-ui-route.yaml
 
 # Upstream alerts kept from the default set: node-exporter, kube-state-metrics,
 # VictoriaMetrics self-health and Alertmanager. The rest of the Kubernetes

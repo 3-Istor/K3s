@@ -1,0 +1,14 @@
+# The Hubble UI route lives in observability (hubble-ui-route.yaml there).
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: hubble-ui-from-observability
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: observability
+  to:
+    - group: ""
+      kind: Service
+      name: hubble-ui
