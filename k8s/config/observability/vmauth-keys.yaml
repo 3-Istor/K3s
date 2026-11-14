@@ -1,0 +1,35 @@
+# vmauth serves /metrics (per-user counters), /flags and /debug/pprof on the
+# port it proxies, which the clouds reach through the relays. Each needs a
+# key: METRICS_AUTH_KEY is vmagent's, ADMIN_AUTH_KEY is for people.
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: vmauth-auth-keys
+spec:
+  path: kvv2/observability/vmauth
+  vaultRole: observability-role
+  type: Opaque
+  keys:
+    - METRICS_AUTH_KEY
+    - ADMIN_AUTH_KEY
+---
+# Replaces the operator's own scrape of every vmauth, which cannot send the
+# key. vmagent expands %{VMAUTH_METRICS_KEY} from its environment when it
+# loads the scrape config, so the key never lands in the generated Secret.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: vmauth
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vmauth
+  podMetricsEndpoints:
+    - port: http
+      params:
+        authKey: ["%{VMAUTH_METRICS_KEY}"]
+      relabelConfigs:
+        - sourceLabels: [__meta_kubernetes_pod_label_app_kubernetes_io_instance]
+          regex: (.+)
+          replacement: vmauth-$1
+          targetLabel: job

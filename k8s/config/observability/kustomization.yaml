@@ -39,12 +39,13 @@ resources:
   - traces-scrapes.yaml
   - hubble-ui-route.yaml
   # V3 alerting (CNP-185): VMAlert and VMAlertmanager replace the Helm
-  # vmalert and Alertmanager, CMP RBAC
+  # vmalert and Alertmanager, CMP RBAC, vmauth keys
   - vmalert.yaml
   - alertmanager.yaml
   - alerting-rules.yaml
   - alerting-networkpolicies.yaml
   - cmp-observability-rbac.yaml
+  - vmauth-keys.yaml
 
 # Upstream alerts kept from the default set: node-exporter, kube-state-metrics,
 # VictoriaMetrics self-health and Alertmanager. The rest of the Kubernetes
