@@ -12,13 +12,14 @@ alloy:
         mountPath: /var/lib/rancher/k3s/server/logs
         readOnly: true
 
+  # Median ~900Mi, p99 ~950Mi over 7 days; 1000Mi got OOMKilled (CNP-272).
   resources:
     requests:
       cpu: 50m
-      memory: 1000Mi
+      memory: 1200Mi
     limits:
       cpu: 500m
-      memory: 1000Mi
+      memory: 1200Mi
 
   configMap:
     create: true

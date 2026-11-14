@@ -30,12 +30,13 @@ vminsert:
 
 vmselect:
   replicaCount: 1
+  # 256Mi got OOMKilled on heavy Grafana queries (CNP-272).
   resources:
     requests:
-      memory: "256Mi"
+      memory: "384Mi"
       cpu: "50m"
     limits:
-      memory: "256Mi"
+      memory: "384Mi"
       cpu: "200m"
 
 # VMAuth acts as the multi-tenant router
