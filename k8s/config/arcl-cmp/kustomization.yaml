@@ -9,6 +9,7 @@ resources:
   - offhours-guard.yaml
   - rbac.yaml
   - api-jwt.yaml
+  - import-worker-route.yaml
   - mcp-route.yaml
 
 # FinOps inputs (finops/ at the repo root), read by the CMP ingester on every
