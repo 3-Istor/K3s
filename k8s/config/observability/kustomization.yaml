@@ -108,6 +108,9 @@ helmCharts:
     releaseName: grafana
     namespace: observability
     valuesFile: values-grafana.yaml
+    # V2 logs (CNP-185)
+    additionalValuesFiles:
+      - values-grafana-vlogs.yaml
 
   # Alloy (Logs and Metrics Aggregation)
   - name: alloy
