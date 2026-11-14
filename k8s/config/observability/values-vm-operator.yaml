@@ -1,0 +1,53 @@
+fullnameOverride: vm-operator
+
+# The operator reads VM objects, and converts ServiceMonitors and PodMonitors,
+# only in these namespaces. Project namespaces are left out on purpose: per-app
+# scrapes and rules are written by the CMP in cnp-observability, never by an
+# app's own chart.
+watchNamespaces:
+  - observability
+  - cnp-observability
+  - argocd
+  - argo-rollouts
+  - cert-manager
+  - cnpg-system
+  - envoy-gateway-system
+  - kyverno
+  - status
+  - trivy-system
+
+# A validating webhook needs a serving certificate: helm template generates a
+# new one on every Argo CD render, which never converges. The operator still
+# rejects invalid objects at reconcile time and reports it in their status.
+admissionWebhooks:
+  enabled: false
+
+operator:
+  enable_converter_ownership: true
+
+extraArgs:
+  controller.disableReconcileFor: PrometheusRule,Probe,AlertmanagerConfig,ScrapeConfig
+
+env:
+  - name: GOMAXPROCS
+    value: "1"
+  # 116Mi RSS on an empty test cluster: keep the GC ahead of the limit.
+  - name: GOMEMLIMIT
+    value: 160MiB
+  # Converted objects would otherwise inherit the Argo CD tracking annotation
+  # of the ServiceMonitor they come from.
+  - name: VM_FILTERPROMETHEUSCONVERTERANNOTATIONPREFIXES
+    value: argocd.argoproj.io
+  - name: VM_FILTERPROMETHEUSCONVERTERLABELPREFIXES
+    value: argocd.argoproj.io
+
+serviceMonitor:
+  enabled: true
+
+resources:
+  requests:
+    cpu: 20m
+    memory: 192Mi
+  limits:
+    cpu: 200m
+    memory: 192Mi

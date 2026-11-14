@@ -1,0 +1,56 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMSingle
+metadata:
+  name: cnp
+spec:
+  retentionPeriod: 30d
+  removePvcAfterDelete: false
+  storage:
+    storageClassName: ceph-block
+    accessModes: [ReadWriteOnce]
+    resources:
+      requests:
+        storage: 40Gi
+  # vmstorage alone used 900-1000Mi for ~300k series; the cardinality diet
+  # targets half of that.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 1536Mi
+    limits:
+      cpu: "1"
+      memory: 1536Mi
+  extraEnvs:
+    - name: GOMAXPROCS
+      value: "1"
+  secrets:
+    - vmsingle-auth-keys
+  extraArgs:
+    # One wide query OOM-killed vmselect on 2026-11-13: refuse it instead.
+    # maxConcurrentRequests x maxMemoryPerQuery stays under the limit.
+    search.maxUniqueTimeseries: "200000"
+    search.maxMemoryPerQuery: 192MB
+    search.maxConcurrentRequests: "4"
+    search.maxQueryDuration: 30s
+    deleteAuthKey: file:///etc/vm/secrets/vmsingle-auth-keys/ADMIN_AUTH_KEY
+    snapshotAuthKey: file:///etc/vm/secrets/vmsingle-auth-keys/ADMIN_AUTH_KEY
+    forceMergeAuthKey: file:///etc/vm/secrets/vmsingle-auth-keys/ADMIN_AUTH_KEY
+    forceFlushAuthKey: file:///etc/vm/secrets/vmsingle-auth-keys/ADMIN_AUTH_KEY
+    reloadAuthKey: file:///etc/vm/secrets/vmsingle-auth-keys/ADMIN_AUTH_KEY
+    flagsAuthKey: file:///etc/vm/secrets/vmsingle-auth-keys/ADMIN_AUTH_KEY
+    configAuthKey: file:///etc/vm/secrets/vmsingle-auth-keys/ADMIN_AUTH_KEY
+    pprofAuthKey: file:///etc/vm/secrets/vmsingle-auth-keys/ADMIN_AUTH_KEY
+    logNewSeriesAuthKey: file:///etc/vm/secrets/vmsingle-auth-keys/ADMIN_AUTH_KEY
+    metricNamesStatsResetAuthKey: file:///etc/vm/secrets/vmsingle-auth-keys/ADMIN_AUTH_KEY
+    search.resetCacheAuthKey: file:///etc/vm/secrets/vmsingle-auth-keys/ADMIN_AUTH_KEY
+---
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: vmsingle-auth-keys
+spec:
+  path: kvv2/observability/vmsingle
+  vaultRole: observability-role
+  type: Opaque
+  keys:
+    - ADMIN_AUTH_KEY

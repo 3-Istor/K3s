@@ -1,6 +1,10 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: observability
+
+# Instead of `namespace: observability`, which would also rename the
+# cnp-observability Namespace object to observability.
+transformers:
+  - namespace-transformer.yaml
 
 resources:
   - namespace.yaml
@@ -17,6 +21,7 @@ resources:
   - alertmanager-networkpolicy.yaml
   - exporters.yaml
   - vmalert-rules.yaml
+  - vmsingle.yaml
 
 helmGlobals:
   chartHome: ../../../charts
@@ -35,7 +40,15 @@ helmCharts:
     namespace: observability
     valuesFile: values-loki.yaml
 
-  # VictoriaMetrics (Metrics)
+  - name: victoria-metrics-operator
+    repo: https://victoriametrics.github.io/helm-charts/
+    version: 0.68.2
+    releaseName: vm-operator
+    namespace: observability
+    valuesFile: values-vm-operator.yaml
+
+  # VictoriaMetrics cluster, replaced by VMSingle: removed 14 days after the
+  # cutover.
   - name: victoria-metrics-cluster
     repo: https://victoriametrics.github.io/helm-charts/
     version: 0.48.0
