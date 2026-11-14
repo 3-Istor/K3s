@@ -38,6 +38,12 @@ resources:
   - traces-networkpolicies.yaml
   - traces-scrapes.yaml
   - hubble-ui-route.yaml
+  # V3 alerting (CNP-185): VMAlert and VMAlertmanager replace the Helm
+  # vmalert and Alertmanager
+  - vmalert.yaml
+  - alertmanager.yaml
+  - alerting-rules.yaml
+  - alerting-networkpolicies.yaml
 
 # Upstream alerts kept from the default set: node-exporter, kube-state-metrics,
 # VictoriaMetrics self-health and Alertmanager. The rest of the Kubernetes
@@ -45,6 +51,10 @@ resources:
 # controller-manager endpoints.
 configMapGenerator:
   - name: vmalert-default-rules
+    # VMAlert cnp mounts it at a fixed path; its config reloader watches it
+    # (V3 alerting).
+    options:
+      disableNameSuffixHash: true
     files:
       - default-rules/alertmanager.yaml
       - default-rules/kube-state-metrics.yaml
@@ -97,20 +107,6 @@ helmCharts:
     releaseName: vm
     namespace: observability
     valuesFile: values-vm.yaml
-
-  - name: victoria-metrics-alert
-    repo: https://victoriametrics.github.io/helm-charts/
-    version: 0.46.0
-    releaseName: vmalert
-    namespace: observability
-    valuesFile: values-vmalert.yaml
-
-  - name: alertmanager
-    repo: https://prometheus-community.github.io/helm-charts
-    version: 1.42.0
-    releaseName: alertmanager
-    namespace: observability
-    valuesFile: values-alertmanager.yaml
 
   # Grafana (Visualisation)
   - name: grafana

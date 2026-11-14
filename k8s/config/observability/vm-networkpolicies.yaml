@@ -19,9 +19,6 @@ spec:
               app.kubernetes.io/component: vmauth
         - podSelector:
             matchLabels:
-              app.kubernetes.io/name: victoria-metrics-alert
-        - podSelector:
-            matchLabels:
               app.kubernetes.io/name: grafana
         # Canary analysis queries (ClusterAnalysisTemplate cnp-error-rate).
         - namespaceSelector:
@@ -74,9 +71,6 @@ spec:
             matchLabels:
               app.kubernetes.io/name: vmagent
               app.kubernetes.io/instance: cnp
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: victoria-metrics-alert
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: secret-age
@@ -141,7 +135,8 @@ spec:
         # outage cannot abort every running canary.
         - podSelector:
             matchLabels:
-              app.kubernetes.io/name: victoria-metrics-alert
+              app.kubernetes.io/name: vmalert
+              app.kubernetes.io/instance: cnp
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: grafana
@@ -195,9 +190,6 @@ spec:
             matchLabels:
               app.kubernetes.io/instance: vm
               app.kubernetes.io/component: vmauth
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: victoria-metrics-alert
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: grafana

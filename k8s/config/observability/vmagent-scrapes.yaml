@@ -171,9 +171,10 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: alertmanager
+      app.kubernetes.io/name: vmalertmanager
+      app.kubernetes.io/instance: cnp
   podMetricsEndpoints:
-    - port: http
+    - port: web
       relabelConfigs:
         - targetLabel: job
           replacement: alertmanager
@@ -185,7 +186,8 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: victoria-metrics-alert
+      app.kubernetes.io/name: vmalert
+      app.kubernetes.io/instance: cnp
   podMetricsEndpoints:
     - port: http
       relabelConfigs:
