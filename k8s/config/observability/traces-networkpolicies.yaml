@@ -1,0 +1,75 @@
+# Every pod may send spans: the gateway decides the tenant from the source
+# address, not from anything the pod says. The cloud port trusts a header,
+# so only the vmauth that sets it reaches that port.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: otelcol-gateway-clients
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: otelcol-gateway
+      app.kubernetes.io/instance: cnp
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - port: 4317
+        - port: 4318
+    # Cloud clusters (D22), through the vmauth instance that authenticates
+    # each cloud and sets X-Cnp-Cluster.
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmauth
+              app.kubernetes.io/instance: clouds
+      ports:
+        - port: 4319
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmagent
+              app.kubernetes.io/instance: cnp
+      ports:
+        - port: 8888
+---
+# VictoriaTraces has no authentication of its own and serves writes and
+# reads on one port: the gateway writes, platform readers and the project
+# vmauth read (vmauth forces each project's tenant and path list).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vtraces-clients
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vtraces
+      app.kubernetes.io/instance: cnp
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: otelcol-gateway
+              app.kubernetes.io/instance: cnp
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmauth
+              app.kubernetes.io/instance: projects
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: grafana
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmagent
+              app.kubernetes.io/instance: cnp
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: arcl-cmp
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: backend
+              app.kubernetes.io/name: arcl-cmp
+      ports:
+        - port: 10428

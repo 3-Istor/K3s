@@ -1,0 +1,127 @@
+# VictoriaTraces single node (CNP-185 D10). Tenants are the AccountID header:
+# 0 is the platform, every project has its own number, written by the
+# OpenTelemetry gateway. Project users only reach it through vmauth-projects,
+# which forces their AccountID.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vtraces-cnp
+  labels: &labels
+    app.kubernetes.io/name: vtraces
+    app.kubernetes.io/instance: cnp
+spec:
+  serviceName: vtraces-cnp
+  replicas: 1
+  selector:
+    matchLabels: *labels
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: vtraces
+          image: docker.io/victoriametrics/victoria-traces:v0.13.0
+          args:
+            - -httpListenAddr=:10428
+            - -storageDataPath=/storage
+            - -retentionPeriod=7d
+            # The PVC is 10Gi: the oldest days go before the disk fills.
+            - -retention.maxDiskSpaceUsageBytes=8GiB
+            - -search.maxConcurrentRequests=4
+            - -search.maxQueryDuration=30s
+            - -servicegraph.enableTask
+            - -servicegraph.taskInterval=5m
+            - -servicegraph.taskLookbehind=5m
+            - -loggerFormat=json
+            - -deleteAuthKey=file:///etc/vtraces/secrets/ADMIN_AUTH_KEY
+            - -forceFlushAuthKey=file:///etc/vtraces/secrets/ADMIN_AUTH_KEY
+            - -forceMergeAuthKey=file:///etc/vtraces/secrets/ADMIN_AUTH_KEY
+            - -partitionManageAuthKey=file:///etc/vtraces/secrets/ADMIN_AUTH_KEY
+            - -logNewStreamsAuthKey=file:///etc/vtraces/secrets/ADMIN_AUTH_KEY
+            - -flagsAuthKey=file:///etc/vtraces/secrets/ADMIN_AUTH_KEY
+            - -pprofAuthKey=file:///etc/vtraces/secrets/ADMIN_AUTH_KEY
+          env:
+            - name: GOMAXPROCS
+              value: "1"
+          ports:
+            - name: http
+              containerPort: 10428
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 384Mi
+            limits:
+              cpu: "1"
+              memory: 384Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: storage
+              mountPath: /storage
+            - name: auth-keys
+              mountPath: /etc/vtraces/secrets
+              readOnly: true
+      volumes:
+        - name: auth-keys
+          secret:
+            secretName: vtraces-auth-keys
+  volumeClaimTemplates:
+    - metadata:
+        name: storage
+      spec:
+        storageClassName: ceph-block
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vtraces-cnp
+  labels:
+    app.kubernetes.io/name: vtraces
+    app.kubernetes.io/instance: cnp
+spec:
+  selector:
+    app.kubernetes.io/name: vtraces
+    app.kubernetes.io/instance: cnp
+  ports:
+    - name: http
+      port: 10428
+      targetPort: http
+---
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: vtraces-auth-keys
+spec:
+  path: kvv2/observability/vtraces
+  vaultRole: observability-role
+  type: Opaque
+  keys:
+    - ADMIN_AUTH_KEY

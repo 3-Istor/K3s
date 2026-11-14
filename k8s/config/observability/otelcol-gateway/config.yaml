@@ -1,0 +1,230 @@
+# Base config of the OpenTelemetry gateway (CNP-185 D10). The pod runs it
+# merged with the routing table the CMP writes in ConfigMap
+# otelcol-gateway-routing (key routing.yaml): one pipeline and one exporter
+# per project, each with its own VictoriaTraces tenant. Without that table
+# the defaults below apply: platform spans are kept, project spans are
+# dropped and counted.
+extensions:
+  health_check:
+    endpoint: ${env:POD_IP}:13133
+  cgroup_runtime:
+    gomaxprocs:
+      enabled: true
+    gomemlimit:
+      enabled: true
+      ratio: 0.8
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: ${env:POD_IP}:4317
+        max_recv_msg_size_mib: 4
+      http:
+        endpoint: ${env:POD_IP}:4318
+  # Spans of the cloud clusters, relayed by vmauth (D22). vmauth sets the
+  # cluster header itself, so a cloud cannot write as another one.
+  otlp/cloud:
+    protocols:
+      http:
+        endpoint: ${env:POD_IP}:4319
+        include_metadata: true
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
+    spike_limit_percentage: 20
+
+  # The pod association below is by source address only, and k8s_attributes
+  # never overwrites an attribute that is already there: whatever the client
+  # sent under these names goes first, or a tenant could write as another.
+  resource/untrusted:
+    attributes:
+      - pattern: ^k8s\..+
+        action: delete
+      - pattern: ^cnp\..+
+        action: delete
+      - key: service.namespace
+        action: delete
+      - key: cluster
+        action: delete
+      - key: cluster
+        value: onprem
+        action: insert
+
+  k8s_attributes:
+    auth_type: serviceAccount
+    passthrough: false
+    pod_association:
+      - sources:
+          - from: connection
+    extract:
+      metadata:
+        - k8s.namespace.name
+        - k8s.pod.name
+        - k8s.pod.uid
+        - k8s.deployment.name
+        - k8s.node.name
+      labels:
+        - tag_name: cnp.project
+          key: cnp.3istor.com/project
+          from: namespace
+        - tag_name: cnp.genai_content
+          key: cnp.3istor.com/genai-content
+          from: namespace
+
+  # The cloud collector associates pods on its own cluster, where the source
+  # address is still the pod's (D22); only the cluster comes from here.
+  resource/cloud:
+    attributes:
+      - key: cluster
+        action: delete
+      - key: cluster
+        from_context: metadata.x-cnp-cluster
+        action: insert
+
+  filter/cloud_without_cluster:
+    error_mode: ignore
+    traces:
+      span:
+        - resource.attributes["cluster"] == nil
+
+  transform/pii:
+    error_mode: ignore
+    trace_statements:
+      - context: span
+        statements:
+          - delete_matching_keys(attributes, "(?i)^http\\.(request|response)\\.header\\.(authorization|proxy[-_]authorization|cookie|set[-_]cookie|x[-_]api[-_]key|x[-_]auth[-_]token)$")
+          - delete_key(attributes, "url.query")
+          - replace_pattern(attributes["url.full"], "\\?.*$", "")
+          - replace_pattern(attributes["http.url"], "\\?.*$", "")
+          - replace_pattern(attributes["http.target"], "\\?.*$", "")
+          - replace_pattern(attributes["db.statement"], "'(?:[^']|'')*'", "?")
+          - replace_pattern(attributes["db.statement"], "\\b\\d+(?:\\.\\d+)?\\b", "?")
+          - replace_pattern(attributes["db.query.text"], "'(?:[^']|'')*'", "?")
+          - replace_pattern(attributes["db.query.text"], "\\b\\d+(?:\\.\\d+)?\\b", "?")
+      - context: spanevent
+        statements:
+          - replace_pattern(attributes["url.full"], "\\?.*$", "")
+
+  # Prompt and completion content only for a namespace labelled
+  # cnp.3istor.com/genai-content=true (07-ia-et-conformite: opt-in per project,
+  # 7 days like every trace).
+  transform/genai:
+    error_mode: ignore
+    trace_statements:
+      - context: span
+        conditions:
+          - resource.attributes["cnp.genai_content"] != "true"
+        statements:
+          - delete_matching_keys(attributes, "^gen_ai\\.(prompt|completion|input\\.messages|output\\.messages|system_instructions|tool\\.call\\.arguments|tool\\.call\\.result)(\\..+)?$")
+      - context: spanevent
+        conditions:
+          - resource.attributes["cnp.genai_content"] != "true"
+        statements:
+          - delete_matching_keys(attributes, "^gen_ai\\.(prompt|completion|input\\.messages|output\\.messages|system_instructions|tool\\.call\\.arguments|tool\\.call\\.result)(\\..+)?$")
+          - delete_key(attributes, "content")
+          - delete_key(attributes, "message")
+
+  filter/genai:
+    error_mode: ignore
+    traces:
+      spanevent:
+        - resource.attributes["cnp.genai_content"] != "true" and IsMatch(name, "^gen_ai\\.(content\\..+|system\\.message|user\\.message|assistant\\.message|tool\\.message|choice|client\\.inference\\.operation\\.details)$")
+
+  resource/cleanup:
+    attributes:
+      - key: cnp.genai_content
+        action: delete
+
+  batch:
+    send_batch_size: 512
+    send_batch_max_size: 1024
+    timeout: 1s
+
+  # The CMP file renders the same processor; the defaults keep the gateway
+  # valid before its first write.
+  filter/cnp_unknown_project:
+    error_mode: ignore
+    traces:
+      span:
+        - "true"
+
+connectors:
+  # A pod in a namespace without the project label is the platform's.
+  routing/cnp_tenancy:
+    error_mode: ignore
+    default_pipelines: [traces/cnp_projects]
+    table:
+      - context: resource
+        condition: attributes["cnp.project"] == nil and attributes["k8s.namespace.name"] != nil
+        pipelines: [traces/cnp_platform]
+
+  # Overwritten by the CMP file, table included.
+  routing/cnp_projects:
+    error_mode: ignore
+    default_pipelines: [traces/cnp_unknown_project]
+    table:
+      - context: resource
+        condition: attributes["cnp.project"] == ""
+        pipelines: [traces/cnp_unknown_project]
+
+exporters:
+  # Platform tenant: AccountID 0, never given to a project.
+  otlp_http/cnp_platform:
+    traces_endpoint: http://vtraces-cnp.observability.svc:10428/insert/opentelemetry/v1/traces
+    headers:
+      AccountID: "0"
+      ProjectID: "0"
+  nop/cnp_unknown_project: {}
+
+service:
+  extensions: [health_check, cgroup_runtime]
+  telemetry:
+    logs:
+      level: info
+      encoding: json
+    metrics:
+      level: normal
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: ${env:POD_IP}
+                port: 8888
+  pipelines:
+    traces/onprem:
+      receivers: [otlp]
+      processors:
+        - memory_limiter
+        - resource/untrusted
+        - k8s_attributes
+        - transform/pii
+        - transform/genai
+        - filter/genai
+        - resource/cleanup
+        - batch
+      exporters: [routing/cnp_tenancy]
+    traces/cloud:
+      receivers: [otlp/cloud]
+      processors:
+        - memory_limiter
+        - resource/cloud
+        - filter/cloud_without_cluster
+        - transform/pii
+        - transform/genai
+        - filter/genai
+        - resource/cleanup
+        - batch
+      exporters: [routing/cnp_tenancy]
+    traces/cnp_platform:
+      receivers: [routing/cnp_tenancy]
+      exporters: [otlp_http/cnp_platform]
+    traces/cnp_projects:
+      receivers: [routing/cnp_tenancy]
+      exporters: [routing/cnp_projects]
+    traces/cnp_unknown_project:
+      receivers: [routing/cnp_projects]
+      processors: [filter/cnp_unknown_project]
+      exporters: [nop/cnp_unknown_project]

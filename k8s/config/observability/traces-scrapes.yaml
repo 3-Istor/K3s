@@ -1,0 +1,29 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: otelcol-gateway
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: otelcol-gateway
+      app.kubernetes.io/instance: cnp
+  endpoints:
+    - port: metrics
+      relabelConfigs:
+        - targetLabel: job
+          replacement: otelcol-gateway
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: vtraces
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vtraces
+      app.kubernetes.io/instance: cnp
+  endpoints:
+    - port: http
+      relabelConfigs:
+        - targetLabel: job
+          replacement: vtraces

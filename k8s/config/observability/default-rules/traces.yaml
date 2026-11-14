@@ -1,0 +1,82 @@
+# CNP-185 V4: the OpenTelemetry gateway and VictoriaTraces.
+groups:
+  - name: traces
+    interval: 30s
+    rules:
+      - alert: TracesGatewayDown
+        expr: up{job="otelcol-gateway"} == 0 or absent(up{job="otelcol-gateway"})
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OpenTelemetry gateway pod {{ $labels.pod }} is down"
+          description: "Apps keep retrying for a few seconds, then drop their spans."
+
+      # The memory limiter or a full pipeline refused spans: the SDK retries,
+      # then drops them.
+      - alert: TracesGatewayRefusingSpans
+        expr: sum(rate(otelcol_receiver_refused_spans{job="otelcol-gateway"}[5m])) by (pod) > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Gateway {{ $labels.pod }} refuses spans"
+          description: "{{ $value | humanize }} spans/s refused, usually the memory limiter. Raise the memory or find the noisy app."
+
+      - alert: TracesExportFailing
+        expr: sum(rate(otelcol_exporter_send_failed_spans{job="otelcol-gateway"}[5m])) by (exporter) > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Spans to VictoriaTraces fail for {{ $labels.exporter }}"
+          description: "{{ $value | humanize }} spans/s are lost after retries."
+
+      - alert: TracesExportQueueDropping
+        expr: sum(rate(otelcol_exporter_enqueue_failed_spans{job="otelcol-gateway"}[5m])) by (exporter) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Export queue of {{ $labels.exporter }} is full"
+          description: "{{ $value | humanize }} spans/s dropped: VictoriaTraces is slow or down."
+
+      # Spans whose project has no tenant yet: a namespace labelled with a
+      # project the CMP does not know, or a table not written since.
+      - alert: TracesUnknownProject
+        expr: sum(increase(otelcol_processor_filter_spans_filtered{job="otelcol-gateway", filter="filter/cnp_unknown_project"}[30m])) > 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Spans dropped for an unknown project"
+          description: "{{ $value | humanize }} spans in 30 min had no project tenant. Check the CMP trace routing and the cnp.3istor.com/project labels."
+
+      - alert: VictoriaTracesDown
+        expr: up{job="vtraces"} == 0 or absent(up{job="vtraces"})
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "VictoriaTraces is down"
+          description: "The gateway queues spans in memory, then drops them."
+
+      # Past the cap, VictoriaTraces drops whole days before the 7 d
+      # retention: traces silently get shorter.
+      - alert: VictoriaTracesNearDiskCap
+        expr: sum(vt_data_size_bytes{job="vtraces"}) by (pod) / max(vt_max_disk_space_usage_bytes{job="vtraces"}) by (pod) > 0.85
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "VictoriaTraces uses {{ $value | humanizePercentage }} of its disk cap"
+          description: "The oldest days are dropped before 7 d at the cap. Grow the PVC and the cap together."
+
+      - alert: VictoriaTracesDiskFull
+        expr: min(vt_free_disk_space_bytes{job="vtraces"} / vt_total_disk_space_bytes{job="vtraces"}) by (pod) < 0.1 or max(vt_storage_is_read_only{job="vtraces"}) by (pod) == 1
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "VictoriaTraces volume is almost full or read-only"
+          description: "New spans are rejected once the volume is read-only."
