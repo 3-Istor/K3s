@@ -22,6 +22,8 @@ resources:
   - exporters.yaml
   - vmalert-rules.yaml
   - vmsingle.yaml
+  - vmagent.yaml
+  - vmagent-scrapes.yaml
 
 helmGlobals:
   chartHome: ../../../charts

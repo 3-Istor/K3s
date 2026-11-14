@@ -1,0 +1,193 @@
+# What Alloy scraped until CNP-185 V1, with the same job labels so rules and
+# dashboards keep matching. ServiceMonitors and PodMonitors are converted by
+# the operator and need nothing here.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMScrapeConfig
+metadata:
+  name: kubelet
+spec:
+  kubernetesSDConfigs:
+    - role: node
+  scheme: HTTPS
+  bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+  tlsConfig:
+    caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+  relabelConfigs:
+    - targetLabel: __address__
+      replacement: kubernetes.default.svc.cluster.local:443
+    - sourceLabels: [__meta_kubernetes_node_name]
+      regex: (.+)
+      replacement: /api/v1/nodes/$1/proxy/metrics
+      targetLabel: __metrics_path__
+    - sourceLabels: [__meta_kubernetes_node_name]
+      targetLabel: node
+    - sourceLabels: [__meta_kubernetes_node_name]
+      targetLabel: instance
+    - targetLabel: job
+      replacement: kubelet
+  metricRelabelConfigs:
+    - sourceLabels: [__name__]
+      regex: .+_bucket
+      action: drop
+    # On the K3s server node the kubelet endpoint also serves the embedded
+    # apiserver's metrics, which the apiserver job already has.
+    - sourceLabels: [__name__]
+      regex: (apiserver|etcd|apiextensions|aggregator|authentication|authorization|admission|watch_cache)_.+
+      action: drop
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMScrapeConfig
+metadata:
+  name: cadvisor
+spec:
+  kubernetesSDConfigs:
+    - role: node
+  scheme: HTTPS
+  bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+  tlsConfig:
+    caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+  relabelConfigs:
+    - targetLabel: __address__
+      replacement: kubernetes.default.svc.cluster.local:443
+    - sourceLabels: [__meta_kubernetes_node_name]
+      regex: (.+)
+      replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
+      targetLabel: __metrics_path__
+    - sourceLabels: [__meta_kubernetes_node_name]
+      targetLabel: node
+    - sourceLabels: [__meta_kubernetes_node_name]
+      targetLabel: instance
+    - targetLabel: job
+      replacement: cadvisor
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMScrapeConfig
+metadata:
+  name: apiserver
+spec:
+  staticConfigs:
+    - targets: [kubernetes.default.svc.cluster.local:443]
+      labels:
+        job: apiserver
+  scheme: HTTPS
+  bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+  tlsConfig:
+    caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    serverName: kubernetes.default.svc
+  metricRelabelConfigs:
+    - sourceLabels: [__name__]
+      regex: .+_bucket
+      action: drop
+---
+# Pods that opt in with prometheus.io annotations, in any namespace. The
+# targets are tenant code: honorLabels stays off, so a namespace, pod or
+# container label they expose lands as exported_* and the real one is kept.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMScrapeConfig
+metadata:
+  name: annotated-pods
+spec:
+  honorLabels: false
+  sampleLimit: 15000
+  kubernetesSDConfigs:
+    - role: pod
+  relabelConfigs:
+    - sourceLabels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+      regex: "true"
+      action: keep
+    - sourceLabels: [__meta_kubernetes_pod_phase]
+      regex: Succeeded|Failed
+      action: drop
+    # One target per pod: the container that declares the annotated port.
+    # Without it every other container port (and Envoy's shutdown-manager)
+    # scraped the same endpoint again.
+    - sourceLabels: [__meta_kubernetes_pod_container_port_number, __meta_kubernetes_pod_annotation_prometheus_io_port]
+      action: keep_if_equal
+    - sourceLabels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+      regex: (.+)
+      targetLabel: __metrics_path__
+    - sourceLabels: [__meta_kubernetes_namespace]
+      targetLabel: namespace
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod
+    - sourceLabels: [__meta_kubernetes_pod_container_name]
+      targetLabel: container
+    - targetLabel: job
+      replacement: kubernetes-pods
+---
+# Flow metrics of every Cilium agent, for the CMP Topology view (CNP-242).
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMScrapeConfig
+metadata:
+  name: hubble
+spec:
+  kubernetesSDConfigs:
+    - role: pod
+      namespaces:
+        names: [kube-system]
+      selectors:
+        - role: pod
+          label: k8s-app=cilium
+  relabelConfigs:
+    - sourceLabels: [__meta_kubernetes_pod_container_port_name]
+      regex: hubble-metrics
+      action: keep
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: instance
+    - targetLabel: job
+      replacement: hubble
+  metricRelabelConfigs:
+    - sourceLabels: [__name__]
+      regex: hubble_flows_processed_total|hubble_drop_total
+      action: keep
+---
+# Alloy keeps counting project log lines until V2 replaces it; its labels
+# (namespace, project) come from the log streams, not from the target.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: alloy
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alloy
+  podMetricsEndpoints:
+    - port: http-metrics
+      honorLabels: true
+      relabelConfigs:
+        - targetLabel: job
+          replacement: integrations/self
+      metricRelabelConfigs:
+        - sourceLabels: [__name__]
+          regex: loki_process_custom_.+|loki_write_.+|loki_source_.+|alloy_build_info
+          action: keep
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: alertmanager
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alertmanager
+  podMetricsEndpoints:
+    - port: http
+      relabelConfigs:
+        - targetLabel: job
+          replacement: alertmanager
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: vmalert
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: victoria-metrics-alert
+  podMetricsEndpoints:
+    - port: http
+      relabelConfigs:
+        - targetLabel: job
+          replacement: vmalert
