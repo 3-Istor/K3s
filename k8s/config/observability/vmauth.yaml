@@ -11,6 +11,13 @@ spec:
   podDisruptionBudget:
     maxUnavailable: 1
   selectAllByDefault: false
+  disableSelfServiceScrape: true
+  secrets:
+    - vmauth-auth-keys
+  extraArgs:
+    metricsAuthKey: file:///etc/vm/secrets/vmauth-auth-keys/METRICS_AUTH_KEY
+    flagsAuthKey: file:///etc/vm/secrets/vmauth-auth-keys/ADMIN_AUTH_KEY
+    pprofAuthKey: file:///etc/vm/secrets/vmauth-auth-keys/ADMIN_AUTH_KEY
   unauthorizedUserAccessSpec:
     url_map:
       - src_paths:
@@ -67,8 +74,14 @@ spec:
     secretRef:
       name: vmauth-projects
       key: auth.yml
+  disableSelfServiceScrape: true
+  secrets:
+    - vmauth-auth-keys
   extraArgs:
     configCheckInterval: 30s
+    metricsAuthKey: file:///etc/vm/secrets/vmauth-auth-keys/METRICS_AUTH_KEY
+    flagsAuthKey: file:///etc/vm/secrets/vmauth-auth-keys/ADMIN_AUTH_KEY
+    pprofAuthKey: file:///etc/vm/secrets/vmauth-auth-keys/ADMIN_AUTH_KEY
   extraEnvs:
     - name: GOMAXPROCS
       value: "1"
