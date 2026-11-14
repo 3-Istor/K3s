@@ -7,6 +7,16 @@ spec:
   provider:
     type: Kubernetes
     kubernetes:
+      # Envoy Gateway's default reserves 100m and 512Mi; the proxy uses ~10m
+      # and under 100Mi. Same size as the project proxies (cnp-project-base).
+      envoyDeployment:
+        container:
+          resources:
+            requests:
+              cpu: 25m
+              memory: 192Mi
+            limits:
+              memory: 192Mi
       envoyService:
         type: ClusterIP
 ---

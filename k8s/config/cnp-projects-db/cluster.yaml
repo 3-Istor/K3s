@@ -27,9 +27,10 @@ spec:
       isWALArchiver: true
       parameters:
         barmanObjectName: cnp-projects-keycloak-backup
+  # Memory stays at 256Mi (peak ~110Mi) to leave room for shared_buffers.
   resources:
     requests:
-      cpu: "50m"
+      cpu: "25m"
       memory: "256Mi"
     limits:
       memory: "256Mi"

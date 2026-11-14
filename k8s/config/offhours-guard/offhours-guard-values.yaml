@@ -5,7 +5,7 @@ image:
 # The chart default (32Mi) sits at the controller's steady usage (27Mi).
 resources:
   requests:
-    cpu: 50m
+    cpu: 10m
     memory: 32Mi
   limits:
     cpu: 100m
