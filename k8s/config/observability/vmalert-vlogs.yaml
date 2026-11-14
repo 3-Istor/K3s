@@ -1,0 +1,46 @@
+# Evaluates the LogsQL rules (vlogs-rules.yaml). A second vmalert because one
+# vmalert has one datasource; this one reads VictoriaLogs directly (D7) and
+# writes its recording rules and alert state to VMSingle.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAlert
+metadata:
+  name: vlogs
+spec:
+  replicaCount: 1
+  image:
+    tag: v1.156.0
+  selectAllByDefault: false
+  ruleSelector:
+    matchLabels:
+      cnp.3istor.com/rules: vlogs
+  ruleNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: observability
+  evaluationInterval: 1m
+  datasource:
+    url: http://vlogs-cnp.observability.svc.cluster.local:9428
+  remoteWrite:
+    url: http://vmsingle-cnp.observability.svc.cluster.local:8429
+  remoteRead:
+    url: http://vmsingle-cnp.observability.svc.cluster.local:8429
+  notifiers:
+    - url: http://alertmanager.observability.svc.cluster.local:9093
+  extraArgs:
+    rule.defaultRuleType: vlogs
+  extraEnvs:
+    - name: GOMAXPROCS
+      value: "1"
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 64Mi
+  configReloaderResources:
+    requests:
+      cpu: 5m
+      memory: 24Mi
+    limits:
+      cpu: 50m
+      memory: 24Mi
