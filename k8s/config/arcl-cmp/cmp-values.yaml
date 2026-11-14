@@ -102,11 +102,12 @@ env:
     IMPORT_WORKFLOW_OWNER_ID: "271529816"
     # Commits of .github/workflows/import.yml allowed to call the worker API,
     # comma separated. A workflow change is live only once its commit is here.
-    IMPORT_WORKFLOW_SHAS: "a2cf73ad26ffdd80bee6e93f050a7d6a16dba12a"
+    IMPORT_WORKFLOW_SHAS: "710937a68f0e2333a0e7c39c24947d0e71e3469a"
     IMPORT_OIDC_AUDIENCE: "cmp-import"
     # "self-hosted" only for a runner group of ephemeral, one-job runners: a
     # persistent runner lets one import read the next one's source and tokens.
-    IMPORT_ALLOWED_RUNNER_ENVIRONMENTS: '["github-hosted"]'
+    # Runner group cnp-import-ephemeral, fed by 3-Istor/Cloud cnp-import-runner.
+    IMPORT_ALLOWED_RUNNER_ENVIRONMENTS: '["self-hosted"]'
 
 extraEnv:
   # --- FinOps: Keycloak client federated to AWS STS and GCP WIF ---
