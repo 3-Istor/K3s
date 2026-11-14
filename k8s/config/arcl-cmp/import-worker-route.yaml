@@ -1,0 +1,45 @@
+# The import workflow calls the CMP with a GitHub Actions OIDC token. The
+# optional Keycloak JWT policy on cmp-route-route refuses any token from
+# another issuer ("Jwt issuer is not configured"), so the worker API gets its
+# own route, which only accepts tokens signed by GitHub Actions. The CMP then
+# checks audience, repository, owner and workflow commit.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: cmp-api-import-worker
+  namespace: arcl-cmp
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: shared-gateway
+      namespace: gateway-infra
+  hostnames:
+    - cmp.3istor.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/import/worker
+      backendRefs:
+        - name: arcl-cmp-backend
+          port: 8000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: cmp-api-import-worker-jwt
+  namespace: arcl-cmp
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: cmp-api-import-worker
+  jwt:
+    providers:
+      - name: github-actions
+        issuer: https://token.actions.githubusercontent.com
+        audiences:
+          - cmp-import
+        remoteJWKS:
+          uri: https://token.actions.githubusercontent.com/.well-known/jwks
