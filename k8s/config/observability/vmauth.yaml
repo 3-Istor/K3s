@@ -1,0 +1,89 @@
+# The old cluster's paths (/select/0/prometheus, /insert/0/prometheus) on top
+# of VMSingle, so a consumer can move without changing its URL. The cutover
+# points the old Service names here (cutover-v1.yaml). Only the read and write
+# APIs pass: VMSingle's admin endpoints are not part of the old paths.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAuth
+metadata:
+  name: compat
+spec:
+  replicaCount: 2
+  podDisruptionBudget:
+    maxUnavailable: 1
+  selectAllByDefault: false
+  unauthorizedUserAccessSpec:
+    url_map:
+      - src_paths:
+          - /select/0/prometheus/api/v1/(query|query_range|series|labels|label/[^/]+/values|metadata|query_exemplars|export|export/[^/]+|status/[^/]+)
+          - /select/0/prometheus/federate
+        url_prefix:
+          - http://vmsingle-cnp.observability.svc.cluster.local:8429
+        drop_src_path_prefix_parts: 3
+      - src_paths:
+          - /insert/0/prometheus/api/v1/(write|import|import/[^/]+)
+        url_prefix:
+          - http://vmsingle-cnp.observability.svc.cluster.local:8429
+        drop_src_path_prefix_parts: 3
+  extraEnvs:
+    - name: GOMAXPROCS
+      value: "1"
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 64Mi
+  configReloaderResources:
+    requests:
+      cpu: 5m
+      memory: 24Mi
+    limits:
+      cpu: 50m
+      memory: 24Mi
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: vmauth
+          app.kubernetes.io/instance: compat
+---
+# Project Grafana orgs. The CMP owns the whole config (Secret vmauth-projects,
+# one user per project with its namespace filter pinned in url_prefix). The
+# operator only runs it: two replicas so a node drain never cuts the
+# project dashboards.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAuth
+metadata:
+  name: projects
+spec:
+  replicaCount: 2
+  podDisruptionBudget:
+    maxUnavailable: 1
+  selectAllByDefault: false
+  externalConfig:
+    secretRef:
+      name: vmauth-projects
+      key: auth.yml
+  extraArgs:
+    configCheckInterval: 30s
+  extraEnvs:
+    - name: GOMAXPROCS
+      value: "1"
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 64Mi
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: vmauth
+          app.kubernetes.io/instance: projects
