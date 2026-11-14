@@ -1,0 +1,67 @@
+# Metrics rules (D15): the platform's, from the two ConfigMaps the Helm
+# vmalert loaded and from VMRules in observability, and the CMP's per-app
+# SLO rules in cnp-observability. LogsQL rules belong to VMAlert vlogs and
+# carry cnp.3istor.com/rules=vlogs.
+#
+# Reads VMSingle directly (D7): a vmauth outage must not stop alerting. Its
+# rules need history (offset 1d, 3d SLO windows), so this replaces the Helm
+# vmalert only once VMSingle has been fed for at least a day (V1 cutover).
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAlert
+metadata:
+  name: cnp
+spec:
+  replicaCount: 1
+  image:
+    tag: v1.156.0
+  selectAllByDefault: false
+  ruleNamespaceSelector:
+    matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: In
+        values: [observability, cnp-observability]
+  ruleSelector:
+    matchExpressions:
+      - key: cnp.3istor.com/rules
+        operator: NotIn
+        values: [vlogs]
+  configMaps:
+    - vmalert-rules
+    - vmalert-default-rules
+  rulePath:
+    - /etc/vm/configs/vmalert-rules/*.yaml
+    - /etc/vm/configs/vmalert-default-rules/*.yaml
+  evaluationInterval: 1m
+  datasource:
+    url: http://vmsingle-cnp.observability.svc.cluster.local:8429
+  # Recording rules and ALERTS go back to VMSingle; the `for` state is
+  # restored from it after a restart.
+  remoteWrite:
+    url: http://vmsingle-cnp.observability.svc.cluster.local:8429
+  remoteRead:
+    url: http://vmsingle-cnp.observability.svc.cluster.local:8429
+  notifiers:
+    - url: http://alertmanager.observability.svc.cluster.local:9093
+  # Scraped by VMPodScrape vmalert, as the Helm vmalert was.
+  disableSelfServiceScrape: true
+  extraArgs:
+    external.url: https://grafana.3istor.com
+    external.alert.source: >-
+      explore?orgId=1&left={"datasource":"prometheus","queries":[{"refId":"A","expr":{{ .Expr | jsonEscape | queryEscape }}}],"range":{"from":"now-1h","to":"now"}}
+  extraEnvs:
+    - name: GOMAXPROCS
+      value: "1"
+  resources:
+    requests:
+      cpu: 25m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  configReloaderResources:
+    requests:
+      cpu: 5m
+      memory: 24Mi
+    limits:
+      cpu: 50m
+      memory: 24Mi
