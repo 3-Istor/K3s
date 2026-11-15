@@ -116,6 +116,14 @@ datasources:
           httpHeaderValue1: "default"
           basicAuthPassword: "$GRAFANA_LOKI_PASSWORD"
 
+      # V4 traces. No AccountID header: org 1 reads the platform tenant (0).
+      # Project orgs get theirs from the CMP, through vmauth.
+      - name: VictoriaTraces
+        type: jaeger
+        uid: victoriatraces
+        url: "http://vtraces-cnp.observability.svc.cluster.local:10428/select/jaeger"
+        access: proxy
+
 # Configure dashboard providers.
 # ref: http://docs.grafana.org/administration/provisioning/#dashboards
 # `path` must be /var/lib/grafana/dashboards/<provider_name>

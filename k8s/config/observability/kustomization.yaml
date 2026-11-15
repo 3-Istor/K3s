@@ -32,6 +32,12 @@ resources:
   - vlogs-rules.yaml
   - vmalert-vlogs.yaml
   - audit-archive-vlogs.yaml
+  # V4 traces
+  - vtraces.yaml
+  - otelcol-gateway-deploy.yaml
+  - traces-networkpolicies.yaml
+  - traces-scrapes.yaml
+  - hubble-ui-route.yaml
 
 # Upstream alerts kept from the default set: node-exporter, kube-state-metrics,
 # VictoriaMetrics self-health and Alertmanager. The rest of the Kubernetes
@@ -48,6 +54,11 @@ configMapGenerator:
       - default-rules/vmalert.yaml
       - default-rules/vmoperator.yaml
       - default-rules/vmsingle.yaml
+      # V4 traces
+      - default-rules/traces.yaml
+  - name: otelcol-gateway
+    files:
+      - otelcol-gateway/config.yaml
 
 # CNP-185 V1 cutover: points the old VictoriaMetrics Service names at the new
 # stack. Uncomment only after the checks of the V1 PR; comment out to roll back.

@@ -26,7 +26,8 @@ resource "keycloak_openid_client" "openid_client" {
     "https://qcm.${var.base_domain}/api/auth/callback/keycloak",
     "http://localhost:3000/api/auth/callback/keycloak",
     "http://localhost:3001/api/auth/callback/keycloak",
-    "https://grafana.${var.base_domain}/login/generic_oauth"
+    "https://grafana.${var.base_domain}/login/generic_oauth",
+    "https://hubble.${var.base_domain}/oauth2/callback"
   ]
 
   valid_post_logout_redirect_uris = [

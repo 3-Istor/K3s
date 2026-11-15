@@ -62,6 +62,32 @@ updateStrategy:
 
 hubble:
   enabled: true
+  # Hubble UI (CNP-185 Q8), behind Keycloak at hubble.3istor.com: the route
+  # and its policy are in k8s/config/observability/hubble-ui-route.yaml.
+  relay:
+    enabled: true
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 64Mi
+  ui:
+    enabled: true
+    frontend:
+      resources:
+        requests:
+          cpu: 5m
+          memory: 32Mi
+        limits:
+          memory: 32Mi
+    backend:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          memory: 64Mi
   # Observed edges for the CMP Topology view, scraped by Alloy on :9965.
   # Workload names repeat across project namespaces, so both metrics carry
   # the namespaces. reserved-identity names the non-pod ends (world, host,
