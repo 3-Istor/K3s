@@ -7,3 +7,4 @@ resources:
   - require-resources-and-memory-limits.yaml
   - pod-security-restricted.yaml
   - disallow-latest-and-untagged-images.yaml
+  - verify-cmp-image-signatures.yaml

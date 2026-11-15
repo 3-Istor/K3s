@@ -1,0 +1,53 @@
+# CMP images are signed keyless by the build-and-push workflow on release tags
+# (CNP-257). Audit only: a failed or unreachable check lands in the policy
+# report and never blocks a pod. Switching to Deny is a separate decision.
+#
+# mutateDigest is off: it would register a mutating webhook that rewrites
+# tags to digests on pods and, through autogen, on the Argo CD managed
+# Deployments, which would then never stay in sync. verifyDigest is off
+# because the CMP chart deploys by tag.
+#
+# Wave 1 so the policy is applied once the upgraded controllers are healthy.
+
+apiVersion: policies.kyverno.io/v1
+kind: ImageValidatingPolicy
+metadata:
+  name: verify-cmp-image-signatures
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  validationActions:
+    - Audit
+  failurePolicy: Ignore
+  matchConstraints:
+    resourceRules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - pods
+  matchImageReferences:
+    - glob: "ghcr.io/3-istor/cmp-*"
+  credentials:
+    secrets:
+      - ghcr-read
+  validationConfigurations:
+    mutateDigest: false
+    verifyDigest: false
+    required: true
+  attestors:
+    - name: cmpRelease
+      cosign:
+        keyless:
+          identities:
+            - issuer: https://token.actions.githubusercontent.com
+              subjectRegExp: '^https://github\.com/3-Istor/CMP/\.github/workflows/build-and-push\.yml@refs/tags/v.+$'
+  validations:
+    - message: "CMP images must carry a cosign keyless signature from the 3-Istor/CMP build-and-push workflow on a release tag."
+      expression: >-
+        (images.containers + images.initContainers).all(image,
+          verifyImageSignatures(image, [attestors.cmpRelease]) > 0)

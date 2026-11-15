@@ -5,8 +5,13 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/compare-options: ServerSideDiff=true,IncludeMutationWebhook=true
+  # Argo CD adds the pre-delete finalizers itself because the chart ships
+  # helm.sh/hook: pre-delete Jobs (webhook cleanup on uninstall). Without them
+  # here the root app reports this Application as OutOfSync forever.
   finalizers:
     - resources-finalizer.argocd.argoproj.io
+    - pre-delete-finalizer.argocd.argoproj.io
+    - pre-delete-finalizer.argocd.argoproj.io/cleanup
 spec:
   syncPolicy:
     automated:
