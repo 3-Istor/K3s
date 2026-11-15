@@ -34,6 +34,8 @@ resource "keycloak_openid_client_default_scopes" "openid_client_default_scopes" 
     "email",
     "roles",
     "web-origins",
-    keycloak_openid_client_scope.groups.name
+    keycloak_openid_client_scope.groups.name,
+    # Keycloak adds it to every client with service accounts enabled.
+    "service_account",
   ]
 }
