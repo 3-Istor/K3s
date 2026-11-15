@@ -9,6 +9,17 @@ resource "cloudflare_dns_record" "a_root_record" {
   proxied = false
 }
 
+# WireGuard endpoint for the team's laptops. Clients use this name instead of the box IP,
+# so an IP change is one dc_ip update. Not proxied: Cloudflare does not relay UDP.
+resource "cloudflare_dns_record" "vpn" {
+  zone_id = var.cloudflare_zone_id
+  name    = "vpn"
+  type    = "A"
+  content = var.dc_ip
+  ttl     = 300
+  proxied = false
+}
+
 #########################################################################
 
 ######################## CNAME 3Istor Cluster ########################
