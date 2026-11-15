@@ -3,4 +3,3 @@
 kubelet-arg:
   - "image-gc-high-threshold=60"
   - "image-gc-low-threshold=45"
-  - "image-maximum-gc-age=72h"
