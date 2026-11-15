@@ -1,5 +1,10 @@
 replicaCount: 1
 
+# Scraped by Alloy for AlertmanagerNotificationsFailing, which had no series.
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9093"
+
 resources:
   requests:
     memory: "128Mi"
