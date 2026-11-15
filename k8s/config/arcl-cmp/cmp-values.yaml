@@ -57,6 +57,10 @@ env:
     # identity of the AWS provider and of the ASG/ALB health checks: the pod
     # carries no static AWS key.
     TF_BACKEND_AWS_ROLE_ARN: "arn:aws:iam::947554757826:role/cnp-tfstate-cmp"
+    # CNP-185 V4: the CMP writes the gateway's per-project trace routing.
+    # The store URLs (OBS_*_URL) wait for the V1 cutover: until then the
+    # projects' vmauth is the old one, which cannot reach the new stores.
+    OBS_TRACES_ROUTING_ENABLED: "true"
     KEYCLOAK_URL: "https://auth.3istor.com"
     KEYCLOAK_CLIENT_ID: "3-istor-openid"
     # Clients whose access tokens the API accepts (azp). Set apart from
