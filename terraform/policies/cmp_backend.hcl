@@ -103,6 +103,11 @@ path "identity/group/id/*" {
   }
 }
 
+# The Vault provider looks project groups up by name on refresh.
+path "identity/group/name/project-*" {
+  capabilities = ["read"]
+}
+
 path "identity/group-alias" {
   capabilities = ["create", "update"]
   denied_parameters = {
