@@ -1,0 +1,11 @@
+# Writes scan results into cnp-audit-archive. The bucket belongs to the
+# observability audit-archive user, whose hourly job grants this one
+# s3:PutObject on compliance/* only (audit-archive-bucket-policy.json).
+apiVersion: ceph.rook.io/v1
+kind: CephObjectStoreUser
+metadata:
+  name: compliance-scans
+spec:
+  store: openstack-rgw
+  clusterNamespace: rook-ceph
+  displayName: CNP compliance scans

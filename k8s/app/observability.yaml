@@ -16,6 +16,9 @@ spec:
       - ServerSideApply=true
       - CreateNamespace=true
       - RespectIgnoreDifferences=true
+      # The VictoriaMetrics operator CRDs and their first objects arrive in
+      # the same sync.
+      - SkipDryRunOnMissingResource=true
   # The CMP keeps vmauth's per-project users up to date in this Secret.
   ignoreDifferences:
     - kind: Secret
@@ -23,6 +26,17 @@ spec:
       jsonPointers:
         - /data
         - /stringData
+    # V4 traces: the CMP writes the gateway's routing table and rolls the
+    # gateway through an annotation of its pod template.
+    - kind: ConfigMap
+      name: otelcol-gateway-routing
+      jsonPointers:
+        - /data
+    - group: apps
+      kind: Deployment
+      name: otelcol-gateway
+      jsonPointers:
+        - /spec/template/metadata/annotations/cnp.3istor.com~1routing-checksum
   project: default
   source:
     repoURL: https://github.com/3-Istor/K3s.git

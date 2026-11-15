@@ -1,16 +1,19 @@
-# Shared demo accounts, one per identity of the access matrix (CNP-228). The
-# whole team uses them to show the segregation; passwords are in Vault at
-# kvv2/demo-accounts, readable by every team member. MFA stays mandatory: the
-# first login sets up TOTP, then its secret is stored next to the password.
-# No demo platform admin: a shared one would make every member admin.
+# Demo accounts, one per identity of the access matrix and per person (CNP-228):
+# demo-<role>-<person>. Personal so each one carries its owner's passkey and
+# TOTP, which a shared account cannot. Passwords are in Vault at
+# kvv2/demo-accounts-<person>, readable by every team member.
+# demo-auditor-* is in security-auditor, so flow v6 also asks it for a passkey.
+# No demo platform admin: Brian and Hugo already are platform admins.
+# Platform groups are in groups.tf; the CMP adds the project groups.
 locals {
-  demo_accounts = {
-    "demo-auditor" = [keycloak_group.member.id, keycloak_group.security_auditor.id]
-    "demo-finops"  = [keycloak_group.member.id, keycloak_group.finops.id]
-    "demo-owner"   = [keycloak_group.member.id]
-    "demo-admin"   = [keycloak_group.member.id]
-    "demo-dev"     = [keycloak_group.member.id]
-    "demo-guest"   = [keycloak_group.member.id]
+  demo_roles  = ["auditor", "finops", "owner", "admin", "dev", "guest"]
+  demo_people = ["brian", "hugo"]
+
+  demo_accounts = toset([
+    for pair in setproduct(local.demo_roles, local.demo_people) : "demo-${pair[0]}-${pair[1]}"
+  ])
+  demo_accounts_of_role = {
+    for role in local.demo_roles : role => [for person in local.demo_people : "demo-${role}-${person}"]
   }
 }
 
@@ -41,20 +44,22 @@ resource "keycloak_user" "demo" {
   }
 }
 
-# Not exhaustive: the CMP adds the project groups of the demo-roles project.
-resource "keycloak_user_groups" "demo" {
-  for_each   = local.demo_accounts
-  realm_id   = keycloak_realm.kube_lab.id
-  user_id    = keycloak_user.demo[each.key].id
-  group_ids  = each.value
-  exhaustive = false
+# Replaced by keycloak_group_memberships.platform. destroy = false: destroying it would have
+# removed the demo accounts from member and their platform group.
+removed {
+  from = keycloak_user_groups.demo
+
+  lifecycle {
+    destroy = false
+  }
 }
 
 resource "vault_kv_secret_v2" "demo_accounts" {
-  mount = vault_mount.kvv2.path
-  name  = "demo-accounts"
+  for_each = toset(local.demo_people)
+  mount    = vault_mount.kvv2.path
+  name     = "demo-accounts-${each.key}"
   data_json = jsonencode({
-    for name, _ in local.demo_accounts : name => random_password.demo[name].result
+    for role in local.demo_roles : "demo-${role}-${each.key}" => random_password.demo["demo-${role}-${each.key}"].result
   })
 
   lifecycle {
@@ -66,7 +71,7 @@ resource "vault_kv_secret_v2" "demo_accounts" {
 resource "vault_policy" "demo_accounts_read" {
   name   = "demo-accounts-read"
   policy = <<-EOT
-    path "${vault_mount.kvv2.path}/data/demo-accounts" {
+    path "${vault_mount.kvv2.path}/data/demo-accounts-*" {
       capabilities = ["read", "update", "patch"]
     }
   EOT

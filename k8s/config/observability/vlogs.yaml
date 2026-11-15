@@ -1,0 +1,68 @@
+# One VictoriaLogs for every log, platform and projects alike (D5). Projects
+# read it through vmauth-projects, which pins their namespace filter (D6).
+apiVersion: operator.victoriametrics.com/v1
+kind: VLSingle
+metadata:
+  name: cnp
+spec:
+  image:
+    tag: v1.53.0
+  retentionPeriod: 30d
+  # VictoriaLogs keeps at least the last two days whatever this says, so the
+  # cap leaves room for them on the volume.
+  retentionMaxDiskSpaceUsageBytes: 16GiB
+  removePvcAfterDelete: false
+  storage:
+    storageClassName: ceph-block
+    accessModes: [ReadWriteOnce]
+    resources:
+      requests:
+        storage: 20Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  extraEnvs:
+    - name: GOMAXPROCS
+      value: "1"
+  secrets:
+    - vlogs-auth-keys
+  extraArgs:
+    # Same reasoning as VMSingle: a few heavy queries at once must not
+    # OOM-kill the only log store.
+    search.maxConcurrentRequests: "4"
+    search.maxQueryDuration: 30s
+    flagsAuthKey: file:///etc/vm/secrets/vlogs-auth-keys/ADMIN_AUTH_KEY
+    forceFlushAuthKey: file:///etc/vm/secrets/vlogs-auth-keys/ADMIN_AUTH_KEY
+    forceMergeAuthKey: file:///etc/vm/secrets/vlogs-auth-keys/ADMIN_AUTH_KEY
+    logNewStreamsAuthKey: file:///etc/vm/secrets/vlogs-auth-keys/ADMIN_AUTH_KEY
+    partitionManageAuthKey: file:///etc/vm/secrets/vlogs-auth-keys/ADMIN_AUTH_KEY
+    pprofAuthKey: file:///etc/vm/secrets/vlogs-auth-keys/ADMIN_AUTH_KEY
+---
+# The name every other wave and the CMP use, whatever the operator calls it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: vlogs-cnp
+spec:
+  ports:
+    - name: http
+      port: 9428
+      targetPort: 9428
+  selector:
+    app.kubernetes.io/name: vlsingle
+    app.kubernetes.io/instance: cnp
+---
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: vlogs-auth-keys
+spec:
+  path: kvv2/observability/vlogs
+  vaultRole: observability-role
+  type: Opaque
+  keys:
+    - ADMIN_AUTH_KEY

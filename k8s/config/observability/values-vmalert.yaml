@@ -19,3 +19,14 @@ server:
     url: "http://alertmanager.observability.svc:9093"
 
   configMap: "vmalert-rules"
+
+  extraArgs:
+    rule: /config/alert-rules.yaml,/default-rules/*.yaml
+  extraVolumes:
+    - name: default-rules
+      configMap:
+        name: vmalert-default-rules
+  extraVolumeMounts:
+    - name: default-rules
+      mountPath: /default-rules
+      readOnly: true

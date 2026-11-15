@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tenant-vault-guardrails
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/compare-options: ServerSideDiff=true
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+  project: default
+  source:
+    repoURL: https://github.com/3-Istor/K3s.git
+    targetRevision: HEAD
+    path: k8s/config/tenant-vault-guardrails
+  # Cluster-scoped objects only: no destination namespace.
+  destination:
+    name: in-cluster

@@ -1,0 +1,214 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otelcol-gateway
+---
+# k8s_attributes: pod by source address, namespace labels, Deployment name
+# through the ReplicaSet.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otelcol-gateway
+rules:
+  - apiGroups: [""]
+    resources: [pods, namespaces]
+    verbs: [get, list, watch]
+  - apiGroups: [apps]
+    resources: [replicasets]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otelcol-gateway
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otelcol-gateway
+subjects:
+  - kind: ServiceAccount
+    name: otelcol-gateway
+    namespace: observability
+---
+# The per-project routing table, written by the CMP (Q9). Argo CD creates it
+# empty and then leaves its data alone (ignoreDifferences on the
+# observability app); empty or missing, the gateway runs on its defaults.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otelcol-gateway-routing
+  labels:
+    cnp.3istor.com/owner: cmp
+data:
+  routing.yaml: ""
+---
+# The CMP writes the table, then rolls the gateway by patching an annotation
+# on its pod template. Nothing else.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cmp-otelcol-gateway-routing
+rules:
+  - apiGroups: [""]
+    resources: [configmaps]
+    resourceNames: [otelcol-gateway-routing]
+    verbs: [get, update, patch]
+  - apiGroups: [apps]
+    resources: [deployments]
+    resourceNames: [otelcol-gateway]
+    verbs: [get, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cmp-otelcol-gateway-routing
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cmp-otelcol-gateway-routing
+subjects:
+  - kind: ServiceAccount
+    name: arcl-cmp
+    namespace: arcl-cmp
+---
+# A new project rolls this Deployment (D10): the new pod is ready before an
+# old one stops, and the old one drains its queues before it exits.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otelcol-gateway
+  labels: &labels
+    app.kubernetes.io/name: otelcol-gateway
+    app.kubernetes.io/instance: cnp
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels: *labels
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      serviceAccountName: otelcol-gateway
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      # 5 s for the endpoint removal to reach every node, then the receivers
+      # stop and the exporters drain: well under 60 s at this volume.
+      terminationGracePeriodSeconds: 60
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: *labels
+      containers:
+        - name: otelcol
+          image: docker.io/otel/opentelemetry-collector-k8s:0.165.0
+          args:
+            - --config=/conf/config.yaml
+            # An env var rather than a mounted file: a missing ConfigMap
+            # leaves it unset, which the collector reads as an empty config.
+            - --config=env:CNP_TRACE_ROUTING
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: CNP_TRACE_ROUTING
+              valueFrom:
+                configMapKeyRef:
+                  name: otelcol-gateway-routing
+                  key: routing.yaml
+                  optional: true
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+            - name: otlp-cloud
+              containerPort: 4319
+            - name: metrics
+              containerPort: 8888
+            - name: health
+              containerPort: 13133
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: health
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: health
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 192Mi
+            limits:
+              cpu: 500m
+              memory: 192Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: config
+              mountPath: /conf
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: otelcol-gateway
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: otelcol-gateway
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: otelcol-gateway
+      app.kubernetes.io/instance: cnp
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otelcol-gateway
+  labels:
+    app.kubernetes.io/name: otelcol-gateway
+    app.kubernetes.io/instance: cnp
+spec:
+  selector:
+    app.kubernetes.io/name: otelcol-gateway
+    app.kubernetes.io/instance: cnp
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: otlp-grpc
+      appProtocol: grpc
+    - name: otlp-http
+      port: 4318
+      targetPort: otlp-http
+    - name: otlp-cloud
+      port: 4319
+      targetPort: otlp-cloud
+    - name: metrics
+      port: 8888
+      targetPort: metrics

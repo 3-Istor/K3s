@@ -6,6 +6,8 @@ namespace: kube-system
 resources:
   - rbac.yaml
   - sysctl-tuner.yaml
+  - hubble-metrics-policy.yaml
+  - hubble-ui-referencegrant.yaml
 
 helmCharts:
   - name: cilium

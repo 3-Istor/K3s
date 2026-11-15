@@ -16,6 +16,7 @@ locals {
     "status",
     "linmap",
     "grafana",
+    "hubble",
     "sessions"
   ])
 

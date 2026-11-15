@@ -1,0 +1,320 @@
+# Ships pod logs and the K3s audit log to VictoriaLogs (D4, D5), next to
+# Alloy during the 14-day dual run. Rollback: delete this file's entry in
+# kustomization.yaml; Alloy and Loki never depended on it.
+#
+# Fluent Bit rather than vlagent: vlagent merges the fields of a JSON log line
+# into the same record as the Kubernetes metadata, so a pod writing
+# {"kubernetes.pod_namespace": "victim"} gets that value into the stream and a
+# duplicate field. Here the record is rebuilt from metadata only, and the
+# application's own content stays under "log" (raw line) or "json.*".
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fluent-bit
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fluent-bit
+rules:
+  - apiGroups: [""]
+    resources: [namespaces, pods]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fluent-bit
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fluent-bit
+subjects:
+  - kind: ServiceAccount
+    name: fluent-bit
+    namespace: observability
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush                     1
+        Log_Level                 warn
+        Parsers_File              /fluent-bit/etc/parsers.conf
+        HTTP_Server               On
+        HTTP_Listen               0.0.0.0
+        HTTP_Port                 2020
+        Health_Check              On
+        storage.path              /var/lib/fluent-bit/storage
+        storage.sync              normal
+        storage.backlog.mem_limit 8M
+
+    # Read_from_Head stays off: the first start does not replay the node's
+    # whole log history into VictoriaLogs.
+    [INPUT]
+        Name              tail
+        Tag               kube.*
+        Path              /var/log/containers/*.log
+        multiline.parser  cri
+        DB                /var/lib/fluent-bit/kube.db
+        DB.locking        true
+        Refresh_Interval  5
+        Buffer_Chunk_Size 64k
+        Buffer_Max_Size   2M
+        Skip_Long_Lines   On
+        Mem_Buf_Limit     16M
+        storage.type      filesystem
+
+    # Only present on the K3s server node. Audit events with a request body
+    # are far over tail's 32k default line size.
+    [INPUT]
+        Name              tail
+        Tag               k8s-audit
+        Path              /var/lib/rancher/k3s/server/logs/audit.log
+        DB                /var/lib/fluent-bit/audit.db
+        DB.locking        true
+        Buffer_Chunk_Size 256k
+        Buffer_Max_Size   4M
+        Skip_Long_Lines   On
+        Mem_Buf_Limit     16M
+        storage.type      filesystem
+
+    # Pods cannot opt out of collection or pick their own parser through
+    # annotations (K8S-Logging.*): logs are audit evidence too.
+    [FILTER]
+        Name                kubernetes
+        Match               kube.*
+        Kube_Tag_Prefix     kube.var.log.containers.
+        Merge_Log           On
+        Merge_Log_Key       json
+        Keep_Log            On
+        Labels              On
+        Annotations         Off
+        namespace_labels    On
+        K8S-Logging.Parser  Off
+        K8S-Logging.Exclude Off
+        Buffer_Size         0
+
+    [FILTER]
+        Name   lua
+        Match  kube.*
+        script /fluent-bit/etc/cnp/cnp.lua
+        call   pod_record
+
+    [FILTER]
+        Name   lua
+        Match  k8s-audit
+        script /fluent-bit/etc/cnp/cnp.lua
+        call   audit_record
+
+    [OUTPUT]
+        Name                     http
+        Match                    *
+        Host                     vlogs-cnp.observability.svc.cluster.local
+        Port                     9428
+        URI                      /insert/jsonline?_stream_fields=cluster,namespace,pod,container,project,app,job&_msg_field=log,json.message,json.msg&_time_field=date
+        Format                   json_lines
+        Json_date_key            date
+        Json_date_format         iso8601
+        Compress                 gzip
+        Retry_Limit              no_limits
+        storage.total_limit_size 512M
+
+  cnp.lua: |
+    -- Every record is built from scratch: cluster, namespace, pod, container,
+    -- project and app come from Kubernetes metadata only. What the
+    -- application wrote is kept under "log" (raw line) or "json" (its parsed
+    -- JSON, stored as json.*), never at the top level.
+
+    -- Audit evidence: archived and matched by the security rules as raw lines.
+    local function keeps_raw_line(namespace)
+      return namespace == "vault" or namespace == "keycloak" or
+        (namespace ~= nil and string.sub(namespace, -7) == "-system")
+    end
+
+    local debug_levels = { trace = true, debug = true, dbug = true }
+    local info_levels = { trace = true, debug = true, dbug = true, info = true }
+
+    -- The chattiest platform containers measured on 2026-11-14 (Loki index
+    -- volume over 24h); their warnings and errors are kept.
+    local warnings_only = {
+      ["argocd/argocd-application-controller"] = true,
+      ["argocd/argocd-repo-server"] = true,
+      ["argocd/argocd-notifications-controller"] = true,
+      ["vault-secrets-operator/vault-secrets-operator"] = true,
+      ["observability/loki"] = true,
+      ["observability/alloy"] = true,
+    }
+
+    local function level_of(record)
+      local parsed = record["json"]
+      if type(parsed) == "table" then
+        local level = parsed["level"] or parsed["severity"] or parsed["lvl"]
+        if type(level) == "string" then
+          return string.lower(level)
+        end
+      end
+      local line = record["log"]
+      if type(line) == "string" then
+        local level = string.match(line, "level=(%a+)")
+        if level ~= nil then
+          return string.lower(level)
+        end
+      end
+      return nil
+    end
+
+    function pod_record(tag, timestamp, record)
+      local k8s = record["kubernetes"] or {}
+      local namespace = k8s["namespace_name"]
+      local container = k8s["container_name"]
+      local pod_labels = k8s["labels"] or {}
+      local namespace_labels = (record["kubernetes_namespace"] or {})["labels"] or {}
+
+      -- Audit evidence is never thinned by level.
+      local level = nil
+      if not keeps_raw_line(namespace) then
+        level = level_of(record)
+      end
+      if level ~= nil then
+        local dropped = debug_levels
+        if warnings_only[(namespace or "") .. "/" .. (container or "")] then
+          dropped = info_levels
+        end
+        if dropped[level] then
+          return -1, timestamp, record
+        end
+      end
+
+      -- Vault writes a request and a response audit line per call; the rules
+      -- and the archive only use the response, which repeats the request.
+      -- That is a third of today's log volume.
+      local parsed = record["json"]
+      if namespace == "vault" and container == "vault" and type(parsed) == "table" and
+          parsed["type"] == "request" then
+        return -1, timestamp, record
+      end
+
+      local out = {
+        cluster = "onprem",
+        namespace = namespace,
+        pod = k8s["pod_name"],
+        container = container,
+        node = k8s["host"],
+        project = namespace_labels["cnp.3istor.com/project"],
+        app = pod_labels["app.kubernetes.io/name"] or pod_labels["app"],
+        stream = record["stream"],
+      }
+      if record["json"] ~= nil and not keeps_raw_line(namespace) then
+        out["json"] = record["json"]
+      else
+        out["log"] = record["log"]
+      end
+      return 2, timestamp, out
+    end
+
+    function audit_record(tag, timestamp, record)
+      return 2, timestamp, {
+        cluster = "onprem",
+        job = "k8s-audit",
+        log = record["log"],
+      }
+    end
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluent-bit
+  labels:
+    app.kubernetes.io/name: fluent-bit
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: fluent-bit
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: fluent-bit
+    spec:
+      serviceAccountName: fluent-bit
+      containers:
+        - name: fluent-bit
+          image: cr.fluentbit.io/fluent/fluent-bit:5.1.5
+          args:
+            - --config=/fluent-bit/etc/cnp/fluent-bit.conf
+          ports:
+            - name: http
+              containerPort: 2020
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /api/v2/health
+              port: http
+          resources:
+            requests:
+              cpu: 20m
+              memory: 96Mi
+            limits:
+              cpu: 300m
+              memory: 96Mi
+          # Root reads the root-owned files under /var/log/pods; no
+          # capability is needed for that.
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: config
+              mountPath: /fluent-bit/etc/cnp
+              readOnly: true
+            - name: varlog
+              mountPath: /var/log
+              readOnly: true
+            - name: k3s-server-logs
+              mountPath: /var/lib/rancher/k3s/server/logs
+              readOnly: true
+            - name: state
+              mountPath: /var/lib/fluent-bit
+      volumes:
+        - name: config
+          configMap:
+            name: fluent-bit
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: k3s-server-logs
+          hostPath:
+            path: /var/lib/rancher/k3s/server/logs
+            type: DirectoryOrCreate
+        # Read positions and the disk buffer survive restarts, so a
+        # VictoriaLogs outage or a rollout loses no line.
+        - name: state
+          hostPath:
+            path: /var/lib/fluent-bit
+            type: DirectoryOrCreate
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: fluent-bit
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: fluent-bit
+  podMetricsEndpoints:
+    - port: http
+      path: /api/v2/metrics/prometheus
+      relabelConfigs:
+        - targetLabel: job
+          replacement: fluent-bit

@@ -54,10 +54,54 @@ l7Proxy: true # default true
 envoyConfig:
   enabled: false
 
-# Flows denied by a network policy, written to the agent's own log so Alloy
-# ships them to Loki with everything else. Measured before enabling: zero
-# policy denials over the agents' flow buffers, so the volume is small.
+# The chart default (2) restarts both agents at once on this two-node cluster.
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+
 hubble:
+  enabled: true
+  # Hubble UI (CNP-185 Q8), behind Keycloak at hubble.3istor.com: the route
+  # and its policy are in k8s/config/observability/hubble-ui-route.yaml.
+  relay:
+    enabled: true
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 64Mi
+  ui:
+    enabled: true
+    frontend:
+      resources:
+        requests:
+          cpu: 5m
+          memory: 32Mi
+        limits:
+          memory: 32Mi
+    backend:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          memory: 64Mi
+  # Observed edges for the CMP Topology view, scraped by Alloy on :9965.
+  # Workload names repeat across project namespaces, so both metrics carry
+  # the namespaces. reserved-identity names the non-pod ends (world, host,
+  # kube-apiserver). verdict is already a built-in label of the flow metric.
+  metrics:
+    enabled:
+      - flow:sourceContext=workload-name|reserved-identity;destinationContext=workload-name|reserved-identity;labelsContext=source_namespace,destination_namespace,source_workload,destination_workload
+      - drop:sourceContext=workload-name|reserved-identity;destinationContext=workload-name|reserved-identity;labelsContext=source_namespace,destination_namespace
+    enableOpenMetrics: false
+    serviceMonitor:
+      enabled: false
+  # Flows denied by a network policy, written to the agent's own log so Alloy
+  # ships them to Loki with everything else. Measured before enabling: zero
+  # policy denials over the agents' flow buffers, so the volume is small.
   export:
     static:
       enabled: true

@@ -4,3 +4,10 @@ metadata:
   name: observability
   labels:
     prod-gateway-access: "true"
+---
+# Per-app scrapes and rules (VMServiceScrape, VMPodScrape, VMRule). The CMP
+# will be its only writer; app charts never create observability objects.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cnp-observability

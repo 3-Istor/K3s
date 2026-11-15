@@ -14,3 +14,8 @@ kube-apiserver-arg:
   - "audit-log-maxsize=100"
   - "audit-log-maxbackup=3"
   - "audit-log-maxage=2"
+# Node disks are thin RBD images on a small Ceph: the default GC (85 %) never
+# fires at 70 %, so old image versions pile up and the RBD images keep growing.
+kubelet-arg:
+  - "image-gc-high-threshold=60"
+  - "image-gc-low-threshold=45"

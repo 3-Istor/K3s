@@ -19,6 +19,14 @@ helmCharts:
     releaseName: rook-ceph
     namespace: rook-ceph
     includeCRDs: true
+    # The chart asks 200m; the operator of an external cluster idles at ~12m.
+    valuesInline:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 192Mi
+        limits:
+          memory: 512Mi
 
   - name: ceph-csi-drivers
     repo: https://ceph.github.io/ceph-csi-operator

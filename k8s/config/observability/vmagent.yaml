@@ -1,0 +1,178 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAgent
+metadata:
+  name: cnp
+spec:
+  # Our own account: the operator only grants Roles in its watched namespaces,
+  # and vmagent must discover nodes and the pods of every project.
+  serviceAccountName: vmagent-cnp
+  replicaCount: 1
+  selectAllByDefault: false
+  scrapeInterval: 30s
+  # Per scrape, after relabeling: a target over it fails whole (up == 0)
+  # instead of flooding the store. The biggest platform target, cAdvisor of
+  # the server node, sends about 20k.
+  sampleLimit: 40000
+  externalLabels:
+    cluster: onprem
+  # Otherwise every series also gets prometheus="observability/cnp", which the
+  # old stack never had.
+  externalLabelName: ""
+  remoteWrite:
+    - url: http://vmsingle-cnp.observability.svc.cluster.local:8429/api/v1/write
+    # Rollback copy, until the old cluster is removed (14 days after the
+    # cutover). Goes to the old vminsert pods, never to the alias Service.
+    - url: http://vm-legacy-vminsert.observability.svc.cluster.local:8480/insert/0/prometheus/api/v1/write
+  remoteWriteSettings:
+    maxDiskUsagePerURL: 512MiB
+  extraArgs:
+    remoteWrite.maxDailySeries: "300000"
+    promscrape.dropOriginalLabels: "true"
+  extraEnvs:
+    - name: GOMAXPROCS
+      value: "1"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 384Mi
+    limits:
+      cpu: "1"
+      memory: 384Mi
+  configReloaderResources:
+    requests:
+      cpu: 5m
+      memory: 24Mi
+    limits:
+      cpu: 50m
+      memory: 24Mi
+  # ServiceMonitors and PodMonitors of the platform are converted in the
+  # operator's watched namespaces; the CMP will write per-app scrapes in
+  # cnp-observability.
+  serviceScrapeNamespaceSelector:
+    matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: In
+        values:
+          - observability
+          - cnp-observability
+          - argocd
+          - argo-rollouts
+          - cert-manager
+          - cnpg-system
+          - envoy-gateway-system
+          - kyverno
+          - status
+          - trivy-system
+  serviceScrapeSelector: {}
+  podScrapeNamespaceSelector:
+    matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: In
+        values:
+          - observability
+          - cnp-observability
+          - argocd
+          - argo-rollouts
+          - cert-manager
+          - cnpg-system
+          - envoy-gateway-system
+          - kyverno
+          - status
+          - trivy-system
+  podScrapeSelector: {}
+  # Raw scrape configs can point anywhere and keep any label: platform only.
+  scrapeConfigNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: observability
+  scrapeConfigSelector: {}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vmagent-cnp
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vmagent-cnp
+rules:
+  - apiGroups: [""]
+    resources: [nodes, nodes/metrics, services, endpoints, pods, namespaces]
+    verbs: [get, list, watch]
+  # kubelet and cAdvisor through the apiserver proxy, whose TLS verifies
+  # against the ServiceAccount CA; K3s signs kubelet certs with another one.
+  - apiGroups: [""]
+    resources: [nodes/proxy]
+    verbs: [get]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]
+    verbs: [get, list, watch]
+  - nonResourceURLs: [/metrics, /metrics/cadvisor]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vmagent-cnp
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: vmagent-cnp
+subjects:
+  - kind: ServiceAccount
+    name: vmagent-cnp
+    namespace: observability
+---
+# The operator's config reloader reads the generated scrape config.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vmagent-cnp
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [vmagent-cnp]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vmagent-cnp
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vmagent-cnp
+subjects:
+  - kind: ServiceAccount
+    name: vmagent-cnp
+    namespace: observability
+---
+# The old vminsert pods, under a name the cutover never moves.
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm-legacy-vminsert
+spec:
+  ports:
+    - name: http
+      port: 8480
+      targetPort: http
+  selector:
+    app: vminsert
+    app.kubernetes.io/instance: vm
+    app.kubernetes.io/name: victoria-metrics-cluster
+---
+# The old vmselect pods: side-by-side comparison and rollback reads.
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm-legacy-vmselect
+spec:
+  ports:
+    - name: http
+      port: 8481
+      targetPort: http
+  selector:
+    app: vmselect
+    app.kubernetes.io/instance: vm
+    app.kubernetes.io/name: victoria-metrics-cluster

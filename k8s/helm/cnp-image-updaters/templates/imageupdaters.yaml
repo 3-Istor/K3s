@@ -10,7 +10,12 @@
   changes only through a promotion from the CMP, which copies the digest that
   ran in staging. A final X.Y.Z pushed by hand is built but deployed nowhere.
 */}}
+{{- /*
+  Imported apps (service, backing) are pinned by digest in cnp-projects: the
+  CMP writes a new digest after each build, no updater watches them.
+*/}}
 {{- range $app := .Values.apps }}
+{{- if has $app.type (list "static" "fullstack") }}
 {{- $owner := regexReplaceAll "^https://github.com/([^/]+)/.*$" $app.repoURL "${1}" | lower }}
 {{- $components := ternary (list "frontend" "backend") (list "app") (eq $app.type "fullstack") }}
 {{- $staged := has "staging" ($app.environments | default (list "prod")) }}
@@ -65,5 +70,6 @@ spec:
           {{- else }}
           writeBackTarget: {{ printf "helmvalues:/deploy/%s" (ternary "values.yaml" (printf "values-%s.yaml" $component) (eq $component "app")) | quote }}
           {{- end }}
+{{- end }}
 {{- end }}
 {{- end }}

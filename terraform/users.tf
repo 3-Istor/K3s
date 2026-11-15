@@ -48,7 +48,9 @@ resource "keycloak_user" "team" {
   enabled        = true
   email_verified = true
 
-  required_actions = ["UPDATE_PASSWORD", "CONFIGURE_TOTP"]
+  # Only read at creation (ignore_changes below). The first password login still sets up
+  # OTP, which the flow requires on the password path, so OTP remains the fallback.
+  required_actions = ["UPDATE_PASSWORD", "webauthn-register-passwordless"]
 
   initial_password {
     value     = random_password.team[each.key].result
@@ -64,18 +66,14 @@ resource "keycloak_user" "team" {
   }
 }
 
-resource "keycloak_user_groups" "team_groups" {
-  for_each = local.team_members
-  realm_id = keycloak_realm.kube_lab.id
-  user_id  = keycloak_user.team[each.key].id
-
-  # Project groups are added by the CMP, platform groups in groups.tf.
-  group_ids = [keycloak_group.member.id]
+# Group membership moved to keycloak_group_memberships.platform (groups.tf). This resource was
+# exhaustive: destroying it would have emptied every team member's groups, project groups
+# included, hence destroy = false.
+removed {
+  from = keycloak_user_groups.team_groups
 
   lifecycle {
-    ignore_changes = [
-      group_ids
-    ]
+    destroy = false
   }
 }
 

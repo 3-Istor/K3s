@@ -161,6 +161,24 @@ variable "os_password" {
   sensitive = true
 }
 
+# Dedicated Keystone user of the CMP (member on 3-istor-cloud), from the Cloud
+# repo terraform/openstack/admin outputs. os_username/os_password stay the
+# admin account until dockair-sandbox/ci is removed.
+variable "cmp_os_username" {
+  type    = string
+  default = "cmp-svc-account"
+
+  validation {
+    condition     = var.cmp_os_username != "admin"
+    error_message = "The CMP must not run with the OpenStack admin account."
+  }
+}
+
+variable "cmp_os_password" {
+  type      = string
+  sensitive = true
+}
+
 variable "os_user_domain_name" {
   type = string
 }
@@ -205,6 +223,26 @@ variable "avatars_s3_secret_key" {
   sensitive = true
 }
 
+variable "icons_s3_access_key_id" {
+  type      = string
+  sensitive = true
+}
+
+variable "icons_s3_secret_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "export_s3_access_key_id" {
+  type      = string
+  sensitive = true
+}
+
+variable "export_s3_secret_key" {
+  type      = string
+  sensitive = true
+}
+
 variable "avatars_s3_endpoint" {
   type    = string
   default = "https://s3.3istor.com"
@@ -239,6 +277,34 @@ variable "security_discord_webhook_url" {
 }
 
 
+# OAuth client of the CNP-Portal GitHub App, for GitHub account linking on the
+# CMP. Empty leaves linking off without breaking the plan.
+variable "github_oauth_client_id" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "github_oauth_client_secret" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+# Secret of the CNP-Portal GitHub App webhook (push events). Empty makes the
+# CMP refuse every delivery: rebuilds then only come from the reconciler.
+variable "github_webhook_secret" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+# Fernet key encrypting the GitHub user tokens the CMP stores. Replacing it
+# makes every stored token unreadable: rotate by prepending a new key to
+# github-token-encryption-keys and keeping this one after it.
+resource "random_bytes" "cmp_github_token_key" {
+  length = 32
+}
 
 resource "vault_kv_secret_v2" "arcl_cmp_creds" {
   mount = vault_mount.kvv2.path
@@ -247,22 +313,24 @@ resource "vault_kv_secret_v2" "arcl_cmp_creds" {
   data_json = jsonencode({
     "os-auth-url"                  = var.os_auth_url
     "os-project-name"              = var.os_project_name
-    "os-username"                  = var.os_username
-    "os-password"                  = var.os_password
+    "os-username"                  = var.cmp_os_username
+    "os-password"                  = var.cmp_os_password
     "os-project-domain-name"       = var.os_project_domain_name
     "os-endpoint-type"             = var.os_endpoint_type
     "os-user-domain-name"          = var.os_user_domain_name
-    "aws-access-key-id"            = var.aws_access_key_id
     "aws-region"                   = var.aws_region
     "aws-s3-bucket"                = var.aws_s3_bucket
     "aws-s3-key-prefix"            = var.aws_s3_key_prefix
-    "aws-secret-access-key"        = var.aws_secret_key
     "avatars-s3-access-key-id"     = var.avatars_s3_access_key_id
     "avatars-s3-secret-access-key" = var.avatars_s3_secret_key
     "avatars-s3-endpoint"          = var.avatars_s3_endpoint
     "avatars-s3-bucket"            = var.avatars_s3_bucket
     "avatars-s3-region"            = var.avatars_s3_region
     "avatars-s3-public-url-base"   = var.avatars_s3_public_url_base
+    "icons-s3-access-key-id"       = var.icons_s3_access_key_id
+    "icons-s3-secret-access-key"   = var.icons_s3_secret_key
+    "export-s3-access-key-id"      = var.export_s3_access_key_id
+    "export-s3-secret-access-key"  = var.export_s3_secret_key
     "cloudflare-api-token"         = var.cloudflare_api_token_secret_var
     "cloudflare-zone-id"           = var.cloudflare_zone_id
     "discord-webhook-url"          = var.discord_webhook_url
@@ -273,11 +341,12 @@ resource "vault_kv_secret_v2" "arcl_cmp_creds" {
     "github-installation-id"       = var.github_app_installation_id
     "github-registry-username"     = var.github_bot_username
     "github-registry-token"        = var.github_bot_token
-    "keycloak-admin-username"      = var.keycloak_admin_username
-    "keycloak-admin-password"      = var.keycloak_admin_password
-    "vault-token"                  = var.vault_token
     "grafana-admin-password"       = var.grafana_admin_password
     "keycloak-client-secret"       = keycloak_openid_client.openid_client.client_secret
+    "github-oauth-client-id"       = var.github_oauth_client_id
+    "github-oauth-client-secret"   = var.github_oauth_client_secret
+    "github-token-encryption-keys" = replace(replace(random_bytes.cmp_github_token_key.base64, "+", "-"), "/", "_")
+    "github-webhook-secret"        = var.github_webhook_secret
   })
 }
 

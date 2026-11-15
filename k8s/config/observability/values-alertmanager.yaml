@@ -27,11 +27,19 @@ config:
     repeat_interval: 12h
     receiver: "discord-default"
     routes:
+      # CNP-185 V2 dual run: the LogsQL copies of the Loki log rules
+      # (logs_backend="vlogs") show in Alertmanager but are not sent, so
+      # Discord gets each alert once. Remove with the Loki ruler.
+      - receiver: "vlogs-shadow"
+        matchers:
+          - logs_backend="vlogs"
+        continue: false
       - receiver: "discord-critical"
         matchers:
           - severity="critical"
         continue: false
   receivers:
+    - name: "vlogs-shadow"
     - name: "discord-default"
       discord_configs:
         - webhook_url_file: /etc/secrets/DISCORD_WEBHOOK_URL

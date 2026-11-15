@@ -93,8 +93,8 @@ resource "keycloak_required_action" "totp" {
   name           = "Configure OTP"
 }
 
-# Not a default action: new accounts, demo-* included, keep password plus TOTP. A user adds a
-# passkey from the account console (Account security, Signing in) or an admin assigns it.
+# Not a default action: accounts created outside users.tf keep password plus TOTP. Team accounts
+# get it at creation, passkey-required users and LoA 2 requests enrol one through flow v6.
 resource "keycloak_required_action" "webauthn_register_passwordless" {
   realm_id       = keycloak_realm.kube_lab.id
   alias          = "webauthn-register-passwordless"

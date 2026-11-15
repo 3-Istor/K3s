@@ -1,0 +1,207 @@
+# LogsQL ports of loki-security-rules.yaml and loki-log-rules.yaml, plus the
+# log counters Alloy used to derive. Evaluated by VMAlert vlogs
+# (vmalert-vlogs.yaml). Same alert names, labels and thresholds as the Loki
+# ones; logs_backend=vlogs marks them as the shadow copy during the dual run
+# (values-alertmanager.yaml routes them away from Discord).
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: vlogs-security
+  labels:
+    cnp.3istor.com/rules: vlogs
+spec:
+  groups:
+    - name: security-audit
+      type: vlogs
+      interval: 1m
+      labels:
+        logs_backend: vlogs
+      rules:
+        # Terraform and the CMP bootstrap hold a root-policy token, so this
+        # also fires on their runs: each one should be one we expect.
+        - alert: VaultRootTokenUsed
+          expr: |
+            _time:5m {namespace="vault", container="vault"}
+              "\"type\":\"response\"" "\"policies\":[\"root\"]"
+            | unpack_json fields (auth.display_name)
+            | rename auth.display_name as display_name
+            | stats by (display_name) count() as events
+            | filter events:>0
+          labels:
+            severity: warning
+          annotations:
+            summary: "Vault root token used by {{ $labels.display_name }}"
+
+        - alert: VaultPermissionDeniedBurst
+          expr: |
+            _time:5m {namespace="vault", container="vault"}
+              "\"type\":\"response\"" "permission denied"
+            | unpack_json fields (auth.display_name)
+            | rename auth.display_name as display_name
+            | stats by (display_name) count() as denied
+            | filter denied:>20
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $value }} denied Vault requests in 5m from {{ $labels.display_name }}"
+
+        - alert: KeycloakLoginFailureBurst
+          expr: |
+            _time:5m {namespace=~"keycloak|.+-system"} "type=\"LOGIN_ERROR\""
+            | extract "realmName=\"<realm>\""
+            | stats by (realm) count() as failures
+            | filter failures:>10
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $value }} failed logins in 5m on realm {{ $labels.realm }}"
+
+        # Project bootstrap grants the tenant admin realm-admin, so a new
+        # project fires this once.
+        - alert: KeycloakPrivilegeChange
+          expr: |
+            _time:5m {namespace=~"keycloak|.+-system"} "operationType="
+            | extract_regexp "operationType=\"(?P<operation>[A-Z]+)\".*resourceType=\"(?P<resource>REALM|REALM_ROLE|REALM_ROLE_MAPPING|CLIENT_ROLE|CLIENT_ROLE_MAPPING|IDENTITY_PROVIDER)\""
+            | filter resource:!""
+            | stats by (operation, resource) count() as changes
+            | filter changes:>0
+          labels:
+            severity: warning
+          annotations:
+            summary: "Keycloak {{ $labels.operation }} on {{ $labels.resource }}"
+
+        # Someone put in or taken out of an elevated-* group by anything but
+        # the CMP (CNP-124). Admin events carry ids only: the group ids come
+        # from `terraform output -raw elevated_group_ids_regex`, the actors are
+        # the 3-istor-openid and cmp-provisioner service accounts. Update them
+        # if those groups or clients are recreated, here and in the Loki rule.
+        - alert: KeycloakElevatedGroupChangedOutsideCmp
+          expr: |
+            _time:5m {namespace=~"keycloak|.+-system"} "resourceType=\"GROUP_MEMBERSHIP\""
+            | extract_regexp "operationType=\"(?P<operation>[A-Z]+)\".*userId=\"(?P<actor>[^\"]*)\".*resourcePath=\"users/[^/]+/groups/(?P<group>[^\"]+)\""
+            | filter group:~"^(47780fd6-4b71-48d7-9a91-7dc504d7a90c|d03bc753-2266-49f5-ab5f-d33fbd108322)$"
+                actor:!~"^(079ffd86-6ca3-4f8c-bbde-93b76f507fd7|de58153b-20f3-4907-abc7-efd152cdfc1a)$"
+            | stats by (operation, actor) count() as changes
+            | filter changes:>0
+          labels:
+            severity: critical
+          annotations:
+            summary: "Elevated group membership {{ $labels.operation }} by {{ $labels.actor }} outside the CMP"
+
+        # Any shell into a pod, people and service accounts alike.
+        - alert: KubernetesPodExec
+          expr: |
+            _time:5m {job="k8s-audit"}
+              ("\"subresource\":\"exec\"" or "\"subresource\":\"attach\"")
+            | unpack_json fields (user.username, objectRef.namespace, objectRef.name, responseStatus.code)
+            | rename user.username as user, objectRef.namespace as namespace, objectRef.name as pod, responseStatus.code as code
+            | filter code:<400
+            | stats by (user, namespace, pod) count() as shells
+            | filter shells:>0
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.user }} opened a shell in {{ $labels.namespace }}/{{ $labels.pod }}"
+
+        # Argo CD and the operators change RBAC through their service
+        # accounts; a person doing it by hand is the exception.
+        - alert: KubernetesRbacChangeByHuman
+          expr: |
+            _time:5m {job="k8s-audit"} "\"apiGroup\":\"rbac.authorization.k8s.io\""
+            | unpack_json fields (user.username, verb, objectRef.resource, objectRef.name)
+            | rename user.username as user, objectRef.resource as kind, objectRef.name as name
+            | filter verb:~"^(create|update|patch|delete)$"
+                user:!~"^(system:serviceaccount:.*|system:kube-.*|system:k3s-.*|system:apiserver)$"
+            | stats by (user, verb, kind, name) count() as changes
+            | filter changes:>0
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.user }} {{ $labels.verb }} {{ $labels.kind }}/{{ $labels.name }}"
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: vlogs-platform
+  labels:
+    cnp.3istor.com/rules: vlogs
+spec:
+  groups:
+    # Watched from the logs on purpose: a read-only store cannot store the
+    # metrics that would alert about itself (vmstorage went silent for 5 days
+    # on 2026-10-05 before this rule existed). VMSingle replaces vmstorage.
+    - name: platform-metrics
+      type: vlogs
+      interval: 1m
+      labels:
+        logs_backend: vlogs
+      rules:
+        - alert: MetricsStorageRejectingWrites
+          expr: |
+            _time:10m
+              ({namespace="observability", container=~".*vminsert.*"} "cannot push")
+              or ({namespace="observability", container=~".*vmstorage.*|vmsingle"} "read-only mode")
+            | stats count() as lines
+            | filter lines:>0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "VictoriaMetrics is rejecting writes: metrics are being lost"
+
+    # Port of LogVolumeSpike (vmalert-rules.yaml), which reads Alloy's
+    # counters: same floors, same comparison with yesterday at this time.
+    - name: project-logs
+      type: vlogs
+      interval: 1m
+      labels:
+        logs_backend: vlogs
+      rules:
+        - alert: LogVolumeSpike
+          expr: |
+            (_time:10m or _time:10m offset 1d) {project=~".+"}
+            | stats by (project, namespace)
+                count() if (_time:10m) as lines,
+                count() if (_time:10m offset 1d) as lines_yesterday
+            | math lines - 5 * lines_yesterday as above_usual
+            | filter (above_usual:>0 and lines:>3000) or lines:>30000
+            | fields project, namespace, lines
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.namespace }} logged {{ $value | humanize }} lines in 10 minutes"
+            description: "Far above its usual volume; it is often an error loop. Check the Logs view of the project in the CMP."
+---
+# What Alloy counted per project (loki_process_custom_log_*_total), as one
+# sample per minute in VMSingle: sum_over_time(...[10m]) replaces
+# increase(...[10m]). Debug lines are no longer collected, so they are not
+# counted either.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: vlogs-project-counters
+  labels:
+    cnp.3istor.com/rules: vlogs
+spec:
+  groups:
+    - name: project-log-counters
+      type: vlogs
+      interval: 1m
+      labels:
+        cluster: onprem
+      rules:
+        - record: cnp_log_lines:count1m
+          expr: |
+            _time:1m {project=~".+"}
+            | stats by (project, namespace) count() as lines
+        - record: cnp_log_bytes:sum1m
+          expr: |
+            _time:1m {project=~".+"}
+            | stats by (project, namespace) sum_len(_msg, json.*) as bytes
+        - record: cnp_log_error_lines:count1m
+          expr: |
+            _time:1m {project=~".+"}
+              (_msg:~"(?i)\\b(error|fatal|panic|exception|traceback)\\b"
+                or json.level:~"(?i)^(error|fatal|panic|critical)$")
+            | stats by (project, namespace) count() as error_lines

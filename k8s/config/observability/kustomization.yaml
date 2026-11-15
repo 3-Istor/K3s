@@ -1,6 +1,10 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: observability
+
+# Instead of `namespace: observability`, which would also rename the
+# cnp-observability Namespace object to observability.
+transformers:
+  - namespace-transformer.yaml
 
 resources:
   - namespace.yaml
@@ -9,12 +13,57 @@ resources:
   - loki-security-rules.yaml
   - loki-log-rules.yaml
   - audit-archive.yaml
+  - secret-age.yaml
   - loki-networkpolicy.yaml
   - cmp-archive-status.yaml
   - vmauth-projects.yaml
   - vm-networkpolicies.yaml
+  - alertmanager-networkpolicy.yaml
   - exporters.yaml
   - vmalert-rules.yaml
+  - vmsingle.yaml
+  - vmagent.yaml
+  - vmagent-scrapes.yaml
+  - vmauth.yaml
+  # V2 logs (CNP-185): VictoriaLogs, Fluent Bit, vmalert for LogsQL rules
+  - vlogs.yaml
+  - fluent-bit.yaml
+  - vlogs-networkpolicies.yaml
+  - vlogs-rules.yaml
+  - vmalert-vlogs.yaml
+  - audit-archive-vlogs.yaml
+  # V4 traces
+  - vtraces.yaml
+  - otelcol-gateway-deploy.yaml
+  - traces-networkpolicies.yaml
+  - traces-scrapes.yaml
+  - hubble-ui-route.yaml
+
+# Upstream alerts kept from the default set: node-exporter, kube-state-metrics,
+# VictoriaMetrics self-health and Alertmanager. The rest of the Kubernetes
+# mixin fires all the time on two nodes, and K3s has no etcd, scheduler or
+# controller-manager endpoints.
+configMapGenerator:
+  - name: vmalert-default-rules
+    files:
+      - default-rules/alertmanager.yaml
+      - default-rules/kube-state-metrics.yaml
+      - default-rules/node-exporter.yaml
+      - default-rules/vm-health.yaml
+      - default-rules/vmagent.yaml
+      - default-rules/vmalert.yaml
+      - default-rules/vmoperator.yaml
+      - default-rules/vmsingle.yaml
+      # V4 traces
+      - default-rules/traces.yaml
+  - name: otelcol-gateway
+    files:
+      - otelcol-gateway/config.yaml
+
+# CNP-185 V1 cutover: points the old VictoriaMetrics Service names at the new
+# stack. Uncomment only after the checks of the V1 PR; comment out to roll back.
+# patches:
+#   - path: cutover-v1.yaml
 
 helmGlobals:
   chartHome: ../../../charts
@@ -33,7 +82,15 @@ helmCharts:
     namespace: observability
     valuesFile: values-loki.yaml
 
-  # VictoriaMetrics (Metrics)
+  - name: victoria-metrics-operator
+    repo: https://victoriametrics.github.io/helm-charts/
+    version: 0.68.2
+    releaseName: vm-operator
+    namespace: observability
+    valuesFile: values-vm-operator.yaml
+
+  # VictoriaMetrics cluster, replaced by VMSingle: removed 14 days after the
+  # cutover.
   - name: victoria-metrics-cluster
     repo: https://victoriametrics.github.io/helm-charts/
     version: 0.48.0
@@ -62,6 +119,9 @@ helmCharts:
     releaseName: grafana
     namespace: observability
     valuesFile: values-grafana.yaml
+    # V2 logs (CNP-185)
+    additionalValuesFiles:
+      - values-grafana-vlogs.yaml
 
   # Alloy (Logs and Metrics Aggregation)
   - name: alloy

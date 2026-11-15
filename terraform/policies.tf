@@ -91,12 +91,38 @@ resource "vault_policy" "vault_admin" {
   })
 }
 
+resource "vault_policy" "vault_data_admin" {
+  name   = "vault_data_admin"
+  policy = file("${path.module}/policies/vault_data_admin.hcl")
+}
+
 # -----------------------------------------------------------------------------
 # CMP Policies
 # -----------------------------------------------------------------------------
 resource "vault_policy" "arcl_cmp_policy" {
   name   = "arcl-cmp-policy"
   policy = templatefile("${path.module}/policies/arcl_cmp.hcl", {})
+}
+
+resource "vault_policy" "cmp_backend" {
+  name = "cmp-backend"
+  policy = templatefile("${path.module}/policies/cmp_backend.hcl", {
+    kv_mount             = vault_mount.kvv2.path
+    auth_mounts          = local.cmp_backend_auth_mounts
+    platform_group_ids   = [for group in local.platform_identity_groups : group.id]
+    platform_group_names = [for group in local.platform_identity_groups : group.name]
+    platform_group_alias_ids = [
+      vault_identity_group_alias.infra_alias.id,
+      vault_identity_group_alias.member_alias.id,
+      vault_identity_group_alias.elevated_vault_data.id,
+    ]
+    denied_roles = {
+      for mount in local.cmp_backend_auth_mounts : mount => sort(distinct(concat(
+        [for role in local.platform_kubernetes_roles : role.role_name if role.backend == mount],
+        mount == vault_auth_backend.kubernetes.path ? [local.cmp_backend_role_name] : [],
+      )))
+    }
+  })
 }
 
 # -----------------------------------------------------------------------------
@@ -211,6 +237,13 @@ resource "vault_policy" "trois_istor_sessions_policy" {
 # -----------------------------------------------------------------------------
 # Cloud Observability Policies
 # -----------------------------------------------------------------------------
+resource "vault_policy" "secret_age" {
+  name = "secret-age"
+  policy = templatefile("${path.module}/policies/secret_age.hcl", {
+    mount_path = vault_mount.kvv2.path
+  })
+}
+
 resource "vault_policy" "cloud_observability_policy" {
   name   = "cloud-observability-policy"
   policy = templatefile("${path.module}/policies/cloud-observability.hcl", {})

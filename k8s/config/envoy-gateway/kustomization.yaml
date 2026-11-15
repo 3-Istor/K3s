@@ -4,7 +4,6 @@ namespace: envoy-gateway-system
 
 resources:
   - namespace.yaml
-  - podmonitor.yaml
 
 helmCharts:
   # - name: envoy-gateway-system
@@ -21,3 +20,13 @@ helmCharts:
     namespace: envoy-gateway-system
     # valuesFile: values.yaml
     includeCRDs: true
+    # The controller uses ~5m and ~115Mi; the chart asks 100m and 256Mi.
+    valuesInline:
+      deployment:
+        envoyGateway:
+          resources:
+            requests:
+              cpu: 25m
+              memory: 160Mi
+            limits:
+              memory: 1024Mi

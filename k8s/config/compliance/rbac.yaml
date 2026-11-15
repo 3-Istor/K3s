@@ -1,0 +1,104 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-bench
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubescape
+---
+# What the CIS section 5 (policies) checks of kube-bench list with kubectl.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: compliance-kube-bench
+rules:
+  - apiGroups: [""]
+    resources: [pods, serviceaccounts]
+    verbs: [get, list]
+  - apiGroups: [rbac.authorization.k8s.io]
+    resources: [clusterroles, clusterrolebindings, roles]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: compliance-kube-bench
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: compliance-kube-bench
+subjects:
+  - kind: ServiceAccount
+    name: kube-bench
+    namespace: compliance
+---
+# The resource kinds matched by the cis-v1.12.0, nsa and mitre frameworks of
+# regolibrary v2.0.39. Secrets are left out on purpose: only CIS 5.6.4 (C-0212,
+# objects in the default namespace) reads them, and the scan should not hold
+# every secret of the cluster for that.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: compliance-kubescape
+rules:
+  - apiGroups: [""]
+    resources:
+      - configmaps
+      - endpoints
+      - namespaces
+      - nodes
+      - persistentvolumeclaims
+      - pods
+      - podtemplates
+      - replicationcontrollers
+      - serviceaccounts
+      - services
+    verbs: [get, list]
+  - apiGroups: [apps]
+    resources: [daemonsets, deployments, replicasets, statefulsets]
+    verbs: [get, list]
+  - apiGroups: [autoscaling]
+    resources: [horizontalpodautoscalers]
+    verbs: [get, list]
+  - apiGroups: [batch]
+    resources: [cronjobs, jobs]
+    verbs: [get, list]
+  - apiGroups: [coordination.k8s.io]
+    resources: [leases]
+    verbs: [get, list]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]
+    verbs: [get, list]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses, networkpolicies]
+    verbs: [get, list]
+  - apiGroups: [cilium.io]
+    resources: [ciliumclusterwidenetworkpolicies, ciliumnetworkpolicies]
+    verbs: [get, list]
+  - apiGroups: [policy]
+    resources: [poddisruptionbudgets]
+    verbs: [get, list]
+  - apiGroups: [rbac.authorization.k8s.io]
+    resources: [clusterrolebindings, clusterroles, rolebindings, roles]
+    verbs: [get, list]
+  - apiGroups: [admissionregistration.k8s.io]
+    resources: [mutatingwebhookconfigurations, validatingwebhookconfigurations]
+    verbs: [get, list]
+  - apiGroups: [storage.k8s.io]
+    resources: [csistoragecapacities]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: compliance-kubescape
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: compliance-kubescape
+subjects:
+  - kind: ServiceAccount
+    name: kubescape
+    namespace: compliance

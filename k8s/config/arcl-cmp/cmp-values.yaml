@@ -24,21 +24,22 @@ securityContext:
   runAsUser: 1001
 
 resources:
+  # The backend averages ~520m and reaches ~880m at p95 over 7 days (CNP-272).
   backend:
     limits:
       cpu: 1000m
       memory: "1Gi"
     requests:
-      cpu: 50m
+      cpu: 500m
       memory: "1Gi"
 
   frontend:
     limits:
       cpu: 500m
-      memory: 512Mi
+      memory: 256Mi
     requests:
       cpu: 50m
-      memory: 512Mi
+      memory: 256Mi
 
 persistence:
   enabled: true
@@ -51,20 +52,80 @@ env:
   backend:
     DATABASE_URL: "sqlite:////app/db/arcl.db"
     TF_BACKEND_S3_ENABLED: "true"
+    # State bucket through role cnp-tfstate-cmp with the Keycloak token of
+    # client cnp-tfstate (Cloud repo, terraform/public/aws/cmp-iam). Also the
+    # identity of the AWS provider and of the ASG/ALB health checks: the pod
+    # carries no static AWS key.
+    TF_BACKEND_AWS_ROLE_ARN: "arn:aws:iam::947554757826:role/cnp-tfstate-cmp"
+    # CNP-185 V4: the CMP writes the gateway's per-project trace routing.
+    # The store URLs (OBS_*_URL) wait for the V1 cutover: until then the
+    # projects' vmauth is the old one, which cannot reach the new stores.
+    OBS_TRACES_ROUTING_ENABLED: "true"
     KEYCLOAK_URL: "https://auth.3istor.com"
     KEYCLOAK_CLIENT_ID: "3-istor-openid"
     # Clients whose access tokens the API accepts (azp). Set apart from
     # KEYCLOAK_CLIENT_ID, which is also the backend's admin client.
     KEYCLOAK_ALLOWED_CLIENTS: "3-istor-openid"
     VAULT_URL: "http://vault.vault.svc.cluster.local:8200"
+    # Log in as Vault role cmp-backend with the pod's ServiceAccount (arcl-cmp).
+    VAULT_AUTH: "kubernetes"
+    # Destructive actions and elevated access ask for a passkey used in the
+    # last 5 minutes (Keycloak LoA 2, flow v6). "false" turns the check off.
+    # Off while the gold access token is refused after a fresh passkey (CNP-124):
+    # back to "true" once the token check passes again.
+    STEP_UP_ENABLED: "false"
+    # Project export dump Jobs upload to Garage through its Service, so a
+    # database dump never leaves the cluster. Download links use the public
+    # endpoint (the avatars one).
+    EXPORT_S3_INTERNAL_ENDPOINT: "http://garage.garage-s3.svc.cluster.local:3900"
     # FinOps: real costs. Backfill starts at the oldest day VictoriaMetrics
     # still holds (14-day retention); days before OpenCost's install have no
     # idle cost.
     FINOPS_INGEST_ENABLED: "true"
     FINOPS_PROVIDER: "real"
     FINOPS_INGEST_SINCE: "2026-10-12"
+    # Cloud clusters' OpenCost through the WireGuard flow 18081. Probed once
+    # per pass: a stopped cloud is skipped in seconds.
+    FINOPS_OPENCOST_CLUSTERS: "aws=http://aws-apps.wireguard.svc.cluster.local:18081,gcp=http://gcp-apps.wireguard.svc.cluster.local:18081"
+    # Invoices, read with the Keycloak token of client cnp-finops (no cloud
+    # key): Cloud repo terraform/public/{aws,gcp}/billing.
+    FINOPS_AWS_ROLE_ARN: "arn:aws:iam::947554757826:role/cnp-finops-reader"
+    FINOPS_AWS_EXPORT_BUCKET: "cnp-billing-exports-757826"
+    FINOPS_AWS_EXPORT_PREFIX: "focus/cnp-focus"
+    FINOPS_GCP_PROJECT: "project-94dabc15-3981-4317-8da"
+    FINOPS_GCP_BILLING_TABLE: "project-94dabc15-3981-4317-8da.cnp_billing.gcp_billing_export_resource_v1_*"
+    FINOPS_GCP_SERVICE_ACCOUNT: "cnp-finops-reader@project-94dabc15-3981-4317-8da.iam.gserviceaccount.com"
+    # Output finops_wif_audience of the GCP billing root.
+    FINOPS_GCP_WIF_AUDIENCE: "//iam.googleapis.com/projects/943089725730/locations/global/workloadIdentityPools/cnp-finops/providers/keycloak"
+    # Repository import.
+    IMPORT_ENABLED: "true"
+    # Numeric ids of 3-Istor/extern-project-analyzer and of the 3-Istor org,
+    # pinned in the workflow's OIDC token: a recreated repository gets new ids.
+    IMPORT_WORKFLOW_REPO_ID: "1267361656"
+    IMPORT_WORKFLOW_OWNER_ID: "271529816"
+    # Commits of .github/workflows/import.yml allowed to call the worker API,
+    # comma separated. A workflow change is live only once its commit is here.
+    IMPORT_WORKFLOW_SHAS: "710937a68f0e2333a0e7c39c24947d0e71e3469a,fe348b4edd2ef9f57d6111fe24cd392013e0d4fc,fae32ad782d2571ae57e9760cf06e19e22e0099c,5e801a917713c2c4ed4993c69207af07d4d8366a,872c1407e1287ed8326d8645764a892b1a882977"
+    IMPORT_OIDC_AUDIENCE: "cmp-import"
+    # "self-hosted" only for a runner group of ephemeral, one-job runners: a
+    # persistent runner lets one import read the next one's source and tokens.
+    # Runner group cnp-import-ephemeral, fed by 3-Istor/Cloud cnp-import-runner.
+    IMPORT_ALLOWED_RUNNER_ENVIRONMENTS: '["self-hosted"]'
 
 extraEnv:
+  # --- FinOps: Keycloak client federated to AWS STS and GCP WIF ---
+  - name: FINOPS_OIDC_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-finops-oidc
+        key: client-secret
+  # --- Terraform state: Keycloak client federated to AWS STS ---
+  - name: TF_BACKEND_OIDC_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-tfstate-oidc
+        key: client-secret
+        optional: true
   # --- OpenStack SDK ---
   - name: OS_AUTH_URL
     valueFrom:
@@ -103,31 +164,11 @@ extraEnv:
         key: os-endpoint-type
 
   # --- AWS SDK & Terraform S3 Backend ---
-  - name: AWS_ACCESS_KEY_ID
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: aws-access-key-id
-  - name: AWS_SECRET_ACCESS_KEY
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: aws-secret-access-key
   - name: AWS_DEFAULT_REGION
     valueFrom:
       secretKeyRef:
         name: arcl-cmp-secret
         key: aws-region
-  - name: TF_BACKEND_AWS_ACCESS_KEY_ID
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: aws-access-key-id
-  - name: TF_BACKEND_AWS_SECRET_ACCESS_KEY
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: aws-secret-access-key
   - name: TF_BACKEND_AWS_REGION
     valueFrom:
       secretKeyRef:
@@ -188,6 +229,20 @@ extraEnv:
         name: arcl-cmp-secret
         key: icons-s3-secret-access-key
 
+  # --- Project exports (EU Data Act, B1): private bucket cnp-project-exports
+  # on the same Garage endpoint, which must stay the public one: the download
+  # link is presigned for that host.
+  - name: EXPORT_S3_ACCESS_KEY_ID
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: export-s3-access-key-id
+  - name: EXPORT_S3_SECRET_ACCESS_KEY
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: export-s3-secret-access-key
+
   # --- Cloudflare API & Account ---
   - name: CLOUDFLARE_API_TOKEN
     valueFrom:
@@ -205,24 +260,17 @@ extraEnv:
         name: arcl-cmp-secret
         key: cloudflare-account-id
 
-  # --- Keycloak Admin client ---
-  - name: KEYCLOAK_ADMIN_USERNAME
+  # --- Keycloak master realm: cmp-provisioner client, never the admin user ---
+  - name: KEYCLOAK_PROVISIONER_CLIENT_ID
     valueFrom:
       secretKeyRef:
-        name: arcl-cmp-secret
-        key: keycloak-admin-username
-  - name: KEYCLOAK_ADMIN_PASSWORD
+        name: arcl-cmp-keycloak-provisioner
+        key: client-id
+  - name: KEYCLOAK_PROVISIONER_CLIENT_SECRET
     valueFrom:
       secretKeyRef:
-        name: arcl-cmp-secret
-        key: keycloak-admin-password
-
-  # --- HashiCorp Vault Client ---
-  - name: VAULT_TOKEN
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: vault-token
+        name: arcl-cmp-keycloak-provisioner
+        key: client-secret
 
   # --- GitHub Integration & Registry (GHCR) ---
   - name: GITHUB_APP_ID
@@ -250,6 +298,35 @@ extraEnv:
       secretKeyRef:
         name: arcl-cmp-secret
         key: github-registry-token
+  # GitHub account linking for repository import. Optional: the CMP keeps
+  # linking off while one is missing, and the keys only exist in Vault once
+  # terraform/secret_templates.tf is applied.
+  - name: GITHUB_OAUTH_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: github-oauth-client-id
+        optional: true
+  - name: GITHUB_OAUTH_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: github-oauth-client-secret
+        optional: true
+  - name: GITHUB_TOKEN_ENCRYPTION_KEYS
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: github-token-encryption-keys
+        optional: true
+  # Push webhook of the CNP-Portal app. Optional: without it the CMP refuses
+  # every delivery and imported apps rebuild only through the reconciler.
+  - name: GITHUB_WEBHOOK_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-secret
+        key: github-webhook-secret
+        optional: true
 
   # --- Alerting ---
   - name: DISCORD_WEBHOOK_URL

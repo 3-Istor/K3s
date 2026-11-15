@@ -136,11 +136,12 @@ singleBinary:
   extraArgs:
     - "-config.expand-env=true"
   # 1Gi was not enough to replay the WAL that built up while flushes were
-  # failing, so the pod was OOMKilled on every start.
+  # failing, so the pod was OOMKilled on every start: the limit stays at 2Gi
+  # for that replay, the request follows normal use (~300Mi).
   resources:
     requests:
       cpu: 50m
-      memory: 2Gi
+      memory: 768Mi
     limits:
       cpu: 500m
       memory: 2Gi

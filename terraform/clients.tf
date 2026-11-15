@@ -26,7 +26,8 @@ resource "keycloak_openid_client" "openid_client" {
     "https://qcm.${var.base_domain}/api/auth/callback/keycloak",
     "http://localhost:3000/api/auth/callback/keycloak",
     "http://localhost:3001/api/auth/callback/keycloak",
-    "https://grafana.${var.base_domain}/login/generic_oauth"
+    "https://grafana.${var.base_domain}/login/generic_oauth",
+    "https://hubble.${var.base_domain}/oauth2/callback"
   ]
 
   valid_post_logout_redirect_uris = [
@@ -53,8 +54,15 @@ resource "keycloak_openid_client" "openid_client" {
     "https://grafana.${var.base_domain}"
   ]
 
+  extra_config = {
+    "acr.loa.map" = local.acr_loa_map
+  }
+
+  # Flow v6 (step-up) once the theme serving the passkey scripts is deployed: swap the two
+  # browser_id lines, here and on the vault client, together with STEP_UP_ENABLED in
+  # k8s/config/arcl-cmp/cmp-values.yaml.
   authentication_flow_binding_overrides {
-    browser_id = keycloak_authentication_flow.browser_v5.id
+    browser_id = keycloak_authentication_flow.browser_v6.id
   }
 }
 
@@ -109,8 +117,13 @@ resource "keycloak_openid_client" "vault" {
     "http://localhost:8250/oidc/callback"
   ]
 
+  extra_config = {
+    "acr.loa.map" = local.acr_loa_map
+  }
+
+  # Flow v6: switch with the 3-istor-openid client above.
   authentication_flow_binding_overrides {
-    browser_id = keycloak_authentication_flow.browser_v5.id
+    browser_id = keycloak_authentication_flow.browser_v6.id
   }
 }
 
@@ -131,6 +144,14 @@ resource "keycloak_openid_client_service_account_role" "cmp_manage_users" {
   client_id               = data.keycloak_openid_client.realm_management.id
   role                    = "manage-users"
 }
+
+# Access reviews read login events to date each user's last login.
+resource "keycloak_openid_client_service_account_role" "cmp_view_events" {
+  realm_id                = keycloak_realm.kube_lab.id
+  service_account_user_id = keycloak_openid_client.openid_client.service_account_user_id
+  client_id               = data.keycloak_openid_client.realm_management.id
+  role                    = "view-events"
+}
 data "keycloak_openid_client" "realm_management" {
   # A literal, not keycloak_realm.kube_lab.id: any pending realm change would defer this read
   # to apply time and force a replacement of cmp_manage_users, removing the role meanwhile.
@@ -150,6 +171,11 @@ resource "keycloak_openid_client" "k3s_api" {
   access_type                  = "PUBLIC"
   standard_flow_enabled        = true
   direct_access_grants_enabled = true
+
+  # kube-apiserver reads the groups from the ID token on every call, so an
+  # ended elevated-k3s-admin grant lasts until the token expires: 5 minutes
+  # instead of the realm's hour (CNP-124). kubelogin refreshes silently.
+  access_token_lifespan = "300"
 
   valid_redirect_uris = [
     "http://localhost:8000",

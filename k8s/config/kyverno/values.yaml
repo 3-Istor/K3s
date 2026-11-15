@@ -1,22 +1,50 @@
 # Values: https://github.com/kyverno/kyverno/blob/main/charts/kyverno/values.yaml
 
 # HA require at least 3 replicas
+# Requests sized on 7-day usage (CNP-272). The chart's 100m per controller
+# held 400m for ~70m of use; the 128Mi limits sat 10Mi above the cleanup and
+# reports controllers' peaks.
 admissionController:
   replicas: 1
   serviceMonitor:
     enabled: true
+  container:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 192Mi
+      limits:
+        memory: 384Mi
 backgroundController:
   replicas: 1
   serviceMonitor:
     enabled: true
+  resources:
+    requests:
+      cpu: 25m
+      memory: 96Mi
+    limits:
+      memory: 192Mi
 cleanupController:
   replicas: 1
   serviceMonitor:
     enabled: true
+  resources:
+    requests:
+      cpu: 25m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
 reportsController:
   replicas: 1
   serviceMonitor:
     enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
 
 # Necessary in EKS with custom Network CNI plugin
 # https://cert-manager.io/docs/installation/compatibility/#aws-eks
