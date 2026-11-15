@@ -144,16 +144,6 @@ config:
     # ==========================================
     # 3. LOB APPLICATIONS (Public)
     # ==========================================
-    - name: N8N (Automation)
-      group: 3. Applications
-      url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/n8n/n8n?port=5678"
-      interval: 1m
-      conditions:
-        - "[STATUS] == 200"
-      alerts:
-        - type: discord
-          failure-threshold: 3
-
     - name: QCM App
       group: 3. Applications
       url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/qcm/qcm?port=3000"

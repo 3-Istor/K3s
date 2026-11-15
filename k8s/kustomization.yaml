@@ -16,7 +16,6 @@ resources:
   - config/vault/
   - config/vault-secrets-operator/
   - config/arcl-cmp/
-  - config/n8n/
   - config/mepa-app/
   - config/cnpg/
   - config/3istor-sessions/

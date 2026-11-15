@@ -18,7 +18,6 @@ resources:
   - argocd.yaml
   - arcl-cmp/
   - garage-s3.yaml
-  - n8n.yaml
   - kube-system.yaml
   - dev-sandbox.yaml
   - cnpg.yaml
