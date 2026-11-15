@@ -1,0 +1,20 @@
+# CNP-185 V2: VictoriaLogs in org 1, next to the Loki datasource during the
+# dual run. Merged over values-grafana.yaml (maps merge, so this datasources
+# key adds a file instead of replacing the list).
+env:
+  # Installed before Grafana starts, so the provisioned datasource below
+  # finds its plugin.
+  GF_PLUGINS_PREINSTALL_SYNC: victoriametrics-logs-datasource@0.33.1
+
+datasources:
+  victorialogs.yaml:
+    apiVersion: 1
+    datasources:
+      # Org 1 reads VictoriaLogs directly (D7); project orgs go through
+      # vmauth-projects, which the CMP configures.
+      - name: VictoriaLogs
+        type: victoriametrics-logs-datasource
+        uid: victorialogs
+        orgId: 1
+        url: "http://vlogs-cnp.observability.svc.cluster.local:9428"
+        access: proxy

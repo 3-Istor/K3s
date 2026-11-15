@@ -25,6 +25,13 @@ resources:
   - vmagent.yaml
   - vmagent-scrapes.yaml
   - vmauth.yaml
+  # V2 logs (CNP-185): VictoriaLogs, Fluent Bit, vmalert for LogsQL rules
+  - vlogs.yaml
+  - fluent-bit.yaml
+  - vlogs-networkpolicies.yaml
+  - vlogs-rules.yaml
+  - vmalert-vlogs.yaml
+  - audit-archive-vlogs.yaml
 
 # Upstream alerts kept from the default set: node-exporter, kube-state-metrics,
 # VictoriaMetrics self-health and Alertmanager. The rest of the Kubernetes
@@ -101,6 +108,9 @@ helmCharts:
     releaseName: grafana
     namespace: observability
     valuesFile: values-grafana.yaml
+    # V2 logs (CNP-185)
+    additionalValuesFiles:
+      - values-grafana-vlogs.yaml
 
   # Alloy (Logs and Metrics Aggregation)
   - name: alloy
