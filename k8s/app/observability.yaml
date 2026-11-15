@@ -16,6 +16,9 @@ spec:
       - ServerSideApply=true
       - CreateNamespace=true
       - RespectIgnoreDifferences=true
+      # The VictoriaMetrics operator CRDs and their first objects arrive in
+      # the same sync.
+      - SkipDryRunOnMissingResource=true
   # The CMP keeps vmauth's per-project users up to date in this Secret.
   ignoreDifferences:
     - kind: Secret

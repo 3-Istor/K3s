@@ -1,5 +1,5 @@
 # The OpenCost API has no authentication: only the CMP (allocations, MCP) and
-# Alloy (metrics scrape) may reach it.
+# the metrics scraper (vmagent, Alloy until CNP-185 V1 is done) may reach it.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -24,3 +24,10 @@ spec:
           podSelector:
             matchLabels:
               app.kubernetes.io/name: alloy
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmagent
+              app.kubernetes.io/instance: cnp

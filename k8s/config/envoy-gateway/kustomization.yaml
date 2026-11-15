@@ -4,7 +4,6 @@ namespace: envoy-gateway-system
 
 resources:
   - namespace.yaml
-  - podmonitor.yaml
 
 helmCharts:
   # - name: envoy-gateway-system

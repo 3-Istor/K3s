@@ -69,6 +69,11 @@ spec:
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: alloy
+        # Rollback copy of every sample during the CNP-185 V1 double write.
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmagent
+              app.kubernetes.io/instance: cnp
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: victoria-metrics-alert
@@ -103,3 +108,195 @@ spec:
             matchLabels:
               app.kubernetes.io/instance: vm
               app.kubernetes.io/component: vmselect
+---
+# VMSingle serves reads, writes and admin on one port. The admin endpoints
+# also need ADMIN_AUTH_KEY; projects never reach it but through vmauth.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vmsingle-clients
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vmsingle
+      app.kubernetes.io/instance: cnp
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        # Writes, and the scrape of VMSingle's own metrics.
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmagent
+              app.kubernetes.io/instance: cnp
+        # Old paths of every consumer (cutover-v1.yaml), and project users.
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmauth
+              app.kubernetes.io/instance: compat
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmauth
+              app.kubernetes.io/instance: projects
+        # Platform readers may also query VMSingle directly, so that a vmauth
+        # outage cannot abort every running canary.
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: victoria-metrics-alert
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: grafana
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: argo-rollouts
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: argo-rollouts
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: arcl-cmp
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: backend
+              app.kubernetes.io/name: arcl-cmp
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: opencost
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: opencost
+      ports:
+        - port: 8429
+---
+# Takes over the old vmselect and vminsert Service names at the cutover, so
+# it admits their readers and writers.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vmauth-compat-clients
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vmauth
+      app.kubernetes.io/instance: compat
+  policyTypes: [Ingress]
+  ingress:
+    # Scrape of vmauth and of its config reloader.
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmagent
+              app.kubernetes.io/instance: cnp
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmauth
+              app.kubernetes.io/instance: projects
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: vm
+              app.kubernetes.io/component: vmauth
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: victoria-metrics-alert
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: grafana
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: secret-age
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: argo-rollouts
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: argo-rollouts
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: arcl-cmp
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: backend
+              app.kubernetes.io/name: arcl-cmp
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: opencost
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: opencost
+        # Cloud clusters through the WireGuard tunnel (aws, gcp).
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: wireguard
+          podSelector:
+            matchExpressions:
+              - {key: app, operator: In, values: [wireguard, wireguard-gcp]}
+      ports:
+        - port: 8427
+---
+# Project Grafana orgs authenticate here; the old vmauth Service name moves
+# to these pods at the cutover.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vmauth-projects-clients
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vmauth
+      app.kubernetes.io/instance: projects
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: grafana
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmagent
+              app.kubernetes.io/instance: cnp
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: arcl-cmp
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: backend
+              app.kubernetes.io/name: arcl-cmp
+      ports:
+        - port: 8427
+---
+# vmagent also accepts remote writes on its port: only its own scrape of
+# itself gets in.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vmagent-self-only
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vmagent
+      app.kubernetes.io/instance: cnp
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmagent
+              app.kubernetes.io/instance: cnp
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vm-operator-scrape-only
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: victoria-metrics-operator
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmagent
+              app.kubernetes.io/instance: cnp
+      ports:
+        - port: 8080
