@@ -1,20 +1,20 @@
-# Shared demo accounts, one per identity of the access matrix (CNP-228). The
-# whole team uses them to show the segregation; passwords are in Vault at
-# kvv2/demo-accounts, readable by every team member. MFA stays mandatory: the
-# first login sets up TOTP, then its secret is stored next to the password.
-# demo-auditor is in security-auditor, so flow v6 also asks it for a passkey: it
-# has to live in a password manager the team shares.
-# No demo platform admin: a shared one would make every member admin.
-# Platform groups are in groups.tf; the CMP adds the project groups of the demo-roles project.
+# Demo accounts, one per identity of the access matrix and per person (CNP-228):
+# demo-<role>-<person>. Personal so each one carries its owner's passkey and
+# TOTP, which a shared account cannot. Passwords are in Vault at
+# kvv2/demo-accounts-<person>, readable by every team member.
+# demo-auditor-* is in security-auditor, so flow v6 also asks it for a passkey.
+# No demo platform admin: Brian and Hugo already are platform admins.
+# Platform groups are in groups.tf; the CMP adds the project groups.
 locals {
+  demo_roles  = ["auditor", "finops", "owner", "admin", "dev", "guest"]
+  demo_people = ["brian", "hugo"]
+
   demo_accounts = toset([
-    "demo-auditor",
-    "demo-finops",
-    "demo-owner",
-    "demo-admin",
-    "demo-dev",
-    "demo-guest",
+    for pair in setproduct(local.demo_roles, local.demo_people) : "demo-${pair[0]}-${pair[1]}"
   ])
+  demo_accounts_of_role = {
+    for role in local.demo_roles : role => [for person in local.demo_people : "demo-${role}-${person}"]
+  }
 }
 
 resource "random_password" "demo" {
@@ -55,10 +55,11 @@ removed {
 }
 
 resource "vault_kv_secret_v2" "demo_accounts" {
-  mount = vault_mount.kvv2.path
-  name  = "demo-accounts"
+  for_each = toset(local.demo_people)
+  mount    = vault_mount.kvv2.path
+  name     = "demo-accounts-${each.key}"
   data_json = jsonencode({
-    for name in local.demo_accounts : name => random_password.demo[name].result
+    for role in local.demo_roles : "demo-${role}-${each.key}" => random_password.demo["demo-${role}-${each.key}"].result
   })
 
   lifecycle {
@@ -70,7 +71,7 @@ resource "vault_kv_secret_v2" "demo_accounts" {
 resource "vault_policy" "demo_accounts_read" {
   name   = "demo-accounts-read"
   policy = <<-EOT
-    path "${vault_mount.kvv2.path}/data/demo-accounts" {
+    path "${vault_mount.kvv2.path}/data/demo-accounts-*" {
       capabilities = ["read", "update", "patch"]
     }
   EOT

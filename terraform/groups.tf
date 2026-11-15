@@ -48,8 +48,8 @@ locals {
 
   platform_group_members = {
     infra            = local.platform_admins
-    security-auditor = ["demo-auditor"]
-    finops           = ["demo-finops"]
+    security-auditor = local.demo_accounts_of_role["auditor"]
+    finops           = local.demo_accounts_of_role["finops"]
     member           = concat(keys(local.team_members), tolist(local.demo_accounts), ["manager.test"])
   }
 
