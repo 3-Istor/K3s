@@ -161,6 +161,24 @@ variable "os_password" {
   sensitive = true
 }
 
+# Dedicated Keystone user of the CMP (member on 3-istor-cloud), from the Cloud
+# repo terraform/openstack/admin outputs. os_username/os_password stay the
+# admin account until dockair-sandbox/ci is removed.
+variable "cmp_os_username" {
+  type    = string
+  default = "cmp-svc-account"
+
+  validation {
+    condition     = var.cmp_os_username != "admin"
+    error_message = "The CMP must not run with the OpenStack admin account."
+  }
+}
+
+variable "cmp_os_password" {
+  type      = string
+  sensitive = true
+}
+
 variable "os_user_domain_name" {
   type = string
 }
@@ -295,8 +313,8 @@ resource "vault_kv_secret_v2" "arcl_cmp_creds" {
   data_json = jsonencode({
     "os-auth-url"                  = var.os_auth_url
     "os-project-name"              = var.os_project_name
-    "os-username"                  = var.os_username
-    "os-password"                  = var.os_password
+    "os-username"                  = var.cmp_os_username
+    "os-password"                  = var.cmp_os_password
     "os-project-domain-name"       = var.os_project_domain_name
     "os-endpoint-type"             = var.os_endpoint_type
     "os-user-domain-name"          = var.os_user_domain_name
