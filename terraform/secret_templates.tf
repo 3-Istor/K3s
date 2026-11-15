@@ -323,9 +323,6 @@ resource "vault_kv_secret_v2" "arcl_cmp_creds" {
     "github-installation-id"       = var.github_app_installation_id
     "github-registry-username"     = var.github_bot_username
     "github-registry-token"        = var.github_bot_token
-    "keycloak-admin-username"      = var.keycloak_admin_username
-    "keycloak-admin-password"      = var.keycloak_admin_password
-    "vault-token"                  = var.vault_token
     "grafana-admin-password"       = var.grafana_admin_password
     "keycloak-client-secret"       = keycloak_openid_client.openid_client.client_secret
     "github-oauth-client-id"       = var.github_oauth_client_id
