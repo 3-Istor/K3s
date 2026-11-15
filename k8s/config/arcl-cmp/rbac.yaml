@@ -204,9 +204,14 @@ spec:
     - name: cmp-service-account
       expression: request.userInfo.username == "system:serviceaccount:arcl-cmp:arcl-cmp"
   validations:
+    # The one platform exception is the trace gateway: the CMP rolls it after
+    # writing the per-project routing table (CNP-185 V4).
     - expression: >-
-        has(namespaceObject.metadata.labels) &&
-        "cnp.3istor.com/project" in namespaceObject.metadata.labels
+        (has(namespaceObject.metadata.labels) &&
+        "cnp.3istor.com/project" in namespaceObject.metadata.labels) ||
+        (request.resource.resource == "deployments" &&
+        request.namespace == "observability" &&
+        request.name == "otelcol-gateway")
       message: The CMP only changes workloads in project namespaces.
     - expression: >-
         object.spec.template.spec == oldObject.spec.template.spec &&
