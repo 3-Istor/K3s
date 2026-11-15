@@ -188,16 +188,6 @@ config:
         - type: discord
           failure-threshold: 3
 
-    - name: Roadmap
-      group: 4. Internal Applications (Direct)
-      url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/roadmap/roadmap?port=3000"
-      interval: 1m
-      conditions:
-        - "[STATUS] == 200"
-      alerts:
-        - type: discord
-          failure-threshold: 3
-
     - name: Mepa AI
       group: 4. Internal Applications (Direct)
       url: "http://offhours-guard.offhours-guard.svc.cluster.local:8082/health/mepa-app/mepa"
