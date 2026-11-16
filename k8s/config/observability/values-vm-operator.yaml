@@ -27,6 +27,9 @@ operator:
 
 extraArgs:
   controller.disableReconcileFor: PrometheusRule,Probe,AlertmanagerConfig,ScrapeConfig
+  # Single replica: leader election only adds a 5s lease renewal deadline,
+  # which a slow API server (kine/SQLite) turns into a crash loop.
+  leader-elect: "false"
 
 env:
   - name: GOMAXPROCS
