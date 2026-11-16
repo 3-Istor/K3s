@@ -1,5 +1,8 @@
+# Parked at 0 replicas since the V1 cutover (2026-11-16): the old cluster stopped
+# receiving samples on 2026-11-15 ~18:00 UTC. The vmstorage PVC keeps its history
+# until CNP-276 removes the chart; scale vmstorage and vmselect back to 1 to read it.
 vmstorage:
-  replicaCount: 1
+  replicaCount: 0
   resources:
     requests:
       memory: "1Gi"
@@ -19,7 +22,10 @@ vmstorage:
     size: "20Gi"
 
 vminsert:
-  replicaCount: 1
+  replicaCount: 0
+  # The chart lists storage nodes from vmstorage.replicaCount, which is 0.
+  extraArgs:
+    storageNode: vm-victoria-metrics-cluster-vmstorage-0.vm-victoria-metrics-cluster-vmstorage.observability.svc.cluster.local.:8400
   resources:
     requests:
       memory: "256Mi"
@@ -29,7 +35,9 @@ vminsert:
       cpu: "200m"
 
 vmselect:
-  replicaCount: 1
+  replicaCount: 0
+  extraArgs:
+    storageNode: vm-victoria-metrics-cluster-vmstorage-0.vm-victoria-metrics-cluster-vmstorage.observability.svc.cluster.local.:8401
   # 256Mi got OOMKilled on heavy Grafana queries (CNP-272).
   resources:
     requests:
@@ -42,7 +50,7 @@ vmselect:
 # VMAuth acts as the multi-tenant router
 vmauth:
   enabled: true
-  replicaCount: 1
+  replicaCount: 0
   resources:
     requests:
       memory: "128Mi"

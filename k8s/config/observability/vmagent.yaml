@@ -20,9 +20,6 @@ spec:
   externalLabelName: ""
   remoteWrite:
     - url: http://vmsingle-cnp.observability.svc.cluster.local:8429/api/v1/write
-    # Rollback copy, until the old cluster is removed (14 days after the
-    # cutover). Goes to the old vminsert pods, never to the alias Service.
-    - url: http://vm-legacy-vminsert.observability.svc.cluster.local:8480/insert/0/prometheus/api/v1/write
   remoteWriteSettings:
     maxDiskUsagePerURL: 512MiB
   extraArgs:
@@ -146,21 +143,6 @@ subjects:
   - kind: ServiceAccount
     name: vmagent-cnp
     namespace: observability
----
-# The old vminsert pods, under a name the cutover never moves.
-apiVersion: v1
-kind: Service
-metadata:
-  name: vm-legacy-vminsert
-spec:
-  ports:
-    - name: http
-      port: 8480
-      targetPort: http
-  selector:
-    app: vminsert
-    app.kubernetes.io/instance: vm
-    app.kubernetes.io/name: victoria-metrics-cluster
 ---
 # The old vmselect pods: side-by-side comparison and rollback reads.
 apiVersion: v1
