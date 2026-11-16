@@ -58,9 +58,14 @@ env:
     # carries no static AWS key.
     TF_BACKEND_AWS_ROLE_ARN: "arn:aws:iam::947554757826:role/cnp-tfstate-cmp"
     # CNP-185 V4: the CMP writes the gateway's per-project trace routing.
-    # The store URLs (OBS_*_URL) wait for the V1 cutover: until then the
-    # projects' vmauth is the old one, which cannot reach the new stores.
     OBS_TRACES_ROUTING_ENABLED: "true"
+    # CNP-185 V4/V5: stores the projects' vmauth and the portal read.
+    OBS_VMSINGLE_URL: "http://vmsingle-cnp.observability.svc:8429"
+    OBS_VLOGS_URL: "http://vlogs-cnp.observability.svc:9428"
+    OBS_VTRACES_URL: "http://vtraces-cnp.observability.svc:10428"
+    OBS_GRAFANA_PROVISIONING_ENABLED: "true"
+    # CNP-185 V2: log-derived alert metrics from the VictoriaLogs recording rules.
+    LOGS_BACKEND: "vl"
     KEYCLOAK_URL: "https://auth.3istor.com"
     KEYCLOAK_CLIENT_ID: "3-istor-openid"
     # Clients whose access tokens the API accepts (azp). Set apart from
