@@ -43,7 +43,7 @@ metadata:
 rules:
   - apiGroups: [""]
     resources: ["namespaces"]
-    verbs: ["get", "delete"]
+    verbs: ["get", "list", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -79,16 +79,22 @@ data:
         continue
       fi
       echo "delete $appproject: project $project is no longer registered"
-      if kubectl delete appproject "$appproject"; then
-        # Bucket namespace is kept with the Application's preserved resources until now.
-        owner=$(kubectl get namespace "$project-backups" --ignore-not-found \
-          -o jsonpath='{.metadata.labels.cnp\.3istor\.com/project}') || owner=
-        if [ "$owner" = "$project" ]; then
-          kubectl delete namespace "$project-backups" --ignore-not-found || echo "keep $project-backups: delete refused"
-        fi
-      else
-        echo "keep $appproject: delete refused"
+      kubectl delete appproject "$appproject" || echo "keep $appproject: delete refused"
+    done
+    # Own pass: a refused namespace delete must not orphan the buckets for a later project of the same name.
+    namespaces=$(kubectl get namespaces -l cnp.3istor.com/project \
+      -o jsonpath='{range .items[*]}{.metadata.name}{"|"}{.metadata.labels.cnp\.3istor\.com/project}{"\n"}{end}')
+    for entry in $namespaces; do
+      ns=${entry%%|*}
+      project=${entry##*|}
+      case $ns in *-backups) ;; *) continue ;; esac
+      [ "$ns" = "$project-backups" ] || continue
+      if [ -n "$(kubectl get application "$project-appproject" --ignore-not-found -o name)" ] ||
+        [ -n "$(kubectl get appproject "$project" --ignore-not-found -o name)" ]; then
+        continue
       fi
+      echo "delete $ns: project $project is no longer registered"
+      kubectl delete namespace "$ns" --ignore-not-found || echo "keep $ns: delete refused"
     done
 ---
 apiVersion: batch/v1
