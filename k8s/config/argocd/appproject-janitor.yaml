@@ -21,7 +21,7 @@ rules:
     verbs: ["get", "list"]
   - apiGroups: ["argoproj.io"]
     resources: ["appprojects"]
-    verbs: ["list", "delete"]
+    verbs: ["get", "list", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -89,10 +89,10 @@ data:
       project=${entry##*|}
       case $ns in *-backups) ;; *) continue ;; esac
       [ "$ns" = "$project-backups" ] || continue
-      if [ -n "$(kubectl get application "$project-appproject" --ignore-not-found -o name)" ] ||
-        [ -n "$(kubectl get appproject "$project" --ignore-not-found -o name)" ]; then
-        continue
-      fi
+      # Fail closed: any lookup error (Forbidden, API down) keeps the namespace.
+      app=$(kubectl get application "$project-appproject" --ignore-not-found -o name) || continue
+      proj=$(kubectl get appproject "$project" --ignore-not-found -o name) || continue
+      [ -z "$app$proj" ] || continue
       echo "delete $ns: project $project is no longer registered"
       kubectl delete namespace "$ns" --ignore-not-found || echo "keep $ns: delete refused"
     done
