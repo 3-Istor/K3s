@@ -61,9 +61,9 @@ configMapGenerator:
       - otelcol-gateway/config.yaml
 
 # CNP-185 V1 cutover: points the old VictoriaMetrics Service names at the new
-# stack. Uncomment only after the checks of the V1 PR; comment out to roll back.
-# patches:
-#   - path: cutover-v1.yaml
+# stack. Comment out to roll back.
+patches:
+  - path: cutover-v1.yaml
 
 helmGlobals:
   chartHome: ../../../charts
