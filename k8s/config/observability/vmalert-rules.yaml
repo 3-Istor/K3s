@@ -346,3 +346,14 @@ data:
             annotations:
               summary: "OpenCost is not reporting node costs"
               description: "node_total_hourly_cost is missing, so the cost dashboard and the burn-rate alert have no data."
+
+      - name: backups.rules
+        rules:
+          # True while the latest WAL archive attempt failed.
+          - alert: CnpgWalArchivingFailing
+            expr: cnpg_pg_stat_archiver_last_failed_time > cnpg_pg_stat_archiver_last_archived_time
+            labels:
+              severity: critical
+            annotations:
+              summary: "WAL archiving fails for {{ $labels.namespace }}"
+              description: "The last WAL archive attempt of pod {{ $labels.pod }} failed, so point-in-time recovery is not guaranteed."

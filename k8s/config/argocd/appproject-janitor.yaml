@@ -35,6 +35,28 @@ subjects:
   - kind: ServiceAccount
     name: appproject-janitor
 ---
+# Namespaces are cluster-scoped, hence the ClusterRole.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: appproject-janitor
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: appproject-janitor
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: appproject-janitor
+subjects:
+  - kind: ServiceAccount
+    name: appproject-janitor
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -57,7 +79,14 @@ data:
         continue
       fi
       echo "delete $appproject: project $project is no longer registered"
-      kubectl delete appproject "$appproject" || echo "keep $appproject: delete refused"
+      if kubectl delete appproject "$appproject"; then
+        # Bucket namespace is kept with the Application's preserved resources until now.
+        if [ -n "$(kubectl get namespace "$project-backups" -l "cnp.3istor.com/project=$project" --ignore-not-found -o name)" ]; then
+          kubectl delete namespace "$project-backups" --ignore-not-found
+        fi
+      else
+        echo "keep $appproject: delete refused"
+      fi
     done
 ---
 apiVersion: batch/v1
