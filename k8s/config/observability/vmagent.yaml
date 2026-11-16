@@ -23,7 +23,10 @@ spec:
   remoteWriteSettings:
     maxDiskUsagePerURL: 512MiB
   extraArgs:
-    remoteWrite.maxDailySeries: "300000"
+    # ~150k series are active per hour; a cluster-wide restart (k3s restart
+    # 2026-11-16) churns pod labels and filled 300k in a day, dropping every
+    # new pod's series until the window rolled over.
+    remoteWrite.maxDailySeries: "500000"
     promscrape.dropOriginalLabels: "true"
   extraEnvs:
     - name: GOMAXPROCS
