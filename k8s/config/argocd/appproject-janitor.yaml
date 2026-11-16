@@ -81,8 +81,10 @@ data:
       echo "delete $appproject: project $project is no longer registered"
       if kubectl delete appproject "$appproject"; then
         # Bucket namespace is kept with the Application's preserved resources until now.
-        if [ -n "$(kubectl get namespace "$project-backups" -l "cnp.3istor.com/project=$project" --ignore-not-found -o name)" ]; then
-          kubectl delete namespace "$project-backups" --ignore-not-found
+        owner=$(kubectl get namespace "$project-backups" --ignore-not-found \
+          -o jsonpath='{.metadata.labels.cnp\.3istor\.com/project}') || owner=
+        if [ "$owner" = "$project" ]; then
+          kubectl delete namespace "$project-backups" --ignore-not-found || echo "keep $project-backups: delete refused"
         fi
       else
         echo "keep $appproject: delete refused"
