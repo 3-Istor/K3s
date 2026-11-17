@@ -26,6 +26,7 @@ patches:
   - path: patch-argocd-rbac-cm.yaml
   - path: patch-argocd-server-extensions.yaml
   - path: patch-image-updater-resources.yaml
+  - path: patch-repo-server-exec-timeout.yaml
 
 helmGlobals:
   chartHome: ../../../charts
