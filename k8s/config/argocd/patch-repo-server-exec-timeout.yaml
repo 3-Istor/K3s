@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-repo-server
+spec:
+  template:
+    spec:
+      containers:
+        - name: argocd-repo-server
+          env:
+            # kustomize build --enable-helm of a cloud platform takes 20 s warm and
+            # ~50 s cold (17/11); queued behind parallelism 1 it hit the 90 s
+            # default. Same budget as controller.repo.server.timeout.seconds.
+            - name: ARGOCD_EXEC_TIMEOUT
+              value: "180s"
