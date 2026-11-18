@@ -1,0 +1,19 @@
+# Zot pulls any private 3-Istor package with the org token and serves it
+# without authentication: only containerd on the nodes may reach it, never a
+# pod. Tenant pods would otherwise read every project's images.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: zot-nodes-only
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: zot
+  ingress:
+    - fromEntities:
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "5000"
+              protocol: TCP

@@ -1,0 +1,9 @@
+# Cached layers live on the RGW. Retain: losing the claim must not empty the
+# cache every node falls back from.
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: zot-registry
+spec:
+  bucketName: zot-registry
+  storageClassName: ceph-bucket-retain

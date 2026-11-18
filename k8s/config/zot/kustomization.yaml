@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: zot
+
+resources:
+  - namespace.yaml
+  - bucket.yaml
+  - secrets.yaml
+  - network-policy.yaml
+
+helmCharts:
+  - name: zot
+    repo: https://zotregistry.dev/helm-charts
+    version: 0.1.134
+    releaseName: zot
+    namespace: zot
+    valuesFile: values.yaml
+    # kustomize ignores helm.sh/hook: the test pods would become permanent Pods.
+    skipTests: true
