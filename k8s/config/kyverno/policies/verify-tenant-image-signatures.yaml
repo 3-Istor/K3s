@@ -1,0 +1,72 @@
+# Tenant images must be signed keyless by the 3-Istor workflow that builds
+# them (CNP-299), same mechanism as verify-cmp-image-signatures (CNP-265):
+#   ghcr.io/3-istor/imports/...  extern-project-analyzer import.yml on main
+#   other ghcr.io/3-istor/...    the template app repo's own ci.yml, on main
+#                                or a v* release tag
+# Public base images are not matched: restrict-tenant-images (CNP-294) bounds
+# them to an allowlist instead.
+#
+# A template app repo belongs to its project, so the template signature proves
+# "built by a 3-Istor repository's CI", not "built by the platform". Which repo
+# may publish which image is restrict-tenant-images' job.
+#
+# Audit only, like CNP-265: a failed or unreachable check lands in the policy
+# report and never blocks a pod. mutateDigest and verifyDigest are off for the
+# same reasons as in verify-cmp-image-signatures.
+
+apiVersion: policies.kyverno.io/v1
+kind: ImageValidatingPolicy
+metadata:
+  name: verify-tenant-image-signatures
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  validationActions:
+    - Audit
+  failurePolicy: Ignore
+  matchConstraints:
+    namespaceSelector:
+      matchExpressions:
+        - key: cnp.3istor.com/project
+          operator: Exists
+    resourceRules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - pods
+  matchImageReferences:
+    - glob: "ghcr.io/3-istor/*"
+  credentials:
+    secrets:
+      - ghcr-read
+  validationConfigurations:
+    mutateDigest: false
+    verifyDigest: false
+    required: true
+  attestors:
+    - name: importWorkflow
+      cosign:
+        keyless:
+          identities:
+            - issuer: https://token.actions.githubusercontent.com
+              subjectRegExp: '^https://github\.com/3-Istor/extern-project-analyzer/\.github/workflows/import\.yml@refs/heads/main$'
+    - name: templateCi
+      cosign:
+        keyless:
+          identities:
+            - issuer: https://token.actions.githubusercontent.com
+              subjectRegExp: '^https://github\.com/3-Istor/[A-Za-z0-9._-]+/\.github/workflows/ci\.yml@refs/(heads/main|tags/v.+)$'
+  validations:
+    - message: "Tenant images under ghcr.io/3-istor/ must carry a cosign keyless signature from the 3-Istor import workflow (imports/) or from the app repository's ci.yml on main or a release tag."
+      expression: >-
+        (images.containers + images.initContainers)
+          .filter(image, image.startsWith('ghcr.io/3-istor/'))
+          .all(image,
+            image.startsWith('ghcr.io/3-istor/imports/')
+              ? verifyImageSignatures(image, [attestors.importWorkflow]) > 0
+              : verifyImageSignatures(image, [attestors.templateCi]) > 0)
