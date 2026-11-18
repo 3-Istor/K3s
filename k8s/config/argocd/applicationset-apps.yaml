@@ -44,6 +44,7 @@ spec:
               # have no repoURL.
               elementsYaml: |
                 {{- $out := list -}}
+                {{- $restores := dig "status" "move" "restores" (list) . -}}
                 {{- range $app := dig "apps" (list) .spec -}}
                   {{- $components := list "app" -}}
                   {{- if eq $app.type "fullstack" -}}{{- $components = list "frontend" "backend" -}}{{- end -}}
@@ -51,7 +52,11 @@ spec:
                   {{- $staged := has "staging" $envs -}}
                   {{- range $env := $envs -}}
                     {{- range $c := $components -}}
-                      {{- $out = append $out (dict "name" $app.name "type" $app.type "repoURL" (dig "repoURL" "" $app) "component" $c "env" $env "suffix" (ternary "" "-stg" (eq $env "prod")) "staged" $staged "public" (dig "public" false $app) "hostname" (dig "hostnames" $env "" $app) "dependsOn" (dig "dependsOn" (list) $app)) -}}
+                      {{- $restore := dict -}}
+                      {{- if eq $c "backend" -}}
+                        {{- range $restores -}}{{- if and (eq .app $app.name) (eq .env $env) -}}{{- $restore = . -}}{{- end -}}{{- end -}}
+                      {{- end -}}
+                      {{- $out = append $out (dict "name" $app.name "type" $app.type "repoURL" (dig "repoURL" "" $app) "component" $c "env" $env "suffix" (ternary "" "-stg" (eq $env "prod")) "staged" $staged "public" (dig "public" false $app) "hostname" (dig "hostnames" $env "" $app) "dependsOn" (dig "dependsOn" (list) $app) "restore" $restore) -}}
                     {{- end -}}
                   {{- end -}}
                 {{- end -}}
@@ -60,7 +65,11 @@ spec:
   # shared one: deploy/env/<env>/<component>.yaml, where the image lives (the
   # staging updater writes the staging one, a promotion from the CMP writes the
   # prod one). The patch replaces the whole sources list, so it repeats it.
-  # Apps without staging get no patch and render exactly as before.
+  # Apps without staging or a restore get no patch and render exactly as before.
+  #
+  # A backend listed in the record's status.move.restores takes the same patch
+  # (a template cannot add list items conditionally), plus db.restore.*
+  # parameters that win over the app repo's own db.restore.
   #
   # Imported apps (service, backing) never read their source repo (D1): the
   # chart comes from infra-templates and the values from cnp-projects
@@ -73,22 +82,33 @@ spec:
   # app, which is the Service name a link in another namespace points to
   # (infra-templates templates/links.yaml).
   templatePatch: |
-    {{- if .staged }}
+    {{- if or .staged .restore }}
     spec:
       sources:
         - repoURL: https://github.com/3-Istor/infra-templates.git
           targetRevision: HEAD
           path: .
           helm:
+            {{- if .staged }}
             ignoreMissingValueFiles: true
+            {{- end }}
             valueFiles:
               - '{{ if eq .type "fullstack" }}$values/deploy/values-{{ .component }}.yaml{{ else }}$values/deploy/values.yaml{{ end }}'
+              {{- if .staged }}
               - '$values/deploy/env/{{ .env }}/{{ .component }}.yaml'
+              {{- end }}
             parameters:
               - {name: cnp.project, value: "{{ .metadata.name }}", forceString: true}
               - {name: cnp.app, value: "{{ .name }}", forceString: true}
               - {name: cnp.environment, value: "{{ .env }}", forceString: true}
               - {name: project_name, value: "{{ .metadata.name }}", forceString: true}
+              {{- with .restore }}
+              # Empty backupID and targetTime: restore up to the latest WAL.
+              - {name: db.restore.generation, value: "{{ .generation }}", forceString: true}
+              - {name: db.restore.sourceServer, value: "{{ .sourceServer }}", forceString: true}
+              - {name: db.restore.backupID, value: "", forceString: true}
+              - {name: db.restore.targetTime, value: "", forceString: true}
+              {{- end }}
         - repoURL: "{{ .repoURL }}"
           targetRevision: HEAD
           path: ""
