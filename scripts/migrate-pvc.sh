@@ -13,6 +13,9 @@ PVC=$2
 TARGET_CLASS=${3:-ceph-rbd}
 KUBECTL=${KUBECTL:-kubectl --context 3-istor-prod@kubernetes}
 COPY_IMAGE=${COPY_IMAGE:-docker.io/library/alpine:3.22.2}
+# Ceph-to-Ceph copies can run anywhere: keep them off the K3s server, whose
+# disk also carries kine (NODE=k3s-worker-node). Ignored for local-path sources.
+NODE=${NODE:-}
 TMP_PVC="${PVC:0:50}-mig"
 JOB="mig-${PVC:0:50}"
 k() { $KUBECTL -n "$NAMESPACE" "$@"; }
@@ -70,6 +73,7 @@ spec:
   template:
     spec:
       restartPolicy: Never
+      ${NODE:+nodeSelector: {kubernetes.io/hostname: $NODE}}
       containers:
         - name: copy
           image: $COPY_IMAGE
