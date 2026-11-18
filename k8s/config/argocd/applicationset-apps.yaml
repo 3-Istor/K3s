@@ -65,7 +65,7 @@ spec:
   # shared one: deploy/env/<env>/<component>.yaml, where the image lives (the
   # staging updater writes the staging one, a promotion from the CMP writes the
   # prod one). The patch replaces the whole sources list, so it repeats it.
-  # Apps without staging get no patch and render exactly as before.
+  # Apps without staging or a restore get no patch and render exactly as before.
   #
   # A backend listed in the record's status.move.restores takes the same patch
   # (a template cannot add list items conditionally), plus db.restore.*
