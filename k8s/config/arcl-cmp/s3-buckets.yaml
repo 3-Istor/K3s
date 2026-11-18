@@ -81,8 +81,10 @@ spec:
   bucketName: cnp-project-exports
   storageClassName: ceph-bucket-retain
 ---
-# The RGW runs on pae-node-1, outside the cluster: a selectorless Service with
-# a hand-written EndpointSlice lets the gateway route to it.
+# The RGW runs on pae-node-1, outside the cluster: the gateway reaches it
+# through this selectorless Service. Its EndpointSlice is applied by hand
+# (rgw-endpointslice.yaml): Argo CD excludes EndpointSlices from management.
+# The status page probes s3.3istor.com, so a missing slice shows there.
 apiVersion: v1
 kind: Service
 metadata:
@@ -92,17 +94,3 @@ spec:
     - name: http
       port: 7480
       targetPort: 7480
----
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
-metadata:
-  name: rgw
-  labels:
-    kubernetes.io/service-name: rgw
-addressType: IPv4
-ports:
-  - name: http
-    port: 7480
-    protocol: TCP
-endpoints:
-  - addresses: ["192.168.1.110"]
