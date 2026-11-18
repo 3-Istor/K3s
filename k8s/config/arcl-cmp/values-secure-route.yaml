@@ -50,7 +50,7 @@ routes:
             urlRewrite:
               path:
                 type: ReplacePrefixMatch
-                replacePrefixMatch: "/user-avatars/"
+                replacePrefixMatch: "/user-avatars"
         backendRefs:
           - name: rgw
             port: 7480
