@@ -1,0 +1,96 @@
+# A tenant pod runs only its own project's images or a public base the
+# platform deploys for it (CNP-294). Audit until a day of reports shows no
+# legitimate violation, then switch validationActions to [Deny].
+#
+# Own images, from the namespace <project>-<app>[-stg]:
+#   ghcr.io/3-istor/imports/<project>/...   imported apps (CMP IMPORT_IMAGE_PREFIX)
+#   ghcr.io/3-istor/<app> and <app>/...      template apps, pushed by the app's
+#                                            own repo, named after the app
+# Template images carry no project segment: the app name stands for it, and
+# GitHub keeps repo names unique within the org. "imports" is refused as an
+# app name so a template namespace cannot claim every imported image.
+
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: restrict-tenant-images
+spec:
+  validationActions:
+    - Audit
+  matchConstraints:
+    namespaceSelector:
+      matchExpressions:
+        - key: cnp.3istor.com/project
+          operator: Exists
+    resourceRules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - pods
+  variables:
+    - name: project
+      expression: namespaceObject.metadata.labels['cnp.3istor.com/project']
+    - name: appAndEnv
+      expression: >-
+        namespaceObject.metadata.name.startsWith(variables.project + '-')
+          ? namespaceObject.metadata.name.substring(size(variables.project) + 1)
+          : ''
+    - name: app
+      expression: >-
+        variables.appAndEnv.endsWith('-stg')
+          ? variables.appAndEnv.substring(0, size(variables.appAndEnv) - 4)
+          : variables.appAndEnv
+    # Entries ending in "/" are prefixes, the others whole repositories.
+    # Public bases: the CMP backing catalogue, CNPG (instance, bootstrap
+    # init container, barman sidecar) and the cnp-project-base components.
+    - name: publicBases
+      expression: >-
+        [
+          'docker.io/library/elasticsearch',
+          'docker.io/library/mongo',
+          'docker.io/library/neo4j',
+          'docker.io/library/nginx',
+          'docker.io/library/redis',
+          'ghcr.io/cloudnative-pg/',
+          'docker.io/cloudflare/cloudflared',
+          'docker.io/twinproduction/gatus',
+          'ghcr.io/home-operations/gatus-sidecar',
+          'quay.io/keycloak/keycloak',
+          'docker.io/adorsys/keycloak-config-cli',
+          'ghcr.io/thegostsniperfr/keycloak-theme-kube-lab',
+          'ghcr.io/thegostsniperfr/offhours-guard'
+        ]
+    - name: images
+      expression: >-
+        (object.spec.containers
+          + object.spec.?initContainers.orValue([])
+          + object.spec.?ephemeralContainers.orValue([])).map(c, c.image)
+    # Repository without tag or digest, with Docker Hub short names expanded
+    # the way containerd resolves them ("redis" is docker.io/library/redis).
+    - name: repositories
+      expression: >-
+        variables.images.map(i, i.split('@')[0]).map(i,
+          i.substring(0, i.lastIndexOf('/') + 1)
+            + i.substring(i.lastIndexOf('/') + 1).split(':')[0]
+        ).map(r,
+          !r.contains('/') ? 'docker.io/library/' + r
+          : (r.split('/')[0].contains('.') || r.split('/')[0].contains(':') || r.split('/')[0] == 'localhost') ? r
+          : 'docker.io/' + r)
+  validations:
+    - messageExpression: >-
+        'Images in this namespace must come from ghcr.io/3-istor/imports/' + variables.project
+        + '/' + (variables.app != '' && variables.app != 'imports' ? ', ghcr.io/3-istor/' + variables.app : '')
+        + ' or the public base allowlist of restrict-tenant-images; got: '
+        + variables.images.join(', ')
+      expression: >-
+        variables.repositories.all(r,
+          r.startsWith('ghcr.io/3-istor/imports/' + variables.project + '/')
+          || (variables.app != '' && variables.app != 'imports'
+              && (r == 'ghcr.io/3-istor/' + variables.app
+                  || r.startsWith('ghcr.io/3-istor/' + variables.app + '/')))
+          || variables.publicBases.exists(b, b.endsWith('/') ? r.startsWith(b) : r == b))

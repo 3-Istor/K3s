@@ -19,3 +19,12 @@ Due to Kyverno's [auto-generation rules](https://kyverno.io/docs/policy-types/cl
 The rule is then rewritten by Kyverno and applied. The problem is that ArgoCD will treat this change as a drift and reapply the original rule. This will create an infinite loop between ArgoCD and Kyverno.
 
 Kyverno Documentation for [ArgoCD Users Best Practice](https://kyverno.io/docs/installation/platform-notes/#notes-for-argocd-users)
+
+## Policy tests
+
+Tenant policies carry Kyverno CLI tests under `policies/tests/`, one folder per
+policy, with namespace labels given in `values.yaml`:
+
+```bash
+nix shell nixpkgs#kyverno -c kyverno test k8s/config/kyverno/policies/tests
+```

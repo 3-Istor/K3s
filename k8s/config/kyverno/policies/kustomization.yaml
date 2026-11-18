@@ -8,3 +8,5 @@ resources:
   - pod-security-restricted.yaml
   - disallow-latest-and-untagged-images.yaml
   - verify-cmp-image-signatures.yaml
+  - restrict-tenant-images.yaml
+  - restrict-tenant-registry-secret.yaml

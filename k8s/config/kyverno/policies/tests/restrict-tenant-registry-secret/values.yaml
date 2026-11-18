@@ -1,0 +1,6 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Values
+namespaceSelector:
+  - name: iot-optispace
+    labels:
+      cnp.3istor.com/project: iot

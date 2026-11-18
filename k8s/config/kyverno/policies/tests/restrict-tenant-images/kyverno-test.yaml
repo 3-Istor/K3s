@@ -1,0 +1,31 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: restrict-tenant-images
+policies:
+  - ../../restrict-tenant-images.yaml
+variables: values.yaml
+resources:
+  - resources.yaml
+results:
+  - policy: restrict-tenant-images
+    kind: Pod
+    result: pass
+    resources:
+      - epitweet-user-service/own-import
+      - epitweet-user-service/backing-and-cnpg
+      - iot-optispace-stg/own-template-staging
+      - iot-system/system-components
+  - policy: restrict-tenant-images
+    kind: Pod
+    result: fail
+    resources:
+      - epitweet-user-service/other-project-import
+      - iot-optispace-stg/project-name-prefix-trick
+      - iot-optispace-stg/other-template-app
+      - iot-optispace-stg/template-app-name-prefix-trick
+      - iot-optispace-stg/platform-image
+      - iot-optispace-stg/unlisted-public-image
+      - iot-optispace-stg/bad-init-container
+      - iot-imports/imports-app-name
+      - iot-optispace-stg/registry-port-not-a-tag

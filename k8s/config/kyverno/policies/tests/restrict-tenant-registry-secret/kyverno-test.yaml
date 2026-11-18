@@ -1,0 +1,23 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: restrict-tenant-registry-secret
+policies:
+  - ../../restrict-tenant-registry-secret.yaml
+variables: values.yaml
+resources:
+  - resources.yaml
+results:
+  - policy: restrict-tenant-registry-secret
+    kind: Pod
+    result: pass
+    resources:
+      - iot-optispace/pull-secret-only
+  - policy: restrict-tenant-registry-secret
+    kind: Pod
+    result: fail
+    resources:
+      - iot-optispace/secret-volume
+      - iot-optispace/projected-volume
+      - iot-optispace/env-secret-key-ref
+      - iot-optispace/env-from-in-init-container

@@ -1,0 +1,15 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Values
+namespaceSelector:
+  - name: epitweet-user-service
+    labels:
+      cnp.3istor.com/project: epitweet
+  - name: iot-optispace-stg
+    labels:
+      cnp.3istor.com/project: iot
+  - name: iot-system
+    labels:
+      cnp.3istor.com/project: iot
+  - name: iot-imports
+    labels:
+      cnp.3istor.com/project: iot
