@@ -88,6 +88,7 @@ spec:
               - {name: cnp.project, value: "{{ .metadata.name }}", forceString: true}
               - {name: cnp.app, value: "{{ .name }}", forceString: true}
               - {name: cnp.environment, value: "{{ .env }}", forceString: true}
+              - {name: cnp.type, value: "{{ .type }}", forceString: true}
               - {name: project_name, value: "{{ .metadata.name }}", forceString: true}
         - repoURL: "{{ .repoURL }}"
           targetRevision: HEAD
@@ -125,6 +126,7 @@ spec:
               - {name: cnp.project, value: "{{ .metadata.name }}", forceString: true}
               - {name: cnp.app, value: "{{ .name }}", forceString: true}
               - {name: cnp.environment, value: "{{ .env }}", forceString: true}
+              - {name: cnp.type, value: "{{ .type }}", forceString: true}
               - {name: project_name, value: "{{ .metadata.name }}", forceString: true}
         - repoURL: https://github.com/3-Istor/cnp-projects.git
           targetRevision: main
@@ -155,9 +157,10 @@ spec:
           helm:
             valueFiles:
               - '{{ if eq .type "fullstack" }}$values/deploy/values-{{ .component }}.yaml{{ else }}$values/deploy/values.yaml{{ end }}'
-            # Who the release belongs to, repeated in both templatePatch
-            # branches. Parameters win over valueFiles and values, so the app
-            # repo (deploy values, CMP config edits) cannot change them:
+            # Who the release belongs to and what kind of app it is (cnp.type
+            # labels backing pods), repeated in both templatePatch branches.
+            # Parameters win over valueFiles and values, so the app repo
+            # (deploy values, CMP config edits) cannot change them:
             # infra-templates derives the Vault role and path, the registry
             # secret and links from cnp.* only, and project_name is pinned so
             # nothing else in the chart trusts the repo's copy.
@@ -165,6 +168,7 @@ spec:
               - {name: cnp.project, value: "{{ .metadata.name }}", forceString: true}
               - {name: cnp.app, value: "{{ .name }}", forceString: true}
               - {name: cnp.environment, value: "{{ .env }}", forceString: true}
+              - {name: cnp.type, value: "{{ .type }}", forceString: true}
               - {name: project_name, value: "{{ .metadata.name }}", forceString: true}
         - repoURL: "{{ .repoURL }}"
           targetRevision: HEAD
