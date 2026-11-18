@@ -18,7 +18,7 @@ vmstorage:
   storageDataPath: "/storage"
   persistentVolume:
     enabled: true
-    storageClassName: "ceph-block"
+    storageClassName: "ceph-rbd"
     size: "20Gi"
 
 vminsert:

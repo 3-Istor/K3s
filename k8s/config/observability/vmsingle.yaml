@@ -6,7 +6,7 @@ spec:
   retentionPeriod: 30d
   removePvcAfterDelete: false
   storage:
-    storageClassName: ceph-block
+    storageClassName: ceph-rbd
     accessModes: [ReadWriteOnce]
     resources:
       requests:

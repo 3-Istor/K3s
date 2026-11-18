@@ -43,7 +43,7 @@ resources:
 
 persistence:
   enabled: true
-  storageClass: "local-path"
+  storageClass: "ceph-rbd"
   backend:
     size: 2Gi
     accessMode: ReadWriteOnce
@@ -79,10 +79,20 @@ env:
     # Off while the gold access token is refused after a fresh passkey (CNP-124):
     # back to "true" once the token check passes again.
     STEP_UP_ENABLED: "false"
-    # Project export dump Jobs upload to Garage through its Service, so a
-    # database dump never leaves the cluster. Download links use the public
-    # endpoint (the avatars one).
-    EXPORT_S3_INTERNAL_ENDPOINT: "http://garage.garage-s3.svc.cluster.local:3900"
+    # CMP buckets live on the Ceph RGW (CNP-189), one ObjectBucketClaim each
+    # (s3-buckets.yaml). Avatars are public through avatars-s3.3istor.com.
+    AVATARS_S3_ENDPOINT: "http://192.168.1.110:7480"
+    AVATARS_S3_BUCKET: "user-avatars"
+    AVATARS_S3_REGION: "us-east-1"
+    AVATARS_PUBLIC_URL_BASE: "https://avatars-s3.3istor.com"
+    ICONS_S3_ENDPOINT: "http://192.168.1.110:7480"
+    ICONS_S3_REGION: "us-east-1"
+    # Download links are presigned for the public host, which only exposes
+    # this bucket. Dump Jobs upload through the RGW directly, so a database
+    # dump never leaves the private network.
+    EXPORT_S3_ENDPOINT: "https://s3.3istor.com"
+    EXPORT_S3_INTERNAL_ENDPOINT: "http://192.168.1.110:7480"
+    EXPORT_S3_REGION: "us-east-1"
     # FinOps: real costs. Backfill starts at the oldest day VictoriaMetrics
     # still holds (14-day retention); days before OpenCost's install have no
     # idle cost.
@@ -190,63 +200,37 @@ extraEnv:
         name: arcl-cmp-secret
         key: aws-s3-key-prefix
 
-  # --- Avatars S3 Compatible Storage ---
+  # --- CMP buckets on the RGW: keys from each ObjectBucketClaim's Secret ---
   - name: AVATARS_S3_ACCESS_KEY_ID
     valueFrom:
       secretKeyRef:
-        name: arcl-cmp-secret
-        key: avatars-s3-access-key-id
+        name: user-avatars
+        key: AWS_ACCESS_KEY_ID
   - name: AVATARS_S3_SECRET_ACCESS_KEY
     valueFrom:
       secretKeyRef:
-        name: arcl-cmp-secret
-        key: avatars-s3-secret-access-key
-  - name: AVATARS_S3_ENDPOINT
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: avatars-s3-endpoint
-  - name: AVATARS_S3_BUCKET
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: avatars-s3-bucket
-  - name: AVATARS_S3_REGION
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: avatars-s3-region
-  - name: AVATARS_PUBLIC_URL_BASE
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: avatars-s3-public-url-base
-
-  # --- App icons (CNP-198): private bucket on the same Garage endpoint ---
+        name: user-avatars
+        key: AWS_SECRET_ACCESS_KEY
   - name: ICONS_S3_ACCESS_KEY_ID
     valueFrom:
       secretKeyRef:
-        name: arcl-cmp-secret
-        key: icons-s3-access-key-id
+        name: cnp-app-icons
+        key: AWS_ACCESS_KEY_ID
   - name: ICONS_S3_SECRET_ACCESS_KEY
     valueFrom:
       secretKeyRef:
-        name: arcl-cmp-secret
-        key: icons-s3-secret-access-key
-
-  # --- Project exports (EU Data Act, B1): private bucket cnp-project-exports
-  # on the same Garage endpoint, which must stay the public one: the download
-  # link is presigned for that host.
+        name: cnp-app-icons
+        key: AWS_SECRET_ACCESS_KEY
   - name: EXPORT_S3_ACCESS_KEY_ID
     valueFrom:
       secretKeyRef:
-        name: arcl-cmp-secret
-        key: export-s3-access-key-id
+        name: cnp-project-exports
+        key: AWS_ACCESS_KEY_ID
   - name: EXPORT_S3_SECRET_ACCESS_KEY
     valueFrom:
       secretKeyRef:
-        name: arcl-cmp-secret
-        key: export-s3-secret-access-key
+        name: cnp-project-exports
+        key: AWS_SECRET_ACCESS_KEY
 
   # --- Cloudflare API & Account ---
   - name: CLOUDFLARE_API_TOKEN

@@ -40,12 +40,12 @@ server:
 
   dataStorage:
     enabled: true
-    storageClass: "local-path"
+    storageClass: "ceph-rbd"
     size: 2Gi
 
   auditStorage:
     enabled: true
-    storageClass: "local-path"
+    storageClass: "ceph-rbd"
     size: 2Gi
 
   ingress:

@@ -148,7 +148,7 @@ singleBinary:
 
   persistence:
     enabled: true
-    storageClass: "ceph-block"
+    storageClass: "ceph-rbd"
     size: 20Gi
 
   extraEnvFrom:

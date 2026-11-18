@@ -17,7 +17,6 @@ resources:
   - vault.yaml
   - argocd.yaml
   - arcl-cmp/
-  - garage-s3.yaml
   - kube-system.yaml
   - dev-sandbox.yaml
   - cnpg.yaml

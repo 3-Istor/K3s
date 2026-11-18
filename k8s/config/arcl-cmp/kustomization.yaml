@@ -11,6 +11,7 @@ resources:
   - api-jwt.yaml
   - import-worker-route.yaml
   - mcp-route.yaml
+  - s3-buckets.yaml
 
 # FinOps inputs (finops/ at the repo root), read by the CMP ingester on every
 # pass. No hash suffix: kustomize does not rename the reference added by the

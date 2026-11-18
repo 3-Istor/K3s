@@ -32,3 +32,46 @@ routes:
       vault:
         path: "kvv2/arcl-cmp/envoy-auth"
         role: "arcl-cmp-role"
+
+  # Public pictures: the old Garage website URLs (avatars-s3.3istor.com/<file>)
+  # keep working, rewritten onto the public-read bucket on the RGW.
+  avatars:
+    hostnames:
+      - "avatars-s3.3istor.com"
+    rules:
+      - matches:
+          - method: GET
+            path:
+              type: PathPrefix
+              value: "/"
+          - method: HEAD
+            path:
+              type: PathPrefix
+              value: "/"
+        filters:
+          - type: URLRewrite
+            urlRewrite:
+              path:
+                type: ReplacePrefixMatch
+                replacePrefixMatch: "/user-avatars/"
+        backendRefs:
+          - name: rgw
+            port: 7480
+    auth:
+      enabled: false
+
+  # Presigned export links are signed for this host. Only the exports bucket
+  # is reachable here, never the rest of the RGW (CNPG backups, audit archive).
+  s3-exports:
+    hostnames:
+      - "s3.3istor.com"
+    rules:
+      - matches:
+          - path:
+              type: PathPrefix
+              value: "/cnp-project-exports/"
+        backendRefs:
+          - name: rgw
+            port: 7480
+    auth:
+      enabled: false
