@@ -745,6 +745,8 @@ spec:
             - --telemetry-port=8082
             - --custom-resource-state-config-file
             - /custom-resource-state/custom-resource-state.yaml
+            # Backing alerts (backing-rules/) select pods on this label.
+            - --metric-labels-allowlist=pods=[cnp.3istor.com/role]
           image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.18.0
           name: kube-state-metrics
           resources:
