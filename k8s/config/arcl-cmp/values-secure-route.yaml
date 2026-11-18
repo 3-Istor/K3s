@@ -39,18 +39,20 @@ routes:
     hostnames:
       - "avatars-s3.3istor.com"
     rules:
-      # A prefix rewrite takes exactly one PathPrefix match. Anonymous writes
-      # are refused by the bucket policy, which only grants s3:GetObject.
+      # Anonymous writes are refused by the bucket policy, which only grants
+      # s3:GetObject.
       - matches:
           - path:
               type: PathPrefix
               value: "/"
+        # Envoy Gateway glues a "/" prefix replacement to the file name
+        # (/user-avatarsx.jpg): a regex rewrite keeps the separator.
         filters:
-          - type: URLRewrite
-            urlRewrite:
-              path:
-                type: ReplacePrefixMatch
-                replacePrefixMatch: "/user-avatars"
+          - type: ExtensionRef
+            extensionRef:
+              group: gateway.envoyproxy.io
+              kind: HTTPRouteFilter
+              name: avatars-bucket-prefix
         backendRefs:
           - name: rgw
             port: 7480

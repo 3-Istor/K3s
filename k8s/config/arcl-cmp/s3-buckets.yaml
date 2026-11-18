@@ -94,3 +94,16 @@ spec:
     - name: http
       port: 7480
       targetPort: 7480
+---
+# /x.jpg on avatars-s3.3istor.com is /user-avatars/x.jpg on the RGW.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: avatars-bucket-prefix
+spec:
+  urlRewrite:
+    path:
+      type: ReplaceRegexMatch
+      replaceRegexMatch:
+        pattern: "^/(.*)$"
+        substitution: "/user-avatars/\\1"
