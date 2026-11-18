@@ -39,13 +39,10 @@ routes:
     hostnames:
       - "avatars-s3.3istor.com"
     rules:
+      # A prefix rewrite takes exactly one PathPrefix match. Anonymous writes
+      # are refused by the bucket policy, which only grants s3:GetObject.
       - matches:
-          - method: GET
-            path:
-              type: PathPrefix
-              value: "/"
-          - method: HEAD
-            path:
+          - path:
               type: PathPrefix
               value: "/"
         filters:
