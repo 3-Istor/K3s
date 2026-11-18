@@ -54,6 +54,12 @@ l7Proxy: true # default true
 envoyConfig:
   enabled: false
 
+# Pod-to-pod traffic between the two nodes crosses the lab network: WireGuard
+# encrypts it (CNP-298). Maintenance procedure in README.md.
+encryption:
+  enabled: true
+  type: wireguard
+
 # The chart default (2) restarts both agents at once on this two-node cluster.
 updateStrategy:
   type: RollingUpdate
