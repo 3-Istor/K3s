@@ -13,7 +13,7 @@ spec:
   retentionMaxDiskSpaceUsageBytes: 16GiB
   removePvcAfterDelete: false
   storage:
-    storageClassName: ceph-block
+    storageClassName: ceph-rbd
     accessModes: [ReadWriteOnce]
     resources:
       requests:

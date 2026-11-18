@@ -68,7 +68,7 @@ grafana.ini:
 
 persistence:
   enabled: true
-  storageClassName: "ceph-block"
+  storageClassName: "ceph-rbd"
   size: 2Gi
 
 resources:

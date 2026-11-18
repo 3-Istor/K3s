@@ -10,7 +10,7 @@ autoscaling:
   enabled: false
 persistence:
   enabled: true
-  storageClass: "local-path"
+  storageClass: "ceph-rbd"
   size: "1Gi"
   mountPath: "/app/data"
 env:
