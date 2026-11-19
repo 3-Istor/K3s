@@ -1,0 +1,3 @@
+# promtool fixture series flagged by generic-api-key (no secret); later commits carry gitleaks:allow
+826b914d8f9ecc7daeecdc6f9b36191bfd067483:k8s/config/observability/backing-rules/backing_test.yaml:generic-api-key:36
+826b914d8f9ecc7daeecdc6f9b36191bfd067483:k8s/config/observability/backing-rules/backing_test.yaml:generic-api-key:38
