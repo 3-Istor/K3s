@@ -16,6 +16,8 @@ results:
       - epitweet-user-service/backing-and-cnpg
       - iot-optispace-stg/own-template-staging
       - iot-system/system-components
+      - iot-optispace-stg/any-public-image
+      - iot-optispace-stg/other-public-registry
   - policy: restrict-tenant-images
     kind: Pod
     result: fail
@@ -25,7 +27,10 @@ results:
       - iot-optispace-stg/other-template-app
       - iot-optispace-stg/template-app-name-prefix-trick
       - iot-optispace-stg/platform-image
-      - iot-optispace-stg/unlisted-public-image
       - iot-optispace-stg/bad-init-container
       - iot-imports/imports-app-name
       - iot-optispace-stg/registry-port-not-a-tag
+      - iot-optispace-stg/zot-mirror-direct
+      - iot-optispace-stg/cluster-service-registry
+      - iot-optispace-stg/org-image-upper-case
+      - iot-optispace-stg/org-image-with-port

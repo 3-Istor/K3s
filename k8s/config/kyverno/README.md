@@ -23,8 +23,9 @@ Kyverno Documentation for [ArgoCD Users Best Practice](https://kyverno.io/docs/i
 ## Policy tests
 
 Tenant policies carry Kyverno CLI tests under `policies/tests/`, one folder per
-policy, with namespace labels given in `values.yaml`:
+policy, with namespace labels given in `values.yaml`. They need Kyverno 1.20
+for `policies.kyverno.io/v1`, newer than the stable nixpkgs one:
 
 ```bash
-nix shell nixpkgs#kyverno -c kyverno test k8s/config/kyverno/policies/tests
+nix shell github:NixOS/nixpkgs/nixos-unstable#kyverno -c kyverno test k8s/config/kyverno/policies/tests
 ```

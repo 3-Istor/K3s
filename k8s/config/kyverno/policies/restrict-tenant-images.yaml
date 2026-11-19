@@ -1,6 +1,8 @@
-# A tenant pod runs only its own project's images or a public base the
-# platform deploys for it (CNP-294). Audit until a day of reports shows no
-# legitimate violation, then switch validationActions to [Deny].
+# A tenant pod may run any public image, but org images only from its own
+# project (CNP-294): ghcr.io/3-istor holds private images that every node can
+# pull, so without this a tenant could run another project's code and read
+# what is baked into it. Audit until a day of reports shows no legitimate
+# violation, then switch validationActions to [Deny].
 #
 # Own images, from the namespace <project>-<app>[-stg]:
 #   ghcr.io/3-istor/imports/<project>/...   imported apps (CMP IMPORT_IMAGE_PREFIX)
@@ -9,6 +11,9 @@
 # Template images carry no project segment: the app name stands for it, and
 # GitHub keeps repo names unique within the org. "imports" is refused as an
 # app name so a template namespace cannot claim every imported image.
+#
+# In-cluster registries are refused: Zot (10.43.0.50) mirrors ghcr.io with
+# the org's pull token, so addressing it directly would skip the org check.
 
 apiVersion: policies.kyverno.io/v1
 kind: ValidatingPolicy
@@ -45,52 +50,48 @@ spec:
         variables.appAndEnv.endsWith('-stg')
           ? variables.appAndEnv.substring(0, size(variables.appAndEnv) - 4)
           : variables.appAndEnv
-    # Entries ending in "/" are prefixes, the others whole repositories.
-    # Public bases: the CMP backing catalogue, CNPG (instance, bootstrap
-    # init container, barman sidecar) and the cnp-project-base components.
-    - name: publicBases
-      expression: >-
-        [
-          'docker.io/library/elasticsearch',
-          'docker.io/library/mongo',
-          'docker.io/library/neo4j',
-          'docker.io/library/nginx',
-          'docker.io/library/redis',
-          'ghcr.io/cloudnative-pg/',
-          'docker.io/cloudflare/cloudflared',
-          'docker.io/twinproduction/gatus',
-          'ghcr.io/home-operations/gatus-sidecar',
-          'quay.io/keycloak/keycloak',
-          'docker.io/adorsys/keycloak-config-cli',
-          'ghcr.io/thegostsniperfr/keycloak-theme-kube-lab',
-          'ghcr.io/thegostsniperfr/offhours-guard'
-        ]
     - name: images
       expression: >-
         (object.spec.containers
           + object.spec.?initContainers.orValue([])
           + object.spec.?ephemeralContainers.orValue([])).map(c, c.image)
-    # Repository without tag or digest, with Docker Hub short names expanded
-    # the way containerd resolves them ("redis" is docker.io/library/redis).
-    - name: repositories
+    # Repository without tag or digest, lower-cased, with Docker Hub short
+    # names expanded the way containerd resolves them ("redis" is
+    # docker.io/library/redis) and the registry port dropped, so neither
+    # GHCR.io nor ghcr.io:443 slips past the org check.
+    - name: fullRepositories
       expression: >-
-        variables.images.map(i, i.split('@')[0]).map(i,
+        variables.images.map(i, i.lowerAscii().split('@')[0]).map(i,
           i.substring(0, i.lastIndexOf('/') + 1)
             + i.substring(i.lastIndexOf('/') + 1).split(':')[0]
         ).map(r,
           !r.contains('/') ? 'docker.io/library/' + r
           : (r.split('/')[0].contains('.') || r.split('/')[0].contains(':') || r.split('/')[0] == 'localhost') ? r
           : 'docker.io/' + r)
+    - name: repositories
+      expression: >-
+        variables.fullRepositories.map(r,
+          r.split('/')[0].split(':')[0] + r.substring(r.indexOf('/')))
+    - name: hosts
+      expression: variables.repositories.map(r, r.split('/')[0])
   validations:
     - messageExpression: >-
-        'Images in this namespace must come from ghcr.io/3-istor/imports/' + variables.project
-        + '/' + (variables.app != '' && variables.app != 'imports' ? ', ghcr.io/3-istor/' + variables.app : '')
-        + ' or the public base allowlist of restrict-tenant-images; got: '
-        + variables.images.join(', ')
+        'Images from ghcr.io/3-istor must be this project\'s own: ghcr.io/3-istor/imports/'
+        + variables.project + '/'
+        + (variables.app != '' && variables.app != 'imports' ? ' or ghcr.io/3-istor/' + variables.app : '')
+        + '; got: ' + variables.images.join(', ')
       expression: >-
         variables.repositories.all(r,
-          r.startsWith('ghcr.io/3-istor/imports/' + variables.project + '/')
+          !r.startsWith('ghcr.io/3-istor/')
+          || r.startsWith('ghcr.io/3-istor/imports/' + variables.project + '/')
           || (variables.app != '' && variables.app != 'imports'
               && (r == 'ghcr.io/3-istor/' + variables.app
-                  || r.startsWith('ghcr.io/3-istor/' + variables.app + '/')))
-          || variables.publicBases.exists(b, b.endsWith('/') ? r.startsWith(b) : r == b))
+                  || r.startsWith('ghcr.io/3-istor/' + variables.app + '/'))))
+    - messageExpression: >-
+        'Images must come from a public registry, not an in-cluster one; got: '
+        + variables.images.join(', ')
+      expression: >-
+        variables.hosts.all(h,
+          h != 'localhost'
+          && !h.endsWith('.svc') && !h.contains('.svc.') && !h.endsWith('.local')
+          && !h.matches('^[0-9.]+$') && !h.startsWith('['))

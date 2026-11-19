@@ -86,7 +86,7 @@ spec:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: unlisted-public-image
+  name: any-public-image
   namespace: iot-optispace-stg
 spec:
   containers:
@@ -145,3 +145,53 @@ spec:
   containers:
     - name: app
       image: localhost:5000/optispace:1
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: zot-mirror-direct
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: app
+      image: 10.43.0.50:5000/3-istor/cmp-backend:v1.0.0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cluster-service-registry
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: app
+      image: zot.zot.svc.cluster.local:5000/3-istor/cmp-backend:v1.0.0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: org-image-upper-case
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: app
+      image: GHCR.io/3-Istor/cmp-backend:v1.0.0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: org-image-with-port
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: app
+      image: ghcr.io:443/3-istor/cmp-backend:v1.0.0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: other-public-registry
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: app
+      image: quay.io/minio/minio:RELEASE.2025-01-01T00-00-00Z
