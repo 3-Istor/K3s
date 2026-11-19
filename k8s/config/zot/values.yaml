@@ -32,6 +32,21 @@ configFiles:
         "dedupe": false,
         "remoteCache": false,
         "gc": true,
+        "gcInterval": "6h",
+        "retention": {
+          "delay": "24h",
+          "policies": [
+            {
+              "repositories": ["**"],
+              "deleteReferrers": true,
+              "deleteUntagged": true,
+              "keepTags": [
+                { "patterns": [".*"], "pulledWithin": "1440h" },
+                { "patterns": [".*"], "mostRecentlyPulledCount": 3 }
+              ]
+            }
+          ]
+        },
         "storageDriver": {
           "name": "s3",
           "region": "us-east-1",
@@ -50,6 +65,7 @@ configFiles:
       "extensions": {
         "sync": {
           "enable": true,
+          "downloadDir": "/var/lib/registry/_sync",
           "credentialsFile": "/etc/zot-sync/credentials.json",
           "registries": [
             {
@@ -69,6 +85,15 @@ configFiles:
       }
     }
 
+# Retention: a tag is kept while pulled in the last 60 days, and the 3 most
+# recently pulled tags of every repository are always kept. Dropping one is
+# harmless: the next pull syncs it again from upstream, and a running pod
+# never needs the registry. Pull times live in the local metaDB (emptyDir):
+# a Zot restart forgets them, at worst a few re-downloads.
+#
+# downloadDir: sync stages layers on local disk before the S3 upload; Zot
+# refuses to start without it when storage is remote. Same emptyDir.
+#
 # Each upstream lands under its own destination, and registries.yaml rewrites
 # every request to that prefix: a docker.io name can never be served from
 # ghcr.io (or the reverse), whoever owns the same path upstream.
