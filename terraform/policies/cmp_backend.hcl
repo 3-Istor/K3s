@@ -35,6 +35,11 @@ path "sys/policies/acl/project-*" {
   capabilities = ["create", "read", "update", "delete"]
 }
 
+# Names only, for the orphan check (CNP-306): what a deleted project left.
+path "sys/policies/acl" {
+  capabilities = ["list"]
+}
+
 # data "vault_auth_backend" "oidc", for the accessor of the group aliases.
 path "sys/mounts/auth/oidc" {
   capabilities = ["read"]
@@ -42,7 +47,7 @@ path "sys/mounts/auth/oidc" {
 
 %{ for mount in auth_mounts ~}
 path "auth/${mount}/role/*" {
-  capabilities = ["create", "read", "update", "delete"]
+  capabilities = ["create", "read", "update", "delete", "list"]
   allowed_parameters = {
     "token_policies"                   = ["project-*"]
     "policies"                         = ["project-*"]
