@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pull-secret-only
+  namespace: iot-optispace
+spec:
+  imagePullSecrets:
+    - name: app-registry
+  volumes:
+    - name: own-secret
+      secret:
+        secretName: optispace-env
+  containers:
+    - name: app
+      image: ghcr.io/3-istor/optispace/backend:sha-abc1234
+      env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: optispace-db-app
+              key: password
+      envFrom:
+        - secretRef:
+            name: optispace-env
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secret-volume
+  namespace: iot-optispace
+spec:
+  volumes:
+    - name: creds
+      secret:
+        secretName: app-registry
+  containers:
+    - name: app
+      image: ghcr.io/3-istor/optispace/backend:sha-abc1234
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: projected-volume
+  namespace: iot-optispace
+spec:
+  volumes:
+    - name: creds
+      projected:
+        sources:
+          - secret:
+              name: app-registry
+  containers:
+    - name: app
+      image: ghcr.io/3-istor/optispace/backend:sha-abc1234
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: env-secret-key-ref
+  namespace: iot-optispace
+spec:
+  containers:
+    - name: app
+      image: ghcr.io/3-istor/optispace/backend:sha-abc1234
+      env:
+        - name: TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: app-registry
+              key: .dockerconfigjson
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: env-from-in-init-container
+  namespace: iot-optispace
+spec:
+  initContainers:
+    - name: init
+      image: ghcr.io/3-istor/optispace/backend:sha-abc1234
+      envFrom:
+        - secretRef:
+            name: app-registry
+  containers:
+    - name: app
+      image: ghcr.io/3-istor/optispace/backend:sha-abc1234
