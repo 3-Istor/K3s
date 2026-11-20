@@ -116,6 +116,8 @@ env:
     FINOPS_GCP_WIF_AUDIENCE: "//iam.googleapis.com/projects/943089725730/locations/global/workloadIdentityPools/cnp-finops/providers/keycloak"
     # Repository import.
     IMPORT_ENABLED: "true"
+    # CNP-303: open a PR that makes an imported repo template-conformant.
+    IMPORT_STANDARD_PR_ENABLED: "true"
     # Numeric ids of 3-Istor/extern-project-analyzer and of the 3-Istor org,
     # pinned in the workflow's OIDC token: a recreated repository gets new ids.
     IMPORT_WORKFLOW_REPO_ID: "1267361656"
