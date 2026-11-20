@@ -184,6 +184,13 @@ resource "vault_policy" "status_policy" {
   policy = templatefile("${path.module}/policies/status.hcl", {})
 }
 
+# Zot Policies
+# -----------------------------------------------------------------------------
+resource "vault_policy" "zot_policy" {
+  name   = "zot-policy"
+  policy = templatefile("${path.module}/policies/zot.hcl", {})
+}
+
 # -----------------------------------------------------------------------------
 # GitHub Actions (Dockair CI) Policies
 # -----------------------------------------------------------------------------

@@ -35,3 +35,4 @@ resources:
   - platform-clouds.yaml
   - opencost.yaml
   - compliance.yaml
+  - zot.yaml

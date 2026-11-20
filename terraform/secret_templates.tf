@@ -480,6 +480,17 @@ resource "vault_kv_secret_v2" "status_secrets" {
   })
 }
 
+# Zot's sync extension reads GHCR with the same bot token the CMP holds, so
+# rotating github_bot_token rotates both.
+resource "vault_kv_secret_v2" "zot_ghcr" {
+  mount = vault_mount.kvv2.path
+  name  = "zot/ghcr"
+  data_json = jsonencode({
+    "username" = var.github_bot_username
+    "token"    = var.github_bot_token
+  })
+}
+
 
 # -----------------------------------------------------------------------------
 # Dockair Sandbox CI Secrets

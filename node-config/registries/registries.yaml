@@ -1,0 +1,17 @@
+# /etc/rancher/k3s/registries.yaml on both nodes (CNP-295). Not applied yet:
+# see README.md. Holds no secret: Zot has the GHCR token, nodes need none.
+#
+# Each request is rewritten under the upstream's name, matching the sync
+# destinations in k8s/config/zot/values.yaml. k3s keeps the upstream registry
+# as the last endpoint, so a failed or missing Zot falls back to it.
+mirrors:
+  ghcr.io:
+    endpoint:
+      - "http://10.43.0.50:5000"
+    rewrite:
+      "^(.*)$": "ghcr.io/$1"
+  docker.io:
+    endpoint:
+      - "http://10.43.0.50:5000"
+    rewrite:
+      "^(.*)$": "docker.io/$1"

@@ -1,0 +1,14 @@
+# Cached layers live on the RGW. Retain: losing the claim must not empty the
+# cache every node falls back from. The quota is a backstop: the retention
+# policy in values.yaml keeps the cache well under it (about 5 GiB of tenant
+# images on 2026-11-19). A full bucket only stops caching, pulls fall back to
+# upstream.
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: zot-registry
+spec:
+  bucketName: zot-registry
+  storageClassName: ceph-bucket-retain
+  additionalConfig:
+    maxSize: "30Gi"
