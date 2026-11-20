@@ -9,11 +9,15 @@ tests:
   # only db-0 may alert.
   - interval: 1m
     input_series:
-      - series: 'kube_pod_labels{namespace="shop-db", pod="db-0", label_cnp_3istor_com_role="backing"}'
+      - series: 'kube_pod_labels{job="kube-state-metrics", namespace="shop-db", pod="db-0", label_cnp_3istor_com_role="backing"}'
         values: '1x40'
-      - series: 'kube_pod_labels{namespace="shop-api", pod="app-0"}'
+      - series: 'kube_pod_labels{job="kubernetes-pods", namespace="opencost", exported_namespace="shop-db", pod="opencost-0", label_cnp_3istor_com_role="backing"}'
+        values: '1x40'
+      - series: 'kube_pod_labels{job="kube-state-metrics", namespace="shop-api", pod="app-0"}'
         values: '1x40'
       - series: 'kube_pod_container_status_restarts_total{namespace="shop-db", pod="db-0", container="db"}'
+        values: '0 0 1 2 3 4 5x34'
+      - series: 'kube_pod_container_status_restarts_total{namespace="opencost", pod="opencost-0", container="opencost"}'
         values: '0 0 1 2 3 4 5x34'
       - series: 'kube_pod_container_status_restarts_total{namespace="shop-api", pod="app-0", container="app"}'
         values: '0 0 1 2 3 4 5x34'
@@ -94,7 +98,7 @@ tests:
   # Healthy backing pod: nothing fires.
   - interval: 1m
     input_series:
-      - series: 'kube_pod_labels{namespace="shop-db", pod="db-0", label_cnp_3istor_com_role="backing"}'
+      - series: 'kube_pod_labels{job="kube-state-metrics", namespace="shop-db", pod="db-0", label_cnp_3istor_com_role="backing"}'
         values: '1x40'
       - series: 'kube_pod_container_status_restarts_total{namespace="shop-db", pod="db-0", container="db"}'
         values: '0x40'
