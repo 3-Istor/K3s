@@ -163,7 +163,7 @@ spec:
                 name: audit-archive-vlogs-scripts
           initContainers:
             - name: export
-              image: curlimages/curl:8.17.0
+              image: curlimages/curl:8.23.0
               command: ["sh", "/scripts/export.sh"]
               volumeMounts:
                 - name: work
@@ -183,7 +183,7 @@ spec:
                   drop: ["ALL"]
           containers:
             - name: upload
-              image: amazon/aws-cli:2.27.0
+              image: amazon/aws-cli:2.39.6
               command: ["bash", "/scripts/upload.sh"]
               env:
                 - name: HOME
@@ -246,7 +246,7 @@ spec:
           initContainers:
             # The three UTC days that hold the last 48 hours, both prefixes.
             - name: download
-              image: amazon/aws-cli:2.27.0
+              image: amazon/aws-cli:2.39.6
               command:
                 - bash
                 - -c
@@ -283,7 +283,7 @@ spec:
                   drop: ["ALL"]
           containers:
             - name: compare
-              image: python:3.13.9-alpine3.22
+              image: python:3.14.5-alpine3.22
               command: ["python3", "-I", "/scripts/compare.py"]
               volumeMounts:
                 - name: work
