@@ -16,11 +16,10 @@
   their standard pull request is merged (CNP-303), a service has a repoURL
   and releases like a template app: its repo's CI publishes
   imports/<project>/<app>/ci:X.Y.Z on a vX.Y.Z tag, and this updater writes
-  that tag into deploy/env/prod/<app>.yaml of the repo's cnp/deploy branch,
-  never into the developer's main. "main:cnp/deploy" checks out main only to
-  create cnp/deploy if it is missing; once it exists the updater commits on
-  it directly (v1.2.0 pkg/argocd/git.go), so main's changes reach Argo CD
-  through deploy/values-<app>.yaml at HEAD, not through this branch.
+  that tag into apps/<project>/<app>/release.yaml in cnp-projects, never into
+  the developer's repo. Not a branch of the app's repo: Argo CD refuses two
+  revisions of one repository in an app, and main's deploy/values-<app>.yaml
+  is read at HEAD.
   forceUpdate: the app runs the import workflow's image until the first
   release, which is not this image name and would otherwise be skipped.
   Backing apps run catalogue images and get no updater.
@@ -55,9 +54,9 @@ spec:
       writeBackConfig:
         method: "git:secret:argocd/cnp-portal-github-creds"
         gitConfig:
-          repository: {{ $app.repoURL | quote }}
-          branch: "main:cnp/deploy"
-          writeBackTarget: {{ printf "helmvalues:/deploy/env/prod/%s.yaml" $app.name | quote }}
+          repository: "https://github.com/3-Istor/cnp-projects.git"
+          branch: "main"
+          writeBackTarget: {{ printf "helmvalues:/apps/%s/%s/release.yaml" $.Values.project $app.name | quote }}
 {{- end }}
 {{- end }}
 {{- range $app := .Values.apps }}
