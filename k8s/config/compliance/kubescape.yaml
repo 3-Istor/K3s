@@ -68,7 +68,7 @@ spec:
                   drop: ["ALL"]
           containers:
             - name: upload
-              image: docker.io/amazon/aws-cli:2.27.0@sha256:e3e329e1d2894b7b4bbb0aacacd0a155262159b2e7a3b4275eb1f24046d3e06c
+              image: docker.io/amazon/aws-cli:2.39.6@sha256:eccdb3ec77e159d43ca6a750a70738c546883138be7f094498294a1477ec7e42
               command: ["bash", "/scripts/upload.sh"]
               env:
                 - name: TOOL
