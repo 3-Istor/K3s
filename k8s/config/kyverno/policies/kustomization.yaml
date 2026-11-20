@@ -10,3 +10,4 @@ resources:
   - verify-cmp-image-signatures.yaml
   - restrict-tenant-images.yaml
   - restrict-tenant-registry-secret.yaml
+  - verify-tenant-image-signatures.yaml
