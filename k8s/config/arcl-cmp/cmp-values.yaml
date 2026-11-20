@@ -64,6 +64,8 @@ env:
     OBS_VLOGS_URL: "http://vlogs-cnp.observability.svc:9428"
     OBS_VTRACES_URL: "http://vtraces-cnp.observability.svc:10428"
     OBS_GRAFANA_PROVISIONING_ENABLED: "true"
+    # VMAlert and VMAlertmanager of V3 are live (K3s#205, #253).
+    OBS_V3_ENABLED: "true"
     # CNP-185 V2: log-derived alert metrics from the VictoriaLogs recording rules.
     LOGS_BACKEND: "vl"
     KEYCLOAK_URL: "https://auth.3istor.com"
