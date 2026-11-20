@@ -11,6 +11,7 @@ spec:
       - { apiGroups: [""], apiVersions: ["v1"], resources: [namespaces], operations: [DELETE, UPDATE] }
       - { apiGroups: [argoproj.io], apiVersions: ["*"], resources: [applications, appprojects], operations: [DELETE, UPDATE] }
       - { apiGroups: [postgresql.cnpg.io], apiVersions: ["*"], resources: [clusters], operations: [DELETE] }
+      - { apiGroups: [objectbucket.io], apiVersions: ["*"], resources: [objectbucketclaims], operations: [DELETE] }
   variables:
     - name: key
       expression: "'cnp.3istor.com/deletion-protected'"
@@ -20,12 +21,15 @@ spec:
       expression: "object != null && has(object.metadata.labels) && variables.key in object.metadata.labels && object.metadata.labels[variables.key] == 'true'"
     - name: inProtectedNamespace
       expression: "namespaceObject != null && has(namespaceObject.metadata.labels) && variables.key in namespaceObject.metadata.labels && namespaceObject.metadata.labels[variables.key] == 'true'"
+    # Data-bearing objects carry no label of their own: their namespace's label protects them.
+    - name: dataBearing
+      expression: "request.resource.resource in ['clusters', 'objectbucketclaims']"
     - name: argocd
       expression: "request.userInfo.username in ['system:serviceaccount:argocd:argocd-application-controller', 'system:serviceaccount:argocd:argocd-applicationset-controller']"
   validations:
-    - expression: "!(request.operation == 'DELETE' && request.resource.resource != 'clusters' && variables.was)"
+    - expression: "!(request.operation == 'DELETE' && !variables.dataBearing && variables.was)"
       message: Deletion protection is on for this project. Turn it off in the CMP first.
-    - expression: "!(request.operation == 'DELETE' && request.resource.resource == 'clusters' && variables.inProtectedNamespace)"
+    - expression: "!(request.operation == 'DELETE' && variables.dataBearing && variables.inProtectedNamespace)"
       message: Deletion protection is on for this project. Turn it off in the CMP first.
     - expression: "!(request.operation == 'UPDATE' && variables.was && !variables.still && !variables.argocd)"
       message: Only Argo CD removes the deletion protection label. Turn it off in the CMP.
