@@ -24,6 +24,11 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "5.28.1"
     }
+
+    healthchecksio = {
+      source  = "kristofferahl/healthchecksio"
+      version = "2.3.0"
+    }
   }
 }
 
@@ -44,4 +49,8 @@ provider "vault" {
 
 provider "cloudflare" {
   api_token = var.cloudflare_api_token_secret_var
+}
+
+provider "healthchecksio" {
+  api_key = var.healthchecksio_api_key
 }
