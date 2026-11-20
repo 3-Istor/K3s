@@ -155,7 +155,7 @@ data:
     {{- end }}
 
     {{ define "cnp.discord.content" -}}
-    {{ if and (eq .Status "firing") (eq .CommonLabels.severity "critical") }}@here{{ end }}
+    {{- "" }}
     {{- end }}
 ---
 # The old name of the Helm chart's Service: vmalert (both), the Loki ruler,
