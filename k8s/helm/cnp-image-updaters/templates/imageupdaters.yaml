@@ -12,8 +12,47 @@
 */}}
 {{- /*
   Imported apps (service, backing) are pinned by digest in cnp-projects: the
-  CMP writes a new digest after each build, no updater watches them.
+  CMP writes a new digest after each build, no updater watches them. Once
+  their standard pull request is merged (CNP-303), a service has a repoURL:
+  its repo's CI publishes imports/<project>/<app>/ci:main on each push to
+  main, and an updater follows that tag by digest into
+  deploy/values-<app>.yaml, so a push to main redeploys without the CMP.
+  Backing apps run catalogue images and get no updater.
 */}}
+{{- range $app := .Values.apps }}
+{{- if and (eq $app.type "service") $app.repoURL }}
+{{- $image := printf "ghcr.io/3-istor/imports/%s/%s/ci" $.Values.project $app.name }}
+---
+apiVersion: argocd-image-updater.argoproj.io/v1alpha1
+kind: ImageUpdater
+metadata:
+  name: {{ printf "%s-%s-app-updater" $.Values.project $app.name }}
+  namespace: argocd
+  labels:
+    cnp.3istor.com/project: {{ $.Values.project | quote }}
+    cnp.3istor.com/app: {{ $app.name | quote }}
+    cnp.3istor.com/env: "prod"
+spec:
+  applicationRefs:
+    - namePattern: {{ printf "%s-%s-app" $.Values.project $app.name | quote }}
+      images:
+        - alias: app-image
+          imageName: {{ printf "%s:main" $image | quote }}
+          commonUpdateSettings:
+            updateStrategy: digest
+            pullSecret: {{ ternary (printf "pullsecret:%s-%s/app-registry" $.Values.project $app.name) "pullsecret:argocd/cnp-cloud-app-registry" (eq $.Values.targetCloud "onprem") | quote }}
+          manifestTargets:
+            helm:
+              name: image.repository
+              tag: image.tag
+      writeBackConfig:
+        method: "git:secret:argocd/cnp-portal-github-creds"
+        gitConfig:
+          repository: {{ $app.repoURL | quote }}
+          branch: main
+          writeBackTarget: {{ printf "helmvalues:/deploy/values-%s.yaml" $app.name | quote }}
+{{- end }}
+{{- end }}
 {{- range $app := .Values.apps }}
 {{- if has $app.type (list "static" "fullstack") }}
 {{- $owner := regexReplaceAll "^https://github.com/([^/]+)/.*$" $app.repoURL "${1}" | lower }}

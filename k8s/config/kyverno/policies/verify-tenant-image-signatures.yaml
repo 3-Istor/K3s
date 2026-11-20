@@ -1,6 +1,9 @@
 # Tenant images must be signed keyless by the 3-Istor workflow that builds
 # them (CNP-299), same mechanism as verify-cmp-image-signatures (CNP-265):
-#   ghcr.io/3-istor/imports/...  extern-project-analyzer import.yml on main
+#   ghcr.io/3-istor/imports/...  extern-project-analyzer import.yml on main,
+#                                or, once the import's standard pull request
+#                                is merged (CNP-303), the imported repo's own
+#                                ci.yml (imports/<project>/<app>/ci)
 #   other ghcr.io/3-istor/...    the template app repo's own ci.yml, on main
 #                                or a v* release tag
 # Public base images are not matched: restrict-tenant-images (CNP-294) bounds
@@ -62,11 +65,11 @@ spec:
             - issuer: https://token.actions.githubusercontent.com
               subjectRegExp: '^https://github\.com/3-Istor/[A-Za-z0-9._-]+/\.github/workflows/ci\.yml@refs/(heads/main|tags/v.+)$'
   validations:
-    - message: "Tenant images under ghcr.io/3-istor/ must carry a cosign keyless signature from the 3-Istor import workflow (imports/) or from the app repository's ci.yml on main or a release tag."
+    - message: "Tenant images under ghcr.io/3-istor/ must carry a cosign keyless signature from the 3-Istor import workflow (imports/ only) or from the app repository's ci.yml on main or a release tag."
       expression: >-
         (images.containers + images.initContainers)
           .filter(image, image.startsWith('ghcr.io/3-istor/'))
           .all(image,
             image.startsWith('ghcr.io/3-istor/imports/')
-              ? verifyImageSignatures(image, [attestors.importWorkflow]) > 0
+              ? verifyImageSignatures(image, [attestors.importWorkflow, attestors.templateCi]) > 0
               : verifyImageSignatures(image, [attestors.templateCi]) > 0)
