@@ -56,6 +56,8 @@ configMapGenerator:
       - default-rules/vmsingle.yaml
       # V4 traces
       - default-rules/traces.yaml
+      # CNP-302, written here rather than vendored
+      - backing-rules/backing.yaml
   - name: otelcol-gateway
     files:
       - otelcol-gateway/config.yaml
