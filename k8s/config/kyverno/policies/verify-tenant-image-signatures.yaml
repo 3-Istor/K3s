@@ -3,7 +3,7 @@
 #   ghcr.io/3-istor/imports/...  extern-project-analyzer import.yml on main,
 #                                or, once the import's standard pull request
 #                                is merged (CNP-303), the imported repo's own
-#                                ci.yml (imports/<project>/<app>/ci)
+#                                ci.yml on a v* tag (imports/<project>/<app>/ci)
 #   other ghcr.io/3-istor/...    the template app repo's own ci.yml, on main
 #                                or a v* release tag
 # Public base images are not matched: restrict-tenant-images (CNP-294) bounds

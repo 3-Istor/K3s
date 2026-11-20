@@ -72,9 +72,13 @@ spec:
   # Imported apps (service, backing) take their values from cnp-projects
   # apps/<project>/<app>/values.yaml, written by the CMP, until their standard
   # pull request is merged (CNP-303): the CMP then sets repoURL on the app and
-  # its values are deploy/values-<app>.yaml of the repository, at HEAD like a
-  # template app's. Such an app gets network.allowFrom inline from the record
-  # (the apps whose dependsOn names it), the CMP no longer writing its values.
+  # its values are deploy/values-<app>.yaml of the repository at HEAD, like a
+  # template app's, plus deploy/env/prod/<app>.yaml of its cnp/deploy branch,
+  # where the image lives: Argo CD Image Updater writes released versions
+  # there, never to the developer's main. A backing app, or a service the CI
+  # does not build, has no such file. Such an app gets network.allowFrom
+  # inline from the record (the apps whose dependsOn names it), the CMP no
+  # longer writing its values.
   # The chart comes from infra-templates. The inline values,
   # which win over the file, carry what the registry decides: names, links
   # from dependsOn, the route only for a public app (on the project's own
@@ -133,8 +137,15 @@ spec:
           targetRevision: HEAD
           path: .
           helm:
+            {{- if .repoURL }}
+            ignoreMissingValueFiles: true
             valueFiles:
-              - '{{ if .repoURL }}$values/deploy/values-{{ .name }}.yaml{{ else }}$values/apps/{{ .metadata.name }}/{{ .name }}/values.yaml{{ end }}'
+              - '$values/deploy/values-{{ .name }}.yaml'
+              - '$image/deploy/env/prod/{{ .name }}.yaml'
+            {{- else }}
+            valueFiles:
+              - '$values/apps/{{ .metadata.name }}/{{ .name }}/values.yaml'
+            {{- end }}
             values: {{ $values | toJson | toJson }}
             parameters:
               - {name: cnp.project, value: "{{ .metadata.name }}", forceString: true}
@@ -147,6 +158,10 @@ spec:
           targetRevision: HEAD
           path: ""
           ref: values
+        - repoURL: "{{ .repoURL }}"
+          targetRevision: cnp/deploy
+          path: ""
+          ref: image
         {{- else }}
         - repoURL: https://github.com/3-Istor/cnp-projects.git
           targetRevision: main

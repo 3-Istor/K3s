@@ -13,15 +13,20 @@
 {{- /*
   Imported apps (service, backing) are pinned by digest in cnp-projects: the
   CMP writes a new digest after each build, no updater watches them. Once
-  their standard pull request is merged (CNP-303), a service has a repoURL:
-  its repo's CI publishes imports/<project>/<app>/ci:main on each push to
-  main, and an updater follows that tag by digest into
-  deploy/values-<app>.yaml, so a push to main redeploys without the CMP.
+  their standard pull request is merged (CNP-303), a service has a repoURL
+  and releases like a template app: its repo's CI publishes
+  imports/<project>/<app>/ci:X.Y.Z on a vX.Y.Z tag, and this updater writes
+  that tag into deploy/env/prod/<app>.yaml of the repo's cnp/deploy branch,
+  never into the developer's main. "main:cnp/deploy" checks out main only to
+  create cnp/deploy if it is missing; once it exists the updater commits on
+  it directly (v1.2.0 pkg/argocd/git.go), so main's changes reach Argo CD
+  through deploy/values-<app>.yaml at HEAD, not through this branch.
+  forceUpdate: the app runs the import workflow's image until the first
+  release, which is not this image name and would otherwise be skipped.
   Backing apps run catalogue images and get no updater.
 */}}
 {{- range $app := .Values.apps }}
 {{- if and (eq $app.type "service") $app.repoURL }}
-{{- $image := printf "ghcr.io/3-istor/imports/%s/%s/ci" $.Values.project $app.name }}
 ---
 apiVersion: argocd-image-updater.argoproj.io/v1alpha1
 kind: ImageUpdater
@@ -37,9 +42,11 @@ spec:
     - namePattern: {{ printf "%s-%s-app" $.Values.project $app.name | quote }}
       images:
         - alias: app-image
-          imageName: {{ printf "%s:main" $image | quote }}
+          imageName: {{ printf "ghcr.io/3-istor/imports/%s/%s/ci" $.Values.project $app.name | quote }}
           commonUpdateSettings:
-            updateStrategy: digest
+            updateStrategy: semver
+            forceUpdate: true
+            allowTags: 'regexp:^[0-9]+\.[0-9]+\.[0-9]+$'
             pullSecret: {{ ternary (printf "pullsecret:%s-%s/app-registry" $.Values.project $app.name) "pullsecret:argocd/cnp-cloud-app-registry" (eq $.Values.targetCloud "onprem") | quote }}
           manifestTargets:
             helm:
@@ -49,8 +56,8 @@ spec:
         method: "git:secret:argocd/cnp-portal-github-creds"
         gitConfig:
           repository: {{ $app.repoURL | quote }}
-          branch: main
-          writeBackTarget: {{ printf "helmvalues:/deploy/values-%s.yaml" $app.name | quote }}
+          branch: "main:cnp/deploy"
+          writeBackTarget: {{ printf "helmvalues:/deploy/env/prod/%s.yaml" $app.name | quote }}
 {{- end }}
 {{- end }}
 {{- range $app := .Values.apps }}
