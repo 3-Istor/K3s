@@ -1,8 +1,8 @@
 # A tenant pod may run any public image, but org images only from its own
 # project (CNP-294): ghcr.io/3-istor holds private images that every node can
 # pull, so without this a tenant could run another project's code and read
-# what is baked into it. Audit until a day of reports shows no legitimate
-# violation, then switch validationActions to [Deny].
+# what is baked into it. Deny since 2026-11-20 (0 violations in Audit), before
+# the nodes pull through Zot, which serves private org images to any pod.
 #
 # Own images, from the namespace <project>-<app>[-stg]:
 #   ghcr.io/3-istor/imports/<project>/...   imported apps (CMP IMPORT_IMAGE_PREFIX)
@@ -21,7 +21,7 @@ metadata:
   name: restrict-tenant-images
 spec:
   validationActions:
-    - Audit
+    - Deny
   matchConstraints:
     namespaceSelector:
       matchExpressions:
