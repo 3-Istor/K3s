@@ -44,14 +44,21 @@ spec:
               # have no repoURL.
               elementsYaml: |
                 {{- $out := list -}}
-                {{- range $app := dig "apps" (list) .spec -}}
+                {{- $apps := dig "apps" (list) .spec -}}
+                {{- range $app := $apps -}}
+                  {{- $callers := list -}}
+                  {{- range $other := $apps -}}
+                    {{- range $link := dig "dependsOn" (list) $other -}}
+                      {{- if eq $link.app $app.name -}}{{- $callers = append $callers $other.name -}}{{- end -}}
+                    {{- end -}}
+                  {{- end -}}
                   {{- $components := list "app" -}}
                   {{- if eq $app.type "fullstack" -}}{{- $components = list "frontend" "backend" -}}{{- end -}}
                   {{- $envs := dig "environments" (list "prod") $app -}}
                   {{- $staged := has "staging" $envs -}}
                   {{- range $env := $envs -}}
                     {{- range $c := $components -}}
-                      {{- $out = append $out (dict "name" $app.name "type" $app.type "repoURL" (dig "repoURL" "" $app) "component" $c "env" $env "suffix" (ternary "" "-stg" (eq $env "prod")) "staged" $staged "public" (dig "public" false $app) "hostname" (dig "hostnames" $env "" $app) "dependsOn" (dig "dependsOn" (list) $app)) -}}
+                      {{- $out = append $out (dict "name" $app.name "type" $app.type "repoURL" (dig "repoURL" "" $app) "component" $c "env" $env "suffix" (ternary "" "-stg" (eq $env "prod")) "staged" $staged "public" (dig "public" false $app) "hostname" (dig "hostnames" $env "" $app) "dependsOn" (dig "dependsOn" (list) $app) "allowFrom" ($callers | uniq | sortAlpha)) -}}
                     {{- end -}}
                   {{- end -}}
                 {{- end -}}
@@ -62,9 +69,17 @@ spec:
   # prod one). The patch replaces the whole sources list, so it repeats it.
   # Apps without staging get no patch and render exactly as before.
   #
-  # Imported apps (service, backing) never read their source repo (D1): the
-  # chart comes from infra-templates and the values from cnp-projects
-  # apps/<project>/<app>/values.yaml, written by the CMP. The inline values,
+  # Imported apps (service, backing) take their values from cnp-projects
+  # apps/<project>/<app>/values.yaml, written by the CMP, until their standard
+  # pull request is merged (CNP-303): the CMP then sets repoURL on the app and
+  # its values are deploy/values-<app>.yaml of the repository at HEAD, like a
+  # template app's, plus deploy/env/prod/<app>.yaml of its cnp/deploy branch,
+  # where the image lives: Argo CD Image Updater writes released versions
+  # there, never to the developer's main. A backing app, or a service the CI
+  # does not build, has no such file. Such an app gets network.allowFrom
+  # inline from the record (the apps whose dependsOn names it), the CMP no
+  # longer writing its values.
+  # The chart comes from infra-templates. The inline values,
   # which win over the file, carry what the registry decides: names, links
   # from dependsOn, the route only for a public app (on the project's own
   # Gateway and connector, like template apps since D-05/D-06), and the pull secret
@@ -106,6 +121,9 @@ spec:
     {{- $_ := set $ingress "gateway" (dict "name" (printf "%s-gateway" .metadata.name) "namespace" (printf "%s-system" .metadata.name)) }}
     {{- end }}
     {{- $values := dict "project_name" .metadata.name "app_name" .name "fullnameOverride" .name "links" $links "ingress" $ingress }}
+    {{- if .repoURL }}
+    {{- $_ := set $values "network" (dict "allowFrom" .allowFrom) }}
+    {{- end }}
     {{- if eq .type "backing" }}
     {{- $_ := set $values "imagePullSecrets" (list) }}
     {{- $_ := set $values "registrySecret" (dict "create" false) }}
@@ -119,8 +137,15 @@ spec:
           targetRevision: HEAD
           path: .
           helm:
+            {{- if .repoURL }}
+            ignoreMissingValueFiles: true
+            valueFiles:
+              - '$values/deploy/values-{{ .name }}.yaml'
+              - '$image/deploy/env/prod/{{ .name }}.yaml'
+            {{- else }}
             valueFiles:
               - '$values/apps/{{ .metadata.name }}/{{ .name }}/values.yaml'
+            {{- end }}
             values: {{ $values | toJson | toJson }}
             parameters:
               - {name: cnp.project, value: "{{ .metadata.name }}", forceString: true}
@@ -128,9 +153,20 @@ spec:
               - {name: cnp.environment, value: "{{ .env }}", forceString: true}
               - {name: cnp.type, value: "{{ .type }}", forceString: true}
               - {name: project_name, value: "{{ .metadata.name }}", forceString: true}
+        {{- if .repoURL }}
+        - repoURL: "{{ .repoURL }}"
+          targetRevision: HEAD
+          path: ""
+          ref: values
+        - repoURL: "{{ .repoURL }}"
+          targetRevision: cnp/deploy
+          path: ""
+          ref: image
+        {{- else }}
         - repoURL: https://github.com/3-Istor/cnp-projects.git
           targetRevision: main
           ref: values
+        {{- end }}
     {{- end }}
   template:
     metadata:
