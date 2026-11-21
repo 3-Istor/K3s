@@ -26,6 +26,27 @@ touched. The audit log is read by Fluent Bit from
 
 Daily trim: install `fstrim.timer.d/daily.conf` to `/etc/systemd/system/fstrim.timer.d/`, then `sudo systemctl daemon-reload && sudo systemctl restart fstrim.timer`.
 
+## Datastore
+
+The server runs embedded etcd (`cluster-init: true`) since 2026-11-21. It was
+converted in place from kine/SQLite: K3s migrates `db/state.db` into
+`db/etcd/` on the first start with `cluster-init`, and renames the old file
+to `state.db.migrated`. Never remove `cluster-init` again: K3s would start on
+the old SQLite file and lose everything written since.
+
+etcd fsyncs every write, and the node disk is an RBD image on Ceph: watch
+`etcd_disk_wal_fsync_duration_seconds` on `127.0.0.1:2381/metrics` (about
+40 ms on average at migration time).
+
+Restore a snapshot:
+
+```bash
+sudo systemctl stop k3s
+sudo k3s server --cluster-reset \
+  --cluster-reset-restore-path=/var/lib/rancher/k3s/server/db/snapshots/<name>
+sudo systemctl start k3s
+```
+
 ## local-path is not the default StorageClass
 
 Persistent volumes live on Ceph (`ceph-rbd`, pool `kubernetes`, CNP-315).
