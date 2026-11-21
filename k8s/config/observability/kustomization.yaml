@@ -91,7 +91,7 @@ helmCharts:
   # Loki (Logs)
   - name: loki
     repo: https://grafana.github.io/helm-charts
-    version: 7.3.0
+    version: 7.5.0
     releaseName: loki
     namespace: observability
     valuesFile: values-loki.yaml
@@ -107,7 +107,7 @@ helmCharts:
   # cutover.
   - name: victoria-metrics-cluster
     repo: https://victoriametrics.github.io/helm-charts/
-    version: 0.48.0
+    version: 0.54.0
     releaseName: vm
     namespace: observability
     valuesFile: values-vm.yaml
