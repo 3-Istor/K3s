@@ -1,6 +1,5 @@
-# Ships pod logs and the K3s audit log to VictoriaLogs (D4, D5), next to
-# Alloy during the 14-day dual run. Rollback: delete this file's entry in
-# kustomization.yaml; Alloy and Loki never depended on it.
+# Ships pod logs and the K3s audit log to VictoriaLogs (D4, D5). It reads
+# the node's log files, never the Kubernetes API.
 #
 # Fluent Bit rather than vlagent: vlagent merges the fields of a JSON log line
 # into the same record as the Kubernetes metadata, so a pod writing
@@ -146,7 +145,6 @@ data:
       ["argocd/argocd-notifications-controller"] = true,
       ["vault-secrets-operator/vault-secrets-operator"] = true,
       ["observability/loki"] = true,
-      ["observability/alloy"] = true,
     }
 
     local function level_of(record)

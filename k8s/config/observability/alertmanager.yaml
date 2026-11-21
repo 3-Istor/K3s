@@ -78,11 +78,6 @@ spec:
           group_interval: 1m
           repeat_interval: 5m
           continue: false
-        # CNP-185 V2 dual run: the LogsQL copies of the Loki log rules show
-        # in Alertmanager but are not sent. Remove with the Loki ruler.
-        - receiver: blackhole
-          matchers: [logs_backend="vlogs"]
-          continue: false
         # Platform alerts only. The operator appends the CMP's project
         # routes after these, so anything here that matched a cnp_project
         # alert would take it from its project.
@@ -102,7 +97,6 @@ spec:
             - receiver: discord-critical
               matchers: [severity="critical"]
     receivers:
-      - name: blackhole
       - name: deadmansswitch
         webhook_configs:
           - url_file: /etc/vm/secrets/alertmanager-deadmansswitch/PING_URL

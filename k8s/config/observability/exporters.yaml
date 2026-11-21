@@ -885,9 +885,6 @@ spec:
               app.kubernetes.io/name: prometheus
         - podSelector:
             matchLabels:
-              app.kubernetes.io/name: alloy
-        - podSelector:
-            matchLabels:
               app.kubernetes.io/name: vmagent
               app.kubernetes.io/instance: cnp
       ports:
@@ -1154,9 +1151,6 @@ spec:
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: prometheus
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: alloy
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: vmagent

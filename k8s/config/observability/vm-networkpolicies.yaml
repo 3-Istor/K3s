@@ -63,9 +63,6 @@ spec:
   policyTypes: [Ingress]
   ingress:
     - from:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: alloy
         # Rollback copy of every sample during the CNP-185 V1 double write.
         - podSelector:
             matchLabels:

@@ -27,9 +27,6 @@ spec:
               app.kubernetes.io/name: grafana
         - podSelector:
             matchLabels:
-              app.kubernetes.io/name: alloy
-        - podSelector:
-            matchLabels:
               app.kubernetes.io/name: vmagent
               app.kubernetes.io/instance: cnp
         # Alerts tab, silences from the portal, the agents' policy checks.

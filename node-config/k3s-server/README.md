@@ -21,8 +21,8 @@ ssh -i ~/.ssh/kp_admin_openstack -J pae-node-1 ubuntu@192.168.1.212 \
 ```
 
 The restart stops the API server for about a minute; running pods are not
-touched. The audit log is read by Alloy from
-`/var/lib/rancher/k3s/server/logs/audit.log` and kept 30 days in Loki.
+touched. The audit log is read by Fluent Bit from
+`/var/lib/rancher/k3s/server/logs/audit.log` and shipped to VictoriaLogs.
 
 Daily trim: install `fstrim.timer.d/daily.conf` to `/etc/systemd/system/fstrim.timer.d/`, then `sudo systemctl daemon-reload && sudo systemctl restart fstrim.timer`.
 

@@ -1,5 +1,5 @@
 # ArgoCD is installed from upstream manifests, which ship metrics Services but
-# no ServiceMonitor. Alloy discovers these to feed the ArgoCD dashboard.
+# no ServiceMonitor. vmagent discovers these to feed the ArgoCD dashboard.
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
