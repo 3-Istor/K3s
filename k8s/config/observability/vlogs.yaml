@@ -18,13 +18,15 @@ spec:
     resources:
       requests:
         storage: 20Gi
+  # 512Mi was OOM-killed 19 times on 2026-11-21 by hour-wide queries during
+  # the Loki backfill; idle use is ~250Mi.
   resources:
     requests:
       cpu: 50m
       memory: 512Mi
     limits:
       cpu: "1"
-      memory: 512Mi
+      memory: 1Gi
   extraEnvs:
     - name: GOMAXPROCS
       value: "1"
