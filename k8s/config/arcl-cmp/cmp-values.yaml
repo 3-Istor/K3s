@@ -346,23 +346,6 @@ extraEnv:
         name: arcl-cmp-secret
         key: keycloak-client-secret
 
-  # --- Activity tab: Loki through its authenticating gateway ---
-  - name: LOKI_URL
-    value: "http://loki-gateway.observability.svc.cluster.local"
-  - name: LOKI_USERNAME
-    value: cmp
-  - name: LOKI_PASSWORD
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-loki
-        key: loki-password
-  # Handed to each project's Grafana org as its Loki datasource credential.
-  - name: LOKI_GRAFANA_PROJECTS_PASSWORD
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-loki
-        key: grafana-projects-loki-password
-
   # --- Per-project metrics isolation (vmauth users derived from this key) ---
   - name: METRICS_PROJECT_KEY
     valueFrom:

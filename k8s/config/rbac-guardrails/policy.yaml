@@ -9,7 +9,7 @@
 # (harmless in one namespace, cluster-admin through a ClusterRoleBinding).
 # Add a ClusterRole here when a chart introduces one of those verbs.
 #
-# Audit first: failures land in the API audit log (Loki, {job="k8s-audit"}),
+# Audit first: failures land in the API audit log (VictoriaLogs, job:k8s-audit),
 # annotation validation.policy.admission.k8s.io/validation_failure. Once a
 # week shows no legitimate caller, set validationActions to [Deny] and
 # failurePolicy to Fail.

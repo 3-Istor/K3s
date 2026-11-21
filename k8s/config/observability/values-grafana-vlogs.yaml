@@ -1,6 +1,5 @@
-# CNP-185 V2: VictoriaLogs in org 1, next to the Loki datasource during the
-# dual run. Merged over values-grafana.yaml (maps merge, so this datasources
-# key adds a file instead of replacing the list).
+# VictoriaLogs in org 1. Merged over values-grafana.yaml (maps merge, so this
+# datasources key adds a file instead of replacing the list).
 env:
   # Installed before Grafana starts, so the provisioned datasource below
   # finds its plugin.

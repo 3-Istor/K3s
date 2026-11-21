@@ -69,7 +69,7 @@ spec:
         # the CMP (CNP-124). Admin events carry ids only: the group ids come
         # from `terraform output -raw elevated_group_ids_regex`, the actors are
         # the 3-istor-openid and cmp-provisioner service accounts. Update them
-        # if those groups or clients are recreated, here and in the Loki rule.
+        # if those groups or clients are recreated, here.
         - alert: KeycloakElevatedGroupChangedOutsideCmp
           expr: |
             _time:5m {namespace=~"keycloak|.+-system"} "resourceType=\"GROUP_MEMBERSHIP\""
@@ -123,8 +123,8 @@ metadata:
 spec:
   groups:
     # Watched from the logs on purpose: a read-only store cannot store the
-    # metrics that would alert about itself (vmstorage went silent for 5 days
-    # on 2026-10-05 before this rule existed). VMSingle replaces vmstorage.
+    # metrics that would alert about itself (the old vmstorage went silent for
+    # 5 days on 2026-10-05 before this rule existed).
     - name: platform-metrics
       type: vlogs
       interval: 1m

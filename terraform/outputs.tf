@@ -15,11 +15,11 @@ output "oidc_issuer_url" {
 }
 
 # For the KeycloakElevatedGroupChangedOutsideCmp rule in
-# k8s/config/observability/loki-security-rules.yaml: admin events name groups
+# k8s/config/observability/vlogs-rules.yaml: admin events name groups
 # and actors by id only.
 output "elevated_group_ids_regex" {
   value       = join("|", sort([for g in keycloak_group.elevated : g.id]))
-  description = "Ids of the elevated-* groups, as a LogQL regex"
+  description = "Ids of the elevated-* groups, as a regex for the LogsQL rule"
 }
 
 output "cmp_service_account_user_id" {

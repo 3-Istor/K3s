@@ -9,12 +9,9 @@ transformers:
 resources:
   - namespace.yaml
   - secrets.yaml
-  - loki-bucket.yaml
-  - loki-security-rules.yaml
-  - loki-log-rules.yaml
+  - loki-archive-buckets.yaml
   - audit-archive.yaml
   - secret-age.yaml
-  - loki-networkpolicy.yaml
   - cmp-archive-status.yaml
   - vmauth-projects.yaml
   - vm-networkpolicies.yaml
@@ -24,6 +21,7 @@ resources:
   - vmagent.yaml
   - vmagent-scrapes.yaml
   - vmauth.yaml
+  - vm-service-names.yaml
   # V2 logs (CNP-185): VictoriaLogs, Fluent Bit, vmalert for LogsQL rules
   - vlogs.yaml
   - fluent-bit.yaml
@@ -74,11 +72,6 @@ configMapGenerator:
     files:
       - otelcol-gateway/config.yaml
 
-# CNP-185 V1 cutover: points the old VictoriaMetrics Service names at the new
-# stack. Comment out to roll back.
-patches:
-  - path: cutover-v1.yaml
-
 helmGlobals:
   chartHome: ../../../charts
 
@@ -88,29 +81,12 @@ helmCharts:
     namespace: observability
     valuesFile: values-secure-route.yaml
 
-  # Loki (Logs)
-  - name: loki
-    repo: https://grafana.github.io/helm-charts
-    version: 7.3.0
-    releaseName: loki
-    namespace: observability
-    valuesFile: values-loki.yaml
-
   - name: victoria-metrics-operator
     repo: https://victoriametrics.github.io/helm-charts/
     version: 0.68.2
     releaseName: vm-operator
     namespace: observability
     valuesFile: values-vm-operator.yaml
-
-  # VictoriaMetrics cluster, replaced by VMSingle: removed 14 days after the
-  # cutover.
-  - name: victoria-metrics-cluster
-    repo: https://victoriametrics.github.io/helm-charts/
-    version: 0.48.0
-    releaseName: vm
-    namespace: observability
-    valuesFile: values-vm.yaml
 
   # Grafana (Visualisation)
   - name: grafana

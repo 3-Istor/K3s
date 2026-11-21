@@ -29,7 +29,7 @@ data:
     python /scripts/summarize.py "$TOOL" "$TOOL_VERSION" "$TARGET" "$day" "$result" /work/result.json > /work/summary.json
     cat /work/summary.json
     # Rook only creates the secret once it reconciles the CephObjectStoreUser,
-    # which it skips while Ceph is unhealthy. The summary above stays in Loki;
+    # which it skips while Ceph is unhealthy. The summary above stays in VictoriaLogs;
     # failing makes ComplianceScanFailed fire.
     if [ -z "${Endpoint:-}" ]; then
       echo "no RGW credentials (secret rook-ceph-object-user-openstack-rgw-compliance-scans missing): $result not archived" >&2

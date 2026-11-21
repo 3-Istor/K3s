@@ -137,14 +137,13 @@ data:
     local debug_levels = { trace = true, debug = true, dbug = true }
     local info_levels = { trace = true, debug = true, dbug = true, info = true }
 
-    -- The chattiest platform containers measured on 2026-11-14 (Loki index
-    -- volume over 24h); their warnings and errors are kept.
+    -- The chattiest platform containers measured on 2026-11-14 (log volume
+    -- over 24h); their warnings and errors are kept.
     local warnings_only = {
       ["argocd/argocd-application-controller"] = true,
       ["argocd/argocd-repo-server"] = true,
       ["argocd/argocd-notifications-controller"] = true,
       ["vault-secrets-operator/vault-secrets-operator"] = true,
-      ["observability/loki"] = true,
     }
 
     local function level_of(record)
