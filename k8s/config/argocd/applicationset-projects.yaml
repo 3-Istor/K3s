@@ -122,7 +122,6 @@ spec:
             projectName: "{{ .metadata.name }}"
             targetCloud: "{{ .spec.targetCloud }}"
             deletionProtection: {{ dig "deletionProtection" false .spec }}
-            logRetention: "{{ dig "logRetention" "" .spec }}"
             features:
               appProject: false
               workloads: true

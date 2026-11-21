@@ -10,7 +10,7 @@ path "*" {
 #
 # This is a guardrail, not a wall: this policy still writes sys/policies and
 # identity, so an admin can grant themselves the rest. The audit device and
-# the Loki rules are what catch that.
+# the VictoriaLogs rules are what catch that.
 path "project-*" {
   capabilities = ["list"]
 }

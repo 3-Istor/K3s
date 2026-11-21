@@ -227,18 +227,6 @@ data:
               summary: "Scrape target {{ $labels.job }} ({{ $labels.instance }}) is down"
               description: "vmagent has been unable to scrape this target for 15 minutes."
 
-          - alert: LokiIngestionStalled
-            expr: |
-              sum(rate(loki_ingester_chunks_flushed_total{cluster="onprem"}[15m])) == 0
-              and
-              sum(rate(loki_distributor_lines_received_total{cluster="onprem"}[15m])) > 0
-            for: 15m
-            labels:
-              severity: critical
-            annotations:
-              summary: "Loki is receiving logs but flushing nothing to object storage"
-              description: "Ingestion is stalled, which usually means the S3 credentials or the bucket are broken."
-
           - alert: VMStorageInsertErrors
             expr: |
               sum(rate(vm_rows_ignored_total{cluster="onprem"}[10m])) > 0
@@ -247,7 +235,7 @@ data:
               severity: warning
             annotations:
               summary: "VictoriaMetrics is dropping rows"
-              description: "vmstorage is ignoring incoming samples, check vminsert and vmstorage logs."
+              description: "VMSingle is ignoring incoming samples, check its logs."
 
           - alert: AlertmanagerNotificationsFailing
             expr: |

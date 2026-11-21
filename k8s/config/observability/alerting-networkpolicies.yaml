@@ -17,11 +17,6 @@ spec:
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: vmalert
-        # Loki ruler (security log rules), until V2 removes it.
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: loki
-              app.kubernetes.io/component: single-binary
         - podSelector:
             matchLabels:
               app.kubernetes.io/name: grafana
