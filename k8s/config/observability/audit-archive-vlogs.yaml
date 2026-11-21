@@ -49,7 +49,8 @@ data:
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: audit-archive-vlogs
+  # The CMP's platform view reads this name (cmp-archive-status.yaml).
+  name: audit-archive
 spec:
   schedule: "7 * * * *"
   concurrencyPolicy: Forbid
