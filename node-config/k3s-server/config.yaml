@@ -19,3 +19,8 @@ kube-apiserver-arg:
 kubelet-arg:
   - "image-gc-high-threshold=60"
   - "image-gc-low-threshold=45"
+# Embedded etcd instead of kine/SQLite (2026-11-21): kine turns every list
+# and watch into LIKE scans that the server VM could not keep up with, and
+# its WAL grew to 1.5 GB in six hours. Snapshots: every 12 h, 5 kept, in
+# /var/lib/rancher/k3s/server/db/snapshots.
+cluster-init: true
