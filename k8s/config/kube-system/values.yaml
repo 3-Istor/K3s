@@ -94,7 +94,7 @@ hubble:
           memory: 64Mi
         limits:
           memory: 64Mi
-  # Observed edges for the CMP Topology view, scraped by Alloy on :9965.
+  # Observed edges for the CMP Topology view, scraped by vmagent on :9965.
   # Workload names repeat across project namespaces, so both metrics carry
   # the namespaces. reserved-identity names the non-pod ends (world, host,
   # kube-apiserver). verdict is already a built-in label of the flow metric.
@@ -105,8 +105,8 @@ hubble:
     enableOpenMetrics: false
     serviceMonitor:
       enabled: false
-  # Flows denied by a network policy, written to the agent's own log so Alloy
-  # ships them to Loki with everything else. Measured before enabling: zero
+  # Flows denied by a network policy, written to the agent's own log so Fluent
+  # Bit ships them to VictoriaLogs with everything else. Measured before enabling: zero
   # policy denials over the agents' flow buffers, so the volume is small.
   export:
     static:
