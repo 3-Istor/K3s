@@ -1,3 +1,6 @@
+# Loki was removed on 2026-11-21 (CNP-276) after its logs were copied into
+# VictoriaLogs (source=loki). Its buckets stay as raw archives; the storage
+# class retains them, so deleting a claim only drops its credentials.
 apiVersion: objectbucket.io/v1alpha1
 kind: ObjectBucketClaim
 metadata:
@@ -7,8 +10,7 @@ spec:
   storageClassName: ceph-bucket-retain
 ---
 # Loki's chunks from before it moved to the RGW (16/09 to 10/10/2026), copied
-# out of Garage when it was removed (CNP-189). Loki no longer reads them: kept
-# as an archive only, delete the claim when nobody needs them.
+# out of Garage when it was removed (CNP-189).
 apiVersion: objectbucket.io/v1alpha1
 kind: ObjectBucketClaim
 metadata:

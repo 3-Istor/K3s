@@ -1,5 +1,5 @@
-# One Alertmanager for every rule source (D15): vmalert, the Loki ruler,
-# Grafana and the CMP all keep posting to alertmanager:9093.
+# One Alertmanager for every rule source (D15): vmalert (metrics and LogsQL),
+# Grafana and the CMP all post to alertmanager:9093.
 #
 # Platform routes live here. Each project's routes are a
 # VMAlertmanagerConfig the CMP writes in cnp-observability, matching only its
@@ -152,8 +152,8 @@ data:
     {{- "" }}
     {{- end }}
 ---
-# The old name of the Helm chart's Service: vmalert (both), the Loki ruler,
-# Grafana's datasource and the CMP keep their URL.
+# The old name of the Helm chart's Service: vmalert (both), Grafana's
+# datasource and the CMP keep their URL.
 apiVersion: v1
 kind: Service
 metadata:
