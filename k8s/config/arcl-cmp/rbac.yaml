@@ -213,11 +213,13 @@ spec:
         request.namespace == "observability" &&
         request.name == "otelcol-gateway")
       message: The CMP only changes workloads in project namespaces.
+    # Scaling to 0 is the only other change: a move stops the source apps.
     - expression: >-
         object.spec.template.spec == oldObject.spec.template.spec &&
-        (has(object.spec.replicas) ? object.spec.replicas : 1) ==
-        (has(oldObject.spec.replicas) ? oldObject.spec.replicas : 1)
-      message: The CMP may only restart a workload, not change it.
+        ((has(object.spec.replicas) ? object.spec.replicas : 1) ==
+        (has(oldObject.spec.replicas) ? oldObject.spec.replicas : 1) ||
+        (has(object.spec.replicas) && object.spec.replicas == 0))
+      message: The CMP may only restart a workload or scale it to 0, not change it.
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
