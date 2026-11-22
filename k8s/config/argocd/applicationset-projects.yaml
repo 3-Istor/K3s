@@ -134,6 +134,9 @@ spec:
               tunnel: {{ dig "features" "tunnel" false .spec }}
               keycloak: {{ dig "features" "keycloak" false .spec }}
               egressIsolation: {{ dig "features" "egressIsolation" false .spec }}
+              {{- if dig "ai" "enabled" false .spec }}
+              ai: true
+              {{- end }}
             {{- $agents := dig "ai" "agents" (list) .spec }}
             apps:
             {{- range dig "apps" (list) .spec }}
