@@ -35,7 +35,7 @@ type fakeSandboxes struct {
 	acquireFn func() error
 }
 
-func (f *fakeSandboxes) Acquire(_ context.Context, template string, labels map[string]string) (string, string, error) {
+func (f *fakeSandboxes) Acquire(_ context.Context, template, _ string, labels map[string]string) (string, string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.templates = append(f.templates, template)

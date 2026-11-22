@@ -63,7 +63,12 @@ jobs:
       - name: Version
         id: version
         working-directory: .
-        run: echo "version=${GITHUB_REF_NAME#ai-runtime/v}" >> "$GITHUB_OUTPUT"
+        run: |
+          if [ "$RELEASE" = true ]; then
+            echo "version=${GITHUB_REF_NAME#ai-runtime/v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=ci" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         if: env.RELEASE == 'true'

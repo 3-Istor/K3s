@@ -74,9 +74,7 @@ func TestKubeSandboxes_WaitsForReadySandbox_OnTheTemplatePool(t *testing.T) {
 	t.Parallel()
 	api := &fakeAPI{}
 	k := newKube(t, api)
-	labels := map[string]string{"cnp.3istor.com/task": strings.Repeat("f", 32)}
-
-	claim, endpoint, err := k.Acquire(context.Background(), "python", labels)
+	claim, endpoint, err := k.Acquire(context.Background(), "python", "run-ffffffffffffffffffff", map[string]string{"cnp.3istor.com/project": "p"})
 
 	if err != nil {
 		t.Fatal(err)

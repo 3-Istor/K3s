@@ -103,9 +103,8 @@ type condition struct {
 	Status string `json:"status"`
 }
 
-// Acquire creates a SandboxClaim on the template's warm pool and waits until its sandbox is Ready.
-func (k *KubeSandboxes) Acquire(ctx context.Context, template string, labels map[string]string) (string, string, error) {
-	name := "run-" + labels["cnp.3istor.com/task"][:20]
+// Acquire creates SandboxClaim name on the template's warm pool and waits until its sandbox is Ready.
+func (k *KubeSandboxes) Acquire(ctx context.Context, template, name string, labels map[string]string) (string, string, error) {
 	claim := map[string]any{
 		"apiVersion": "extensions.agents.x-k8s.io/v1beta1",
 		"kind":       "SandboxClaim",

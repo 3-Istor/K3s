@@ -56,7 +56,7 @@ type Result struct {
 
 // Sandboxes hands out a ready sandbox for one run and frees it afterwards.
 type Sandboxes interface {
-	Acquire(ctx context.Context, template string, labels map[string]string) (claim, endpoint string, err error)
+	Acquire(ctx context.Context, template, name string, labels map[string]string) (claim, endpoint string, err error)
 	Release(ctx context.Context, claim string) error
 	NamespaceLabel(ctx context.Context, namespace, label string) (string, error)
 }
@@ -123,7 +123,7 @@ func (r *Runner) isolationOf(ctx context.Context, c caller) string {
 	}
 	iso, err := r.Sandboxes.NamespaceLabel(ctx, c.project+"-"+agent, IsolationLabel)
 	if err != nil {
-		r.Log.Warn("isolation lookup failed, using gvisor", "agent", c.agent, "err", err)
+		r.Log.Warn("isolation lookup failed, using gvisor", "err", err)
 		return "gvisor"
 	}
 	if iso == "kata" {
@@ -163,12 +163,12 @@ func (r *Runner) Run(ctx context.Context, callerJWT, code string, timeoutS int) 
 	}
 	sandboxToken, err := r.Exchanger.Exchange(ctx, callerJWT, "ai-gateway", "mcp-read")
 	if err != nil {
-		return nil, fmt.Errorf("token exchange for %s: %w", c.agent, err)
+		return nil, fmt.Errorf("token exchange: %w", err)
 	}
 	isolation := r.isolationOf(ctx, c)
 	task := newTaskID()
 	labels := map[string]string{"cnp.3istor.com/project": c.project, "cnp.3istor.com/agent": c.agent, "cnp.3istor.com/task": task}
-	claim, endpoint, err := r.Sandboxes.Acquire(ctx, r.Templates[isolation], labels)
+	claim, endpoint, err := r.Sandboxes.Acquire(ctx, r.Templates[isolation], "run-"+task[:20], labels)
 	if claim != "" {
 		defer func() {
 			// The caller may have gone: free the sandbox anyway.
@@ -180,7 +180,7 @@ func (r *Runner) Run(ctx context.Context, callerJWT, code string, timeoutS int) 
 		}()
 	}
 	if err != nil {
-		return nil, fmt.Errorf("sandbox for %s: %w", c.agent, err)
+		return nil, fmt.Errorf("sandbox: %w", err)
 	}
 
 	out, err := r.exec(ctx, endpoint, execRequest{
@@ -194,7 +194,8 @@ func (r *Runner) Run(ctx context.Context, callerJWT, code string, timeoutS int) 
 	if err != nil {
 		return nil, err
 	}
-	r.Log.Info("run_python done", "project", c.project, "agent", c.agent, "task", task, "runtime", isolation,
+	// Who ran it is on the gateway's traces and the SandboxClaim labels; logs keep the task only.
+	r.Log.Info("run_python done", "task", task, "runtime", isolation,
 		"exit_code", out.ExitCode, "artifacts", len(artifacts), "duration_ms", r.Now().Sub(start).Milliseconds())
 	return &Result{
 		Stdout: out.Stdout, Stderr: out.Stderr, ExitCode: out.ExitCode, Artifacts: artifacts,
