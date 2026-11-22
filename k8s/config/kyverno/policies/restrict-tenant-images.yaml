@@ -12,7 +12,8 @@
 # GitHub keeps repo names unique within the org. "imports" is refused as an
 # app name so a template namespace cannot claim every imported image.
 #
-# Platform images any tenant runs, public and built from the K3s repo:
+# One platform image any tenant runs, that exact repository only, and only
+# signed (ImageValidatingPolicy verify-gw-auth-proxy-signature, Deny):
 #   ghcr.io/3-istor/cnp-gw-auth-proxy        sidecar of every AI agent
 #
 # In-cluster registries are refused: Zot (10.43.0.50) mirrors ghcr.io with
