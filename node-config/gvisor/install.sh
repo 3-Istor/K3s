@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Installs gVisor on a K3s node. Idempotent. Run as root on the node; it does
-# not restart K3s (see README.md: one node at a time).
+# not restart K3s (see README.md: one node at a time). Upgrading only the
+# binaries needs no restart: each new sandbox starts the installed runsc.
 set -euo pipefail
 
 version=20261116.0
@@ -12,9 +13,13 @@ trap 'rm -rf "$work"' EXIT
 
 curl -fsSL -o "$work/gvisor.tar.zstd" "$url"
 echo "${sha512}  $work/gvisor.tar.zstd" | sha512sum -c --quiet
-tar --zstd -xf "$work/gvisor.tar.zstd" -C "$work" runsc containerd-shim-runsc-v1
+tar --zstd -xf "$work/gvisor.tar.zstd" -C "$work"
 
 install -m 0755 "$work/runsc" "$work/containerd-shim-runsc-v1" /usr/local/bin/
+# runsc starts its sentry and gofers from gvisor-bin/ next to itself.
+rm -rf /usr/local/bin/gvisor-bin
+install -d -m 0755 /usr/local/bin/gvisor-bin
+install -m 0755 "$work"/gvisor-bin/* /usr/local/bin/gvisor-bin/
 install -D -m 0644 "$here/runsc.toml" /etc/containerd/runsc.toml
 install -D -m 0644 "$here/gvisor.toml" \
   /var/lib/rancher/k3s/agent/etc/containerd/config-v3.toml.d/gvisor.toml
