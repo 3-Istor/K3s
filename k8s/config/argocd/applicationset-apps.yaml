@@ -88,6 +88,9 @@ spec:
   # does not build, has no such file. Such an app gets network.allowFrom
   # inline from the record (the apps whose dependsOn names it), the CMP no
   # longer writing its values.
+  # Agent and mcp apps (AI landing zone) take the same path: an agent renders
+  # kagent objects from its agent: values and has no image of its own; an mcp
+  # app runs its image through kmcp and releases like a service.
   # The chart comes from infra-templates. The inline values,
   # which win over the file, carry what the registry decides: names, links
   # from dependsOn, the route only for a public app (on the project's own
@@ -132,7 +135,7 @@ spec:
           targetRevision: HEAD
           path: ""
           ref: values
-    {{- else if or (eq .type "service") (eq .type "backing") }}
+    {{- else if has .type (list "service" "backing" "agent" "mcp") }}
     {{- $links := list }}
     {{- range .dependsOn }}
     {{- $links = append $links (dict "alias" (dig "alias" .app .) "app" .app "port" .port) }}
@@ -147,7 +150,7 @@ spec:
     {{- if .repoURL }}
     {{- $_ := set $values "network" (dict "allowFrom" .allowFrom) }}
     {{- end }}
-    {{- if eq .type "backing" }}
+    {{- if has .type (list "backing" "agent") }}
     {{- $_ := set $values "imagePullSecrets" (list) }}
     {{- $_ := set $values "registrySecret" (dict "create" false) }}
     {{- else }}
@@ -165,7 +168,7 @@ spec:
             ignoreMissingValueFiles: true
             valueFiles:
               - '$values/deploy/values-{{ .name }}.yaml'
-              {{- if eq .type "service" }}
+              {{- if has .type (list "service" "mcp") }}
               - '$release/apps/{{ .metadata.name }}/{{ .name }}/release.yaml'
               {{- end }}
             {{- else }}
