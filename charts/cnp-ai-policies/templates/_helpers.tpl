@@ -40,6 +40,8 @@ project's, web_search needs spec.ai.webSearch.
     {{- end -}}
   {{- end -}}
   {{- $name := .name -}}
+  {{- /* A scheduled agent triggers itself through its own A2A route. */ -}}
+  {{- $callers = append $callers (printf "agent-%s-%s" $p .name) -}}
   {{- range $agents -}}
     {{- if has $name (dig "calls" (list) .) -}}{{- $callers = append $callers (printf "agent-%s-%s" $p .name) -}}{{- end -}}
   {{- end -}}

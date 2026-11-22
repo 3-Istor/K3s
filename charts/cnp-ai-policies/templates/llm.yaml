@@ -107,8 +107,10 @@ spec:
           expression: 'has(llmRequest.max_tokens) ? math.least(int(llmRequest.max_tokens), {{ $gw.maxTokens }}) : {{ $gw.maxTokens }}'
         - field: model
           expression: '{{ $model }}'
+        # The model's effort is a ceiling: an agent may ask for less with the
+        # x-cnp-effort header (its ModelConfig), never for more.
         - field: output_config
-          expression: 'default(llmRequest.output_config, {}).merge({"effort": {{ toJson $gw.effortByModel }}[{{ $model }}]})'
+          expression: 'default(llmRequest.output_config, {}).merge({"effort": {{ toJson $gw.effortByModel }}[{{ $model }}].with(cap, string(default(request.headers.raw()["x-cnp-effort"][0], cap)).with(req, req in {{ toJson $gw.effortRank }} && {{ toJson $gw.effortRank }}[req] <= {{ toJson $gw.effortRank }}[cap] ? req : cap))})'
         # web_search is a server tool billed by Anthropic: kept only for the
         # agents granted it, silently removed for the others.
         - field: tools
