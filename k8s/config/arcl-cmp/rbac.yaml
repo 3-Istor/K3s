@@ -306,8 +306,8 @@ roleRef:
   name: cmp-prepuller
   apiGroup: rbac.authorization.k8s.io
 ---
-# The CMP may only create image pre-pull Pods: project namespaces, no volumes,
-# no service account token, no host namespaces, a fixed no-op command.
+# The CMP may only create and delete image pre-pull Pods: project namespaces,
+# no volumes, no service account token, no host namespaces, a fixed no-op command.
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata:
@@ -319,18 +319,25 @@ spec:
       - apiGroups: [""]
         apiVersions: ["v1"]
         resources: ["pods"]
-        operations: ["CREATE"]
+        operations: ["CREATE", "DELETE"]
   matchConditions:
     - name: cmp-service-account
       expression: request.userInfo.username == "system:serviceaccount:arcl-cmp:arcl-cmp"
   validations:
     - expression: >-
+        request.operation != "DELETE" ||
+        (has(oldObject.metadata.labels) &&
+        "cnp.3istor.com/prepull" in oldObject.metadata.labels)
+      message: The CMP only deletes its pre-pull Pods.
+    - expression: >-
+        request.operation == "DELETE" || (
         has(namespaceObject.metadata.labels) &&
         "cnp.3istor.com/project" in namespaceObject.metadata.labels &&
         has(object.metadata.labels) &&
-        "cnp.3istor.com/prepull" in object.metadata.labels
+        "cnp.3istor.com/prepull" in object.metadata.labels)
       message: The CMP only creates pre-pull Pods, in project namespaces.
     - expression: >-
+        request.operation == "DELETE" || (
         has(object.spec.nodeName) && object.spec.nodeName != "" &&
         has(object.spec.automountServiceAccountToken) &&
         object.spec.automountServiceAccountToken == false &&
@@ -340,9 +347,10 @@ spec:
         !(has(object.spec.hostNetwork) && object.spec.hostNetwork) &&
         !(has(object.spec.hostPID) && object.spec.hostPID) &&
         !(has(object.spec.hostIPC) && object.spec.hostIPC) &&
-        object.spec.containers.size() == 1
+        object.spec.containers.size() == 1)
       message: A pre-pull Pod is pinned to a node and has no volumes, token or host namespaces.
     - expression: >-
+        request.operation == "DELETE" || (
         object.spec.containers[0].command == ["sh", "-c", "true"] &&
         !has(object.spec.containers[0].args) &&
         !has(object.spec.containers[0].env) &&
@@ -351,7 +359,7 @@ spec:
         !has(object.spec.containers[0].ports) &&
         (!has(object.spec.containers[0].securityContext) ||
         !has(object.spec.containers[0].securityContext.privileged) ||
-        object.spec.containers[0].securityContext.privileged == false)
+        object.spec.containers[0].securityContext.privileged == false))
       message: A pre-pull Pod only runs a no-op command.
 ---
 apiVersion: admissionregistration.k8s.io/v1
