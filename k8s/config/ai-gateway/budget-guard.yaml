@@ -64,7 +64,7 @@ spec:
           env:
             # Platform cap in USD. Keep ratelimit/config.yaml platform limit
             # equal to this x 1 000 000.
-            - {name: CAP_USD, value: "5"}
+            - {name: CAP_USD, value: "0.000001"}
             - {name: INTERVAL_S, value: "15"}
             - name: POD_NAMESPACE
               valueFrom:
