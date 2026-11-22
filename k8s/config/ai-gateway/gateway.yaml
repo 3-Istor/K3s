@@ -22,6 +22,11 @@ spec:
   deployment:
     spec:
       replicas: 2
+      template:
+        spec:
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
   modelCatalog:
     sources:
       - configMap:
