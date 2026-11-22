@@ -69,8 +69,11 @@ helmCharts:
         enabled: true
         models: [claude-haiku-5-5, claude-sonnet-5-5]
         webSearch: false
+        # Their Keycloak client ids are the bare names, not app-<project>-<app>.
         apps:
           - name: cmp-ai
+            azp: cmp-ai
             dailyTokenBudget: 500000
           - name: ai-gateway-smoke
+            azp: ai-gateway-smoke
             dailyTokenBudget: 50000
