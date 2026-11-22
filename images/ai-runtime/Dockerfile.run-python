@@ -1,0 +1,14 @@
+FROM golang:1.26.5 AS build
+ARG VERSION=dev
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY cmd ./cmd
+COPY internal ./internal
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o /out/run-python ./cmd/run-python
+
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /out/run-python /run-python
+USER 65532:65532
+EXPOSE 3000
+ENTRYPOINT ["/run-python"]

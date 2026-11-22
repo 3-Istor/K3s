@@ -36,3 +36,4 @@ resources:
   - opencost.yaml
   - compliance.yaml
   - zot.yaml
+  - sandbox-runtimes.yaml

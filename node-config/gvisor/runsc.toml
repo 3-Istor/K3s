@@ -1,0 +1,7 @@
+binary_name = "/usr/local/bin/runsc"
+
+[runsc_config]
+  # The VMs have /dev/kvm, but systrap needs no device and is gVisor's default.
+  platform = "systrap"
+  # K3s runs runc with SystemdCgroup = true; runsc must use the same driver.
+  systemd-cgroup = "true"
