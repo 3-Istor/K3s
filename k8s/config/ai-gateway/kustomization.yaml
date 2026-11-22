@@ -12,7 +12,7 @@ resources:
   - ratelimit.yaml
   - budget-guard.yaml
   - networkpolicies.yaml
-  - scrape.yaml
+  - artifacts.yaml
 
 configMapGenerator:
   - name: ratelimit-config

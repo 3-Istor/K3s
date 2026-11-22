@@ -1,0 +1,102 @@
+# AI landing zone: the metrics contract the CMP reads (names are fixed, the
+# CMP reads only these) and the platform AI alerts. Sources: the agentgateway
+# proxy in ai-gateway (labels azp, project, tool, decision added by
+# AgentgatewayPolicy ai-gateway-telemetry) and budget-guard.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: ai-gateway
+  labels:
+    cnp.3istor.com/rules: metrics
+spec:
+  groups:
+    - name: ai-gateway.records
+      interval: 30s
+      rules:
+        - record: cnp:ai_tokens_total
+          expr: |
+            sum by (project, azp, model, direction) (
+              label_replace(
+                label_replace(
+                  agentgateway_gen_ai_client_token_usage_sum{gateway="ai-gateway/ai-gateway", gen_ai_token_type=~"input|output"},
+                  "model", "$1", "gen_ai_response_model", "(.+)"),
+                "direction", "$1", "gen_ai_token_type", "(.+)")
+              or
+              label_replace(
+                label_replace(
+                  agentgateway_gen_ai_client_token_usage_sum{gateway="ai-gateway/ai-gateway", gen_ai_token_type=~"cache.*"},
+                  "model", "$1", "gen_ai_response_model", "(.+)"),
+                "direction", "cache", "gen_ai_token_type", ".*")
+            )
+        # Tokens only. Web searches are in the platform spend
+        # (cnp:ai_global_spend_usd), not in this per-agent figure.
+        - record: cnp:ai_cost_usd_total
+          expr: |
+            sum by (project, azp, model) (
+              label_replace(
+                agentgateway_gen_ai_client_cost_usd_total{gateway="ai-gateway/ai-gateway"},
+                "model", "$1", "gen_ai_response_model", "(.+)")
+            )
+        - record: cnp:ai_requests_total
+          expr: |
+            sum by (project, azp, status) (
+              agentgateway_requests_total{gateway="ai-gateway/ai-gateway", project!="none"}
+            )
+        - record: cnp:ai_refusals_total
+          expr: |
+            sum by (project, azp, reason) (
+              label_replace(
+                sum by (project, azp, decision) (
+                  agentgateway_requests_total{gateway="ai-gateway/ai-gateway", decision=~"budget|policy|ratelimit|guardrail"}
+                ),
+                "reason", "$1", "decision", "(.+)")
+            )
+        - record: cnp:ai_tool_calls_total
+          expr: |
+            sum by (project, azp, tool, decision) (
+              agentgateway_mcp_requests_total{gateway="ai-gateway/ai-gateway", method="tools/call"}
+            )
+        - record: cnp:ai_global_spend_usd
+          expr: max(cnp_ai_global_spend_usd{namespace="ai-gateway"})
+        - record: cnp:ai_global_budget_usd
+          expr: max(cnp_ai_global_budget_usd{namespace="ai-gateway"})
+
+    - name: ai-gateway.alerts
+      rules:
+        - alert: AIGlobalBudgetHigh
+          expr: cnp:ai_global_spend_usd / cnp:ai_global_budget_usd >= 0.8 < 1
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Budget IA de la plateforme à {{ $value | humanizePercentage }}"
+            description: "La dépense IA cumulée atteint 80 % du plafond plateforme. À 100 %, la gateway IA répond 429 à tous les agents."
+            runbook_url: https://github.com/3-Istor/cnp-docs/blob/main/docs/07-ai-landing-zone/06-finops-ia.md
+        - alert: AIGlobalBudgetExhausted
+          expr: cnp:ai_global_spend_usd / cnp:ai_global_budget_usd >= 1
+          for: 0m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Budget IA de la plateforme atteint : la gateway IA refuse les appels"
+            description: "Dépense cumulée {{ $value | humanizePercentage }} du plafond. Les appels LLM et A2A reçoivent 429 ai_budget_exhausted. Relever CAP_USD (budget-guard) et la limite platform de ratelimit, ou remettre la dépense à zéro."
+            runbook_url: https://github.com/3-Istor/cnp-docs/blob/main/docs/07-ai-landing-zone/06-finops-ia.md
+        - alert: AIBudgetGuardDown
+          expr: |
+            absent(cnp_ai_budget_guard_last_success_timestamp_seconds{namespace="ai-gateway"})
+            or time() - max(cnp_ai_budget_guard_last_success_timestamp_seconds{namespace="ai-gateway"}) > 120
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "budget-guard ne mesure plus la dépense IA"
+            description: "Sans lui, le plafond natif bloque toujours, mais sans message clair ni alerte à 80 %."
+        - alert: AIGatewayRateLimitUnavailable
+          expr: |
+            sum(rate(agentgateway_requests_total{gateway="ai-gateway/ai-gateway", status="500", reason="RateLimit"}[5m])) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Gateway IA : le service de rate limit ne répond plus (fail-closed)"
+            description: "Les appels LLM sont refusés en 500 tant que ratelimit ou son Redis (ns ai-gateway) ne répond pas."

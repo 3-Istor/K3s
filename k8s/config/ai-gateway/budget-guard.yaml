@@ -44,6 +44,11 @@ spec:
   template:
     metadata:
       labels: *labels
+      # Scraped by the platform's annotated-pods job, like the gateway proxy.
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: /metrics
     spec:
       serviceAccountName: budget-guard
       securityContext:
