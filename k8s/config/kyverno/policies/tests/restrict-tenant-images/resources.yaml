@@ -1,0 +1,197 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: own-import
+  namespace: epitweet-user-service
+spec:
+  containers:
+    - name: app
+      image: ghcr.io/3-istor/imports/epitweet/user-service@sha256:32ca39e021b327dcd74b283f131d72b3a7900b805aa1c77a277b88d7e5adf220
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: backing-and-cnpg
+  namespace: epitweet-user-service
+spec:
+  initContainers:
+    - name: bootstrap-controller
+      image: ghcr.io/cloudnative-pg/cloudnative-pg:1.28.0
+  containers:
+    - name: mongo
+      image: docker.io/library/mongo:8.0.4@sha256:32ca39e021b327dcd74b283f131d72b3a7900b805aa1c77a277b88d7e5adf220
+    - name: redis-short
+      image: redis:7.4
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: other-project-import
+  namespace: epitweet-user-service
+spec:
+  containers:
+    - name: app
+      image: ghcr.io/3-istor/imports/iot/api:sha-abc1234
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: project-name-prefix-trick
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: app
+      image: ghcr.io/3-istor/imports/iot-evil/api:sha-abc1234
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: own-template-staging
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: app
+      image: ghcr.io/3-istor/optispace/backend:sha-abc1234
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: other-template-app
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: app
+      image: ghcr.io/3-istor/my-app-bis:sha-abc1234
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: template-app-name-prefix-trick
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: app
+      image: ghcr.io/3-istor/optispace-other:sha-abc1234
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: platform-image
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: app
+      image: ghcr.io/3-istor/cmp-backend:v1.0.0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: any-public-image
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: app
+      image: docker.io/library/busybox:1.37
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: bad-init-container
+  namespace: iot-optispace-stg
+spec:
+  initContainers:
+    - name: init
+      image: ghcr.io/3-istor/imports/epitweet/user-service:sha-abc1234
+  containers:
+    - name: app
+      image: ghcr.io/3-istor/optispace/frontend:sha-abc1234
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: system-components
+  namespace: iot-system
+spec:
+  containers:
+    - name: gatus
+      image: twinproduction/gatus:v5.37.0@sha256:094eb186e55235db367e90e9d56140e5897b7044c41de23cde4cc18e6da1242e
+    - name: sidecar
+      image: ghcr.io/home-operations/gatus-sidecar:0.5.3
+    - name: cloudflared
+      image: cloudflare/cloudflared:2026.10.0
+    - name: keycloak
+      image: quay.io/keycloak/keycloak:26.5.5
+    - name: config-cli
+      image: adorsys/keycloak-config-cli:6.5.1-26.5.5
+    - name: guard
+      image: ghcr.io/thegostsniperfr/offhours-guard:1.2.0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: imports-app-name
+  namespace: iot-imports
+spec:
+  containers:
+    - name: app
+      image: ghcr.io/3-istor/imports/epitweet/user-service:sha-abc1234
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: registry-port-not-a-tag
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: app
+      image: localhost:5000/optispace:1
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: zot-mirror-direct
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: app
+      image: 10.43.0.50:5000/3-istor/cmp-backend:v1.0.0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cluster-service-registry
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: app
+      image: zot.zot.svc.cluster.local:5000/3-istor/cmp-backend:v1.0.0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: org-image-upper-case
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: app
+      image: GHCR.io/3-Istor/cmp-backend:v1.0.0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: org-image-with-port
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: app
+      image: ghcr.io:443/3-istor/cmp-backend:v1.0.0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: other-public-registry
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: app
+      image: quay.io/minio/minio:RELEASE.2025-01-01T00-00-00Z

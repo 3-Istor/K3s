@@ -103,7 +103,7 @@ resource "vault_kubernetes_auth_backend_role" "observability_cloud" {
   bound_service_account_names      = ["vault-secrets-operator"]
   bound_service_account_namespaces = ["vault-secrets-operator"]
   token_ttl                        = 86400 # 24h
-  token_policies                   = [vault_policy.cloud_observability_policy.name]
+  token_policies                   = [vault_policy.cloud_observability_policy[each.key].name]
 }
 
 # -----------------------------------------------------------------------------
@@ -252,6 +252,17 @@ resource "vault_kubernetes_auth_backend_role" "status_role" {
   token_policies                   = [vault_policy.status_policy.name]
 }
 
+# Zot Roles
+# -----------------------------------------------------------------------------
+resource "vault_kubernetes_auth_backend_role" "zot_role" {
+  backend                          = vault_auth_backend.kubernetes.path
+  role_name                        = "zot-role"
+  bound_service_account_names      = ["vault-secrets-operator"]
+  bound_service_account_namespaces = ["vault-secrets-operator"]
+  token_ttl                        = 86400
+  token_policies                   = [vault_policy.zot_policy.name]
+}
+
 
 # -----------------------------------------------------------------------------
 # GitHub Actions Roles
@@ -363,6 +374,7 @@ locals {
       vault_kubernetes_auth_backend_role.mepa_role,
       vault_kubernetes_auth_backend_role.qcm_role,
       vault_kubernetes_auth_backend_role.status_role,
+      vault_kubernetes_auth_backend_role.zot_role,
       vault_kubernetes_auth_backend_role.linmap_bot_role,
       vault_kubernetes_auth_backend_role.observability_role,
       vault_kubernetes_auth_backend_role.rook_ceph_role,

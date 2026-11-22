@@ -14,12 +14,14 @@ kind: Cluster
 metadata:
   name: cnp-projects-keycloak
 spec:
-  instances: 3
+  # One instance: the MVP has no HA. Recovery is a restore from the Barman
+  # backups on the RGW, with WAL archived every 5 minutes.
+  instances: 1
   # Pinned: the operator's default is frozen into a Cluster at creation, so
   # without this a fixed image never reaches it.
   imageName: ghcr.io/cloudnative-pg/postgresql:18.6-202610050823-system-trixie@sha256:3e89ea90485ffda67094fd6950d9d61dec9ec314aabc8d63c048c67759918621
   storage:
-    storageClass: local-path
+    storageClass: ceph-rbd
     size: 2Gi
   enableSuperuserAccess: false
   plugins:

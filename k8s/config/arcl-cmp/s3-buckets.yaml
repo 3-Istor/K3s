@@ -1,0 +1,109 @@
+# CMP buckets on the OpenStack Ceph RGW (CNP-189, replaces Garage).
+# Each claim gets its own RGW user, limited to its bucket; the CMP reads the
+# keys from the Secret of the same name. Retain: deleting a claim keeps data.
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: user-avatars
+spec:
+  bucketName: user-avatars
+  storageClassName: ceph-bucket-retain
+---
+# Avatars are public pictures served on avatars-s3.3istor.com. Rook only takes
+# a bucket policy in an OBC if the operator allows it for every claim, which
+# would let any project make its bucket public: the bucket owner sets it here.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-avatars-policy
+data:
+  policy.json: |
+    {
+      "Version": "2012-10-17",
+      "Statement": [{
+        "Sid": "PublicReadAvatars",
+        "Effect": "Allow",
+        "Principal": {"AWS": ["*"]},
+        "Action": ["s3:GetObject"],
+        "Resource": ["arn:aws:s3:::user-avatars/*"]
+      }]
+    }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: user-avatars-policy
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: put-policy
+          image: docker.io/amazon/aws-cli:2.31.33
+          args:
+            - s3api
+            - put-bucket-policy
+            - --endpoint-url=http://192.168.1.110:7480
+            - --region=us-east-1
+            - --bucket=user-avatars
+            - --policy=file:///policy/policy.json
+          envFrom:
+            - secretRef:
+                name: user-avatars
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {memory: 128Mi}
+          volumeMounts:
+            - {name: policy, mountPath: /policy, readOnly: true}
+      volumes:
+        - name: policy
+          configMap:
+            name: user-avatars-policy
+---
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: cnp-app-icons
+spec:
+  bucketName: cnp-app-icons
+  storageClassName: ceph-bucket-retain
+---
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: cnp-project-exports
+spec:
+  bucketName: cnp-project-exports
+  storageClassName: ceph-bucket-retain
+---
+# The RGW runs on pae-node-1, outside the cluster: the gateway reaches it
+# through this selectorless Service. Its EndpointSlice is applied by hand
+# (rgw-endpointslice.yaml): Argo CD excludes EndpointSlices from management.
+# The status page probes s3.3istor.com, so a missing slice shows there.
+apiVersion: v1
+kind: Service
+metadata:
+  name: rgw
+spec:
+  ports:
+    - name: http
+      port: 7480
+      targetPort: 7480
+---
+# /x.jpg on avatars-s3.3istor.com is /user-avatars/x.jpg on the RGW.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: avatars-bucket-prefix
+spec:
+  urlRewrite:
+    path:
+      type: ReplaceRegexMatch
+      replaceRegexMatch:
+        pattern: "^/(.*)$"
+        substitution: "/user-avatars/\\1"

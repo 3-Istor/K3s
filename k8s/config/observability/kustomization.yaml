@@ -9,22 +9,19 @@ transformers:
 resources:
   - namespace.yaml
   - secrets.yaml
-  - loki-bucket.yaml
-  - loki-security-rules.yaml
-  - loki-log-rules.yaml
+  - loki-archive-buckets.yaml
   - audit-archive.yaml
   - secret-age.yaml
-  - loki-networkpolicy.yaml
   - cmp-archive-status.yaml
   - vmauth-projects.yaml
   - vm-networkpolicies.yaml
-  - alertmanager-networkpolicy.yaml
   - exporters.yaml
   - vmalert-rules.yaml
   - vmsingle.yaml
   - vmagent.yaml
   - vmagent-scrapes.yaml
   - vmauth.yaml
+  - vm-service-names.yaml
   # V2 logs (CNP-185): VictoriaLogs, Fluent Bit, vmalert for LogsQL rules
   - vlogs.yaml
   - fluent-bit.yaml
@@ -38,6 +35,15 @@ resources:
   - traces-networkpolicies.yaml
   - traces-scrapes.yaml
   - hubble-ui-route.yaml
+  # V3 alerting (CNP-185): VMAlert and VMAlertmanager replace the Helm
+  # vmalert and Alertmanager, CMP RBAC, vmauth keys, vmauth for the clouds
+  - vmalert.yaml
+  - alertmanager.yaml
+  - alerting-rules.yaml
+  - alerting-networkpolicies.yaml
+  - cmp-observability-rbac.yaml
+  - vmauth-keys.yaml
+  - vmauth-clouds.yaml
 
 # Upstream alerts kept from the default set: node-exporter, kube-state-metrics,
 # VictoriaMetrics self-health and Alertmanager. The rest of the Kubernetes
@@ -45,6 +51,10 @@ resources:
 # controller-manager endpoints.
 configMapGenerator:
   - name: vmalert-default-rules
+    # VMAlert cnp mounts it at a fixed path; its config reloader watches it
+    # (V3 alerting).
+    options:
+      disableNameSuffixHash: true
     files:
       - default-rules/alertmanager.yaml
       - default-rules/kube-state-metrics.yaml
@@ -56,14 +66,11 @@ configMapGenerator:
       - default-rules/vmsingle.yaml
       # V4 traces
       - default-rules/traces.yaml
+      # CNP-302, written here rather than vendored
+      - backing-rules/backing.yaml
   - name: otelcol-gateway
     files:
       - otelcol-gateway/config.yaml
-
-# CNP-185 V1 cutover: points the old VictoriaMetrics Service names at the new
-# stack. Comment out to roll back.
-patches:
-  - path: cutover-v1.yaml
 
 helmGlobals:
   chartHome: ../../../charts
@@ -74,43 +81,12 @@ helmCharts:
     namespace: observability
     valuesFile: values-secure-route.yaml
 
-  # Loki (Logs)
-  - name: loki
-    repo: https://grafana.github.io/helm-charts
-    version: 7.3.0
-    releaseName: loki
-    namespace: observability
-    valuesFile: values-loki.yaml
-
   - name: victoria-metrics-operator
     repo: https://victoriametrics.github.io/helm-charts/
     version: 0.68.2
     releaseName: vm-operator
     namespace: observability
     valuesFile: values-vm-operator.yaml
-
-  # VictoriaMetrics cluster, replaced by VMSingle: removed 14 days after the
-  # cutover.
-  - name: victoria-metrics-cluster
-    repo: https://victoriametrics.github.io/helm-charts/
-    version: 0.48.0
-    releaseName: vm
-    namespace: observability
-    valuesFile: values-vm.yaml
-
-  - name: victoria-metrics-alert
-    repo: https://victoriametrics.github.io/helm-charts/
-    version: 0.46.0
-    releaseName: vmalert
-    namespace: observability
-    valuesFile: values-vmalert.yaml
-
-  - name: alertmanager
-    repo: https://prometheus-community.github.io/helm-charts
-    version: 1.42.0
-    releaseName: alertmanager
-    namespace: observability
-    valuesFile: values-alertmanager.yaml
 
   # Grafana (Visualisation)
   - name: grafana
@@ -122,14 +98,6 @@ helmCharts:
     # V2 logs (CNP-185)
     additionalValuesFiles:
       - values-grafana-vlogs.yaml
-
-  # Alloy (Logs and Metrics Aggregation)
-  - name: alloy
-    repo: https://grafana.github.io/helm-charts
-    version: 1.11.1
-    releaseName: alloy
-    namespace: observability
-    valuesFile: values-alloy.yaml
 
   # Official Prometheus Operator CRDs
   - name: prometheus-operator-crds

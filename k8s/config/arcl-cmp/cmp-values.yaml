@@ -43,7 +43,7 @@ resources:
 
 persistence:
   enabled: true
-  storageClass: "local-path"
+  storageClass: "ceph-rbd"
   backend:
     size: 2Gi
     accessMode: ReadWriteOnce
@@ -64,6 +64,8 @@ env:
     OBS_VLOGS_URL: "http://vlogs-cnp.observability.svc:9428"
     OBS_VTRACES_URL: "http://vtraces-cnp.observability.svc:10428"
     OBS_GRAFANA_PROVISIONING_ENABLED: "true"
+    # VMAlert and VMAlertmanager of V3 are live (K3s#205, #253).
+    OBS_V3_ENABLED: "true"
     # CNP-185 V2: log-derived alert metrics from the VictoriaLogs recording rules.
     LOGS_BACKEND: "vl"
     KEYCLOAK_URL: "https://auth.3istor.com"
@@ -79,10 +81,20 @@ env:
     # Off while the gold access token is refused after a fresh passkey (CNP-124):
     # back to "true" once the token check passes again.
     STEP_UP_ENABLED: "false"
-    # Project export dump Jobs upload to Garage through its Service, so a
-    # database dump never leaves the cluster. Download links use the public
-    # endpoint (the avatars one).
-    EXPORT_S3_INTERNAL_ENDPOINT: "http://garage.garage-s3.svc.cluster.local:3900"
+    # CMP buckets live on the Ceph RGW (CNP-189), one ObjectBucketClaim each
+    # (s3-buckets.yaml). Avatars are public through avatars-s3.3istor.com.
+    AVATARS_S3_ENDPOINT: "http://192.168.1.110:7480"
+    AVATARS_S3_BUCKET: "user-avatars"
+    AVATARS_S3_REGION: "us-east-1"
+    AVATARS_PUBLIC_URL_BASE: "https://avatars-s3.3istor.com"
+    ICONS_S3_ENDPOINT: "http://192.168.1.110:7480"
+    ICONS_S3_REGION: "us-east-1"
+    # Download links are presigned for the public host, which only exposes
+    # this bucket. Dump Jobs upload through the RGW directly, so a database
+    # dump never leaves the private network.
+    EXPORT_S3_ENDPOINT: "https://s3.3istor.com"
+    EXPORT_S3_INTERNAL_ENDPOINT: "http://192.168.1.110:7480"
+    EXPORT_S3_REGION: "us-east-1"
     # FinOps: real costs. Backfill starts at the oldest day VictoriaMetrics
     # still holds (14-day retention); days before OpenCost's install have no
     # idle cost.
@@ -104,13 +116,15 @@ env:
     FINOPS_GCP_WIF_AUDIENCE: "//iam.googleapis.com/projects/943089725730/locations/global/workloadIdentityPools/cnp-finops/providers/keycloak"
     # Repository import.
     IMPORT_ENABLED: "true"
+    # CNP-303: open a PR that makes an imported repo template-conformant.
+    IMPORT_STANDARD_PR_ENABLED: "true"
     # Numeric ids of 3-Istor/extern-project-analyzer and of the 3-Istor org,
     # pinned in the workflow's OIDC token: a recreated repository gets new ids.
     IMPORT_WORKFLOW_REPO_ID: "1267361656"
     IMPORT_WORKFLOW_OWNER_ID: "271529816"
     # Commits of .github/workflows/import.yml allowed to call the worker API,
     # comma separated. A workflow change is live only once its commit is here.
-    IMPORT_WORKFLOW_SHAS: "710937a68f0e2333a0e7c39c24947d0e71e3469a,fe348b4edd2ef9f57d6111fe24cd392013e0d4fc,fae32ad782d2571ae57e9760cf06e19e22e0099c,5e801a917713c2c4ed4993c69207af07d4d8366a,872c1407e1287ed8326d8645764a892b1a882977"
+    IMPORT_WORKFLOW_SHAS: "710937a68f0e2333a0e7c39c24947d0e71e3469a,fe348b4edd2ef9f57d6111fe24cd392013e0d4fc,fae32ad782d2571ae57e9760cf06e19e22e0099c,5e801a917713c2c4ed4993c69207af07d4d8366a,872c1407e1287ed8326d8645764a892b1a882977,37746aa61fa8334dcf0845848c3034fb6394f758,103a00f3cfa14e8150268472d412a662520ed5c7"
     IMPORT_OIDC_AUDIENCE: "cmp-import"
     # "self-hosted" only for a runner group of ephemeral, one-job runners: a
     # persistent runner lets one import read the next one's source and tokens.
@@ -190,63 +204,37 @@ extraEnv:
         name: arcl-cmp-secret
         key: aws-s3-key-prefix
 
-  # --- Avatars S3 Compatible Storage ---
+  # --- CMP buckets on the RGW: keys from each ObjectBucketClaim's Secret ---
   - name: AVATARS_S3_ACCESS_KEY_ID
     valueFrom:
       secretKeyRef:
-        name: arcl-cmp-secret
-        key: avatars-s3-access-key-id
+        name: user-avatars
+        key: AWS_ACCESS_KEY_ID
   - name: AVATARS_S3_SECRET_ACCESS_KEY
     valueFrom:
       secretKeyRef:
-        name: arcl-cmp-secret
-        key: avatars-s3-secret-access-key
-  - name: AVATARS_S3_ENDPOINT
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: avatars-s3-endpoint
-  - name: AVATARS_S3_BUCKET
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: avatars-s3-bucket
-  - name: AVATARS_S3_REGION
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: avatars-s3-region
-  - name: AVATARS_PUBLIC_URL_BASE
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-secret
-        key: avatars-s3-public-url-base
-
-  # --- App icons (CNP-198): private bucket on the same Garage endpoint ---
+        name: user-avatars
+        key: AWS_SECRET_ACCESS_KEY
   - name: ICONS_S3_ACCESS_KEY_ID
     valueFrom:
       secretKeyRef:
-        name: arcl-cmp-secret
-        key: icons-s3-access-key-id
+        name: cnp-app-icons
+        key: AWS_ACCESS_KEY_ID
   - name: ICONS_S3_SECRET_ACCESS_KEY
     valueFrom:
       secretKeyRef:
-        name: arcl-cmp-secret
-        key: icons-s3-secret-access-key
-
-  # --- Project exports (EU Data Act, B1): private bucket cnp-project-exports
-  # on the same Garage endpoint, which must stay the public one: the download
-  # link is presigned for that host.
+        name: cnp-app-icons
+        key: AWS_SECRET_ACCESS_KEY
   - name: EXPORT_S3_ACCESS_KEY_ID
     valueFrom:
       secretKeyRef:
-        name: arcl-cmp-secret
-        key: export-s3-access-key-id
+        name: cnp-project-exports
+        key: AWS_ACCESS_KEY_ID
   - name: EXPORT_S3_SECRET_ACCESS_KEY
     valueFrom:
       secretKeyRef:
-        name: arcl-cmp-secret
-        key: export-s3-secret-access-key
+        name: cnp-project-exports
+        key: AWS_SECRET_ACCESS_KEY
 
   # --- Cloudflare API & Account ---
   - name: CLOUDFLARE_API_TOKEN
@@ -357,23 +345,6 @@ extraEnv:
       secretKeyRef:
         name: arcl-cmp-secret
         key: keycloak-client-secret
-
-  # --- Activity tab: Loki through its authenticating gateway ---
-  - name: LOKI_URL
-    value: "http://loki-gateway.observability.svc.cluster.local"
-  - name: LOKI_USERNAME
-    value: cmp
-  - name: LOKI_PASSWORD
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-loki
-        key: loki-password
-  # Handed to each project's Grafana org as its Loki datasource credential.
-  - name: LOKI_GRAFANA_PROJECTS_PASSWORD
-    valueFrom:
-      secretKeyRef:
-        name: arcl-cmp-loki
-        key: grafana-projects-loki-password
 
   # --- Per-project metrics isolation (vmauth users derived from this key) ---
   - name: METRICS_PROJECT_KEY

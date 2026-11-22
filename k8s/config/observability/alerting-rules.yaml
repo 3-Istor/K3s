@@ -1,0 +1,136 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: alerting-chain
+  labels:
+    cnp.3istor.com/rules: metrics
+spec:
+  groups:
+    - name: alerting-chain
+      rules:
+        # Always firing. Alertmanager forwards it to healthchecks.io every 5
+        # minutes; when the pings stop, vmalert, VMSingle or Alertmanager is
+        # down and healthchecks.io tells Discord.
+        - alert: Watchdog
+          expr: vector(1)
+          labels:
+            severity: none
+          annotations:
+            summary: "The alerting chain is alive"
+            description: "Always firing. Routed to the healthchecks.io dead man's switch only."
+            runbook_url: https://github.com/3-Istor/cnp-docs/blob/main/docs/10-observabilite/06-alerting.md
+---
+# Public clouds (D22). Their collectors write through vmauth clouds, which
+# stamps cluster=aws|gcp on every sample.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: clouds
+  labels:
+    cnp.3istor.com/rules: metrics
+spec:
+  groups:
+    - name: clouds
+      rules:
+        # A cloud is on when Argo CD reaches its API server and its platform
+        # app is healthy. Health alone is not enough: Argo CD keeps the last
+        # known "Healthy" while a cloud is destroyed. Argo CD reaches the
+        # clouds over the internet, not through the WireGuard tunnel, so a
+        # cut tunnel keeps the cloud "on" and fires this.
+        - alert: CloudTelemetryMissing
+          expr: |
+            (
+              max by (cluster) (
+                label_replace(argocd_app_info{name=~"platform-.+", health_status="Healthy"}, "cluster", "$1", "name", "platform-(.+)")
+              )
+              and on (cluster)
+              max by (cluster) (
+                label_replace(argocd_cluster_info{name!="onprem"} * on (server) group_left argocd_cluster_connection_status == 1, "cluster", "$1", "name", "(.+)")
+              )
+            )
+            unless on (cluster)
+            count by (cluster) (last_over_time(up{cluster!="onprem"}[10m]))
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "No telemetry from {{ $labels.cluster }} for 10 minutes"
+            description: "Argo CD sees the {{ $labels.cluster }} cluster up, but no sample has arrived through vmauth clouds. Check relay 18080 (wireguard namespace) and the cloud's vmagent queue."
+            runbook_url: https://github.com/3-Istor/cnp-docs/blob/main/docs/10-observabilite/03-architecture.md
+
+        # Disk queues during a tunnel cut: vmagent's (2 GiB, in bytes) and
+        # Fluent Bit's (storage.total_limit_size, which it only reports as
+        # the share left). Their own metrics travel in the same queues, so
+        # this shows once the tunnel is back and a queue drains slowly.
+        - alert: CloudQueueBacklog
+          expr: |
+            sum by (cluster, job, pod) (vm_persistentqueue_bytes_pending{cluster!="onprem"}) > 500e6
+            or
+            max by (cluster, job, pod) (100 - fluentbit_output_chunk_available_capacity_percent{cluster!="onprem"}) > 25
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.job }} ({{ $labels.pod }}) on {{ $labels.cluster }} has a telemetry backlog"
+            description: "Over 500 MB queued by vmagent, or over a quarter of Fluent Bit's disk buffer. Full queues drop data. Check relay 18080 and vmauth clouds; cnp.sh down waits for them to drain."
+            runbook_url: https://github.com/3-Istor/cnp-docs/blob/main/docs/10-observabilite/03-architecture.md
+
+    # The on-prem node alerts (vmalert-rules.yaml, infrastructure.rules), at
+    # warning: a demo cloud's node never pages.
+    - name: clouds-infrastructure
+      rules:
+        - alert: NodeNotReady
+          expr: |
+            kube_node_status_condition{cluster!="onprem", condition="Ready", status="true"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node {{ $labels.node }} ({{ $labels.cluster }}) is NotReady"
+            description: "The node has been reporting NotReady for 5 minutes."
+
+        - alert: NodeMemoryPressure
+          expr: |
+            (
+              1 - (node_memory_MemAvailable_bytes{cluster!="onprem"} / node_memory_MemTotal_bytes{cluster!="onprem"})
+            ) > 0.90
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node {{ $labels.instance }} ({{ $labels.cluster }}) is low on memory"
+            description: "Memory usage is at {{ $value | humanizePercentage }}."
+
+        - alert: NodeDiskFillingUp
+          expr: |
+            (
+              1 - (node_filesystem_avail_bytes{cluster!="onprem", fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{cluster!="onprem", fstype!~"tmpfs|overlay|squashfs"})
+            ) > 0.85
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} ({{ $labels.cluster }}) is almost full"
+            description: "Disk usage is at {{ $value | humanizePercentage }}."
+
+        - alert: NodeCPUSaturated
+          expr: |
+            (
+              1 - avg by (cluster, instance) (rate(node_cpu_seconds_total{cluster!="onprem", mode="idle"}[5m]))
+            ) > 0.90
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node {{ $labels.instance }} ({{ $labels.cluster }}) CPU is saturated"
+            description: "CPU usage has been above 90% for 30 minutes (currently {{ $value | humanizePercentage }})."
+
+        - alert: NodeClockSkew
+          expr: |
+            abs(node_timex_offset_seconds{cluster!="onprem"}) > 0.05
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Clock skew detected on {{ $labels.instance }} ({{ $labels.cluster }})"
+            description: "The node clock is drifting by {{ $value }}s, which breaks TLS and token validation."

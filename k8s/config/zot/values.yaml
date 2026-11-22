@@ -1,0 +1,139 @@
+# Pull-through cache of ghcr.io and Docker Hub for containerd on the nodes
+# (CNP-295). The procedure that points k3s at it is node-config/registries/.
+#
+# The full image (not zot-minimal) carries the sync extension. Pinned by
+# digest with IfNotPresent: once on a node it is never pulled again, and a
+# pull of Zot's own image while Zot is down falls back to ghcr.io.
+image:
+  repository: ghcr.io/project-zot/zot
+  tag: "v2.1.23@sha256:9d3de83ac2099e6f4843045b4c9b65b7e8baf40f92d28f54906dee9d4d390fd7"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+strategy:
+  type: Recreate
+
+# containerd runs in the host network namespace and cannot resolve cluster
+# DNS: registries.yaml points at this fixed ClusterIP, reachable from the
+# hosts through Cilium's socket LB. Taken from the low band of the 10.43/16
+# service range that the apiserver keeps for static assignments.
+service:
+  type: ClusterIP
+  clusterIP: 10.43.0.50
+  port: 5000
+
+mountConfig: true
+configFiles:
+  config.json: |-
+    {
+      "distSpecVersion": "1.1.1",
+      "storage": {
+        "rootDirectory": "/var/lib/registry",
+        "dedupe": false,
+        "remoteCache": false,
+        "gc": true,
+        "gcInterval": "6h",
+        "retention": {
+          "delay": "24h",
+          "policies": [
+            {
+              "repositories": ["**"],
+              "deleteReferrers": true,
+              "deleteUntagged": true,
+              "keepTags": [
+                { "patterns": [".*"], "pulledWithin": "1440h" },
+                { "patterns": [".*"], "mostRecentlyPulledCount": 3 }
+              ]
+            }
+          ]
+        },
+        "storageDriver": {
+          "name": "s3",
+          "region": "us-east-1",
+          "regionendpoint": "http://192.168.1.110:7480",
+          "bucket": "zot-registry",
+          "forcepathstyle": true,
+          "secure": false,
+          "skipverify": false
+        }
+      },
+      "http": {
+        "address": "0.0.0.0",
+        "port": "5000"
+      },
+      "log": { "level": "info" },
+      "extensions": {
+        "sync": {
+          "enable": true,
+          "downloadDir": "/var/lib/registry/_sync",
+          "credentialsFile": "/etc/zot-sync/credentials.json",
+          "registries": [
+            {
+              "urls": ["https://ghcr.io"],
+              "onDemand": true,
+              "tlsVerify": true,
+              "content": [{ "prefix": "**", "destination": "/ghcr.io" }]
+            },
+            {
+              "urls": ["https://mirror.gcr.io"],
+              "onDemand": true,
+              "tlsVerify": true,
+              "content": [{ "prefix": "**", "destination": "/docker.io" }]
+            }
+          ]
+        }
+      }
+    }
+
+# Retention: a tag is kept while pulled in the last 60 days, and the 3 most
+# recently pulled tags of every repository are always kept. Dropping one is
+# harmless: the next pull syncs it again from upstream, and a running pod
+# never needs the registry. Pull times live in the local metaDB (emptyDir):
+# a Zot restart forgets them, at worst a few re-downloads.
+#
+# downloadDir: sync stages layers on local disk before the S3 upload; Zot
+# refuses to start without it when storage is remote. Same emptyDir.
+#
+# Each upstream lands under its own destination, and registries.yaml rewrites
+# every request to that prefix: a docker.io name can never be served from
+# ghcr.io (or the reverse), whoever owns the same path upstream.
+
+externalSecrets:
+  - secretName: zot-sync-credentials
+    mountPath: /etc/zot-sync
+
+# The ObjectBucketClaim's Secret; the S3 driver reads the standard AWS
+# variables when the config holds no keys.
+env:
+  - name: AWS_ACCESS_KEY_ID
+    valueFrom:
+      secretKeyRef:
+        name: zot-registry
+        key: AWS_ACCESS_KEY_ID
+  - name: AWS_SECRET_ACCESS_KEY
+    valueFrom:
+      secretKeyRef:
+        name: zot-registry
+        key: AWS_SECRET_ACCESS_KEY
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
+
+# Ticket estimate 100-200Mi, not measured yet: request the middle, leave room
+# for sync bursts.
+resources:
+  requests:
+    cpu: 25m
+    memory: 160Mi
+  limits:
+    memory: 512Mi

@@ -126,7 +126,6 @@ spec:
             projectName: "{{ .metadata.name }}"
             targetCloud: "{{ .spec.targetCloud }}"
             deletionProtection: {{ dig "deletionProtection" false .spec }}
-            logRetention: "{{ dig "logRetention" "" .spec }}"
             features:
               appProject: false
               workloads: true
@@ -134,6 +133,7 @@ spec:
               gateway: {{ dig "features" "gateway" false .spec }}
               tunnel: {{ dig "features" "tunnel" false .spec }}
               keycloak: {{ dig "features" "keycloak" false .spec }}
+              egressIsolation: {{ dig "features" "egressIsolation" false .spec }}
             apps:
             {{- range dig "apps" (list) .spec }}
               - name: "{{ .name }}"

@@ -225,19 +225,7 @@ data:
               severity: warning
             annotations:
               summary: "Scrape target {{ $labels.job }} ({{ $labels.instance }}) is down"
-              description: "Alloy has been unable to scrape this target for 15 minutes."
-
-          - alert: LokiIngestionStalled
-            expr: |
-              sum(rate(loki_ingester_chunks_flushed_total{cluster="onprem"}[15m])) == 0
-              and
-              sum(rate(loki_distributor_lines_received_total{cluster="onprem"}[15m])) > 0
-            for: 15m
-            labels:
-              severity: critical
-            annotations:
-              summary: "Loki is receiving logs but flushing nothing to object storage"
-              description: "Ingestion is stalled, which usually means the S3 credentials or the bucket are broken."
+              description: "vmagent has been unable to scrape this target for 15 minutes."
 
           - alert: VMStorageInsertErrors
             expr: |
@@ -247,7 +235,7 @@ data:
               severity: warning
             annotations:
               summary: "VictoriaMetrics is dropping rows"
-              description: "vmstorage is ignoring incoming samples, check vminsert and vmstorage logs."
+              description: "VMSingle is ignoring incoming samples, check its logs."
 
           - alert: AlertmanagerNotificationsFailing
             expr: |
@@ -298,31 +286,6 @@ data:
             annotations:
               summary: "Secret age run {{ $labels.job_name }} failed"
               description: "cnp_secret_age_days is no longer refreshed; check the job logs (Vault login or the push to vminsert)."
-
-      # Project logs live in per-project Loki tenants, which the Loki ruler
-      # (tenant "default") does not see; Alloy counts them as metrics instead.
-      - name: project-logs.rules
-        rules:
-          # An app suddenly logging far more than at the same time yesterday is
-          # usually looping on an error. The floors keep quiet apps from
-          # tripping it; a new app has no yesterday, so only the high floor
-          # applies to it.
-          - alert: LogVolumeSpike
-            expr: |
-              (
-                sum by (project, namespace) (increase(loki_process_custom_log_lines_total[10m]))
-                  > 5 * sum by (project, namespace) (increase(loki_process_custom_log_lines_total[10m] offset 1d))
-                and
-                sum by (project, namespace) (increase(loki_process_custom_log_lines_total[10m])) > 3000
-              )
-              or
-              sum by (project, namespace) (increase(loki_process_custom_log_lines_total[10m])) > 30000
-            for: 10m
-            labels:
-              severity: warning
-            annotations:
-              summary: "{{ $labels.namespace }} logged {{ $value | humanize }} lines in 10 minutes"
-              description: "Far above its usual volume; it is often an error loop. Check the Logs view of the project in the CMP."
 
       # OpenCost prices are custom on-prem EUR per hour; 730 h is an average month.
       - name: finops.rules

@@ -1,0 +1,181 @@
+# One Alertmanager for every rule source (D15): vmalert (metrics and LogsQL),
+# Grafana and the CMP all post to alertmanager:9093.
+#
+# Platform routes live here. Each project's routes are a
+# VMAlertmanagerConfig the CMP writes in cnp-observability, matching only its
+# cnp_project; the operator appends them after the routes below. A project
+# without a webhook of its own is routed by the CMP to the platform webhook.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAlertmanager
+metadata:
+  name: cnp
+spec:
+  replicaCount: 1
+  image:
+    tag: v0.34.0
+  selectAllByDefault: false
+  configNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: cnp-observability
+  configSelector:
+    matchLabels:
+      cnp.3istor.com/owner: cmp
+  # Project alerts carry the app's namespace, not cnp-observability, and a
+  # project route must stop there instead of also reaching the platform.
+  disableNamespaceMatcher: true
+  disableRouteContinueEnforce: true
+  # Scraped by VMPodScrape alertmanager, under the job name the upstream
+  # Alertmanager rules expect.
+  disableSelfServiceScrape: true
+  secrets:
+    - observability-secrets
+    - alertmanager-deadmansswitch
+  templates:
+    - name: alertmanager-templates
+      key: cnp.tmpl
+  # Silences and the notification log survive a restart.
+  storage:
+    volumeClaimTemplate:
+      spec:
+        storageClassName: ceph-rbd
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 50Mi
+  extraEnvs:
+    - name: GOMAXPROCS
+      value: "1"
+  resources:
+    requests:
+      cpu: 25m
+      memory: 128Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+  configReloaderResources:
+    requests:
+      cpu: 5m
+      memory: 24Mi
+    limits:
+      cpu: 50m
+      memory: 24Mi
+  configRawYaml: |
+    global:
+      resolve_timeout: 5m
+    route:
+      receiver: discord-default
+      group_by: [alertname, cluster, job, namespace]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      routes:
+        # Dead man's switch: Watchdog always fires, so healthchecks.io gets a
+        # ping every 5 minutes and alerts Discord when they stop.
+        - receiver: deadmansswitch
+          matchers: [alertname="Watchdog"]
+          group_by: [alertname]
+          group_wait: 0s
+          group_interval: 1m
+          repeat_interval: 5m
+          continue: false
+        # Platform alerts only. The operator appends the CMP's project
+        # routes after these, so anything here that matched a cnp_project
+        # alert would take it from its project.
+        - receiver: discord-default
+          matchers: [cnp_project=""]
+          continue: false
+          routes:
+            # The clouds are demo clusters: nothing there pages.
+            - receiver: discord-default
+              matchers: ['cluster=~"aws|gcp"']
+            # One message a day.
+            - receiver: discord-default
+              matchers: [severity="info"]
+              group_wait: 1h
+              group_interval: 24h
+              repeat_interval: 24h
+            - receiver: discord-critical
+              matchers: [severity="critical"]
+    receivers:
+      - name: deadmansswitch
+        webhook_configs:
+          - url_file: /etc/vm/secrets/alertmanager-deadmansswitch/PING_URL
+            send_resolved: false
+      - name: discord-default
+        discord_configs:
+          - webhook_url_file: /etc/vm/secrets/observability-secrets/DISCORD_WEBHOOK_URL
+            send_resolved: true
+            title: '{{ template "cnp.discord.title" . }}'
+            message: '{{ template "cnp.discord.message" . }}'
+      - name: discord-critical
+        discord_configs:
+          - webhook_url_file: /etc/vm/secrets/observability-secrets/DISCORD_WEBHOOK_URL
+            send_resolved: true
+            title: '{{ template "cnp.discord.title" . }}'
+            message: '{{ template "cnp.discord.message" . }}'
+            content: '{{ template "cnp.discord.content" . }}'
+---
+# The format of 06-alerting.md, shared with the CMP's project receivers:
+# title, severity, app, value, then runbook, portal, Grafana and mute links.
+# GeneratorURL is the Grafana Explore link vmalert builds (-external.url).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-templates
+data:
+  cnp.tmpl: |
+    {{ define "cnp.discord.title" -}}
+    {{ if eq .Status "firing" }}[{{ .CommonLabels.severity | toUpper }}]{{ else }}[RÉSOLU]{{ end }} {{ .CommonLabels.alertname }}
+    {{- with .CommonLabels.cnp_project }} · {{ . }}{{ with $.CommonLabels.cnp_app }}/{{ . }}{{ end }}{{ end }}
+    {{- with .CommonLabels.cluster }} · {{ . }}{{ end }}
+    {{- end }}
+
+    {{ define "cnp.discord.message" -}}
+    {{ range .Alerts -}}
+    **{{ or .Annotations.summary .Labels.alertname }}**
+    {{ with .Annotations.description }}{{ . }}
+    {{ end -}}
+    {{ with .Annotations.value }}Valeur : {{ . }}
+    {{ end -}}
+    Gravité : {{ .Labels.severity }}
+    {{- with .Labels.cnp_app }} · app : {{ . }}{{ end }}
+    {{- with .Labels.namespace }} · namespace : {{ . }}{{ end }}
+    {{- with .Labels.cluster }} · cluster : {{ . }}{{ end }}
+    {{ with .Annotations.runbook_url }}[Runbook]({{ . }}) {{ end -}}
+    {{ with .Annotations.portal_url }}[Portail]({{ . }}) {{ end -}}
+    {{ with .GeneratorURL }}[Grafana]({{ . }}) {{ end -}}
+    {{ with .Annotations.silence_url }}[Mettre en sourdine]({{ . }}){{ end }}
+    {{ end -}}
+    {{- end }}
+
+    {{ define "cnp.discord.content" -}}
+    {{- "" }}
+    {{- end }}
+---
+# The old name of the Helm chart's Service: vmalert (both), Grafana's
+# datasource and the CMP keep their URL.
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+spec:
+  selector:
+    app.kubernetes.io/name: vmalertmanager
+    app.kubernetes.io/instance: cnp
+  ports:
+    - name: http
+      port: 9093
+      targetPort: 9093
+---
+# healthchecks.io ping URL of the Watchdog check (hc-ping.com/<uuid>):
+# whoever holds it can keep the check green, so it stays out of git.
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: alertmanager-deadmansswitch
+spec:
+  path: kvv2/observability/healthchecks
+  vaultRole: observability-role
+  type: Opaque
+  keys:
+    - PING_URL

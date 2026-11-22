@@ -1,6 +1,6 @@
 # The old cluster's paths (/select/0/prometheus, /insert/0/prometheus) on top
-# of VMSingle, so a consumer can move without changing its URL. The cutover
-# points the old Service names here (cutover-v1.yaml). Only the read and write
+# of VMSingle, so a consumer keeps its URL. The old Service names point here
+# (vm-service-names.yaml). Only the read and write
 # APIs pass: VMSingle's admin endpoints are not part of the old paths.
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMAuth
@@ -11,6 +11,13 @@ spec:
   podDisruptionBudget:
     maxUnavailable: 1
   selectAllByDefault: false
+  disableSelfServiceScrape: true
+  secrets:
+    - vmauth-auth-keys
+  extraArgs:
+    metricsAuthKey: file:///etc/vm/secrets/vmauth-auth-keys/METRICS_AUTH_KEY
+    flagsAuthKey: file:///etc/vm/secrets/vmauth-auth-keys/ADMIN_AUTH_KEY
+    pprofAuthKey: file:///etc/vm/secrets/vmauth-auth-keys/ADMIN_AUTH_KEY
   unauthorizedUserAccessSpec:
     url_map:
       - src_paths:
@@ -67,8 +74,14 @@ spec:
     secretRef:
       name: vmauth-projects
       key: auth.yml
+  disableSelfServiceScrape: true
+  secrets:
+    - vmauth-auth-keys
   extraArgs:
     configCheckInterval: 30s
+    metricsAuthKey: file:///etc/vm/secrets/vmauth-auth-keys/METRICS_AUTH_KEY
+    flagsAuthKey: file:///etc/vm/secrets/vmauth-auth-keys/ADMIN_AUTH_KEY
+    pprofAuthKey: file:///etc/vm/secrets/vmauth-auth-keys/ADMIN_AUTH_KEY
   extraEnvs:
     - name: GOMAXPROCS
       value: "1"

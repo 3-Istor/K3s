@@ -1,5 +1,5 @@
-# What Alloy scraped until CNP-185 V1, with the same job labels so rules and
-# dashboards keep matching. ServiceMonitors and PodMonitors are converted by
+# Scrape jobs keep the job labels the old stack used, so rules and dashboards
+# keep matching. ServiceMonitors and PodMonitors are converted by
 # the operator and need nothing here.
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMScrapeConfig
@@ -143,27 +143,6 @@ spec:
       regex: hubble_flows_processed_total|hubble_drop_total
       action: keep
 ---
-# Alloy keeps counting project log lines until V2 replaces it; its labels
-# (namespace, project) come from the log streams, not from the target.
-apiVersion: operator.victoriametrics.com/v1beta1
-kind: VMPodScrape
-metadata:
-  name: alloy
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: alloy
-  podMetricsEndpoints:
-    - port: http-metrics
-      honorLabels: true
-      relabelConfigs:
-        - targetLabel: job
-          replacement: integrations/self
-      metricRelabelConfigs:
-        - sourceLabels: [__name__]
-          regex: loki_process_custom_.+|loki_write_.+|loki_source_.+|alloy_build_info
-          action: keep
----
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMPodScrape
 metadata:
@@ -171,9 +150,10 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: alertmanager
+      app.kubernetes.io/name: vmalertmanager
+      app.kubernetes.io/instance: cnp
   podMetricsEndpoints:
-    - port: http
+    - port: web
       relabelConfigs:
         - targetLabel: job
           replacement: alertmanager
@@ -185,7 +165,8 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: victoria-metrics-alert
+      app.kubernetes.io/name: vmalert
+      app.kubernetes.io/instance: cnp
   podMetricsEndpoints:
     - port: http
       relabelConfigs:

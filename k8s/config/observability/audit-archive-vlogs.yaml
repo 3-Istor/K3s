@@ -1,9 +1,8 @@
-# LogsQL version of the hourly audit archive (audit-archive.yaml), run next to
-# the logcli one during the dual run. Same streams, same bucket, same object
-# names under ARCHIVE_PREFIX: audit/vlogs/ for now, so the bucket's audit/
-# lifecycle and Object Lock apply. At the switch, ARCHIVE_PREFIX becomes
-# "audit" and the logcli CronJob goes. Each line is VictoriaLogs' own JSON
-# ({"_time", "_stream", "_msg"}), _msg being the raw log line.
+# Hourly audit archive from VictoriaLogs (LogsQL): the Kubernetes API, Vault
+# and Keycloak event streams, one object per stream and hour under audit/, so
+# the bucket's audit/ lifecycle and Object Lock apply (audit-archive.yaml).
+# Each line is VictoriaLogs' own JSON ({"_time", "_stream", "_msg"}), _msg
+# being the raw log line.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -46,94 +45,12 @@ data:
         --content-type application/gzip --output text --query VersionId
       echo "uploaded $key"
     done
-  # Exit criterion of the switch: 48 h of both archives hold the same lines.
-  # Lines are compared by hash, and a line may sit in the next or previous
-  # hour on the other side (each collector stamps its own read time).
-  compare.py: |
-    import datetime, gzip, hashlib, json, os, sys
-    from collections import Counter
-
-    ROOT = os.environ.get("ARCHIVE_DIR", "/work/archive")
-    HOURS = int(os.environ.get("COMPARE_HOURS", "48"))
-    STREAMS = ("k8s-audit", "vault", "keycloak")
-    EDGE = datetime.timedelta(minutes=2)
-
-    def parse_time(value):
-        value = value.rstrip("Z")
-        if "." in value:
-            whole, fraction = value.split(".", 1)
-            value = whole + "." + fraction[:6]
-        return datetime.datetime.fromisoformat(value).replace(tzinfo=datetime.timezone.utc)
-
-    def read(path, line_key, time_key, times):
-        if not os.path.exists(path):
-            return None
-        lines = Counter()
-        with gzip.open(path, "rt", encoding="utf-8") as f:
-            for raw in f:
-                if raw.strip():
-                    entry = json.loads(raw)
-                    digest = hashlib.sha256(entry[line_key].rstrip("\n").encode()).hexdigest()[:16]
-                    lines[digest] += 1
-                    times[digest] = parse_time(entry[time_key])
-        return lines
-
-    now = datetime.datetime.now(datetime.timezone.utc).replace(minute=0, second=0, microsecond=0)
-    hours = [now - datetime.timedelta(hours=h) for h in range(HOURS, 0, -1)]
-    window_start, window_end = hours[0], now
-    failed = False
-
-    for stream in STREAMS:
-        times = {}
-        carry = Counter()
-        totals = Counter()
-        differing = 0
-        previous = None
-
-        def unmatched(lines, where):
-            count = 0
-            for digest, n in lines.items():
-                stamp = times.get(digest)
-                if stamp and (stamp - window_start <= EDGE or window_end - stamp <= EDGE):
-                    continue
-                print(f"{stream} {where}: line {digest} on one side only")
-                count += n
-            return count
-
-        for hour in hours:
-            name = hour.strftime("%Y/%m/%d/%H") + ".jsonl.gz"
-            logcli = read(f"{ROOT}/{stream}/{name}", "line", "timestamp", times)
-            logsql = read(f"{ROOT}/vlogs/{stream}/{name}", "_msg", "_time", times)
-            if logcli is None or logsql is None:
-                print(f"{stream} {name}: missing on the {'logcli' if logcli is None else 'LogsQL'} side")
-                failed = True
-                continue
-            totals["logcli"] += sum(logcli.values())
-            totals["logsql"] += sum(logsql.values())
-            # Signed: positive on the logcli side, negative on the LogsQL side.
-            here = Counter(logcli)
-            here.subtract(logsql)
-            for digest in list(here):
-                if carry[digest] and here[digest] and (carry[digest] > 0) != (here[digest] > 0):
-                    matched = min(abs(carry[digest]), abs(here[digest]))
-                    sign = 1 if here[digest] > 0 else -1
-                    here[digest] -= sign * matched
-                    carry[digest] += sign * matched
-            differing += unmatched(Counter({d: abs(n) for d, n in carry.items() if n}), previous)
-            carry = Counter({d: n for d, n in here.items() if n})
-            previous = name
-            print(f"{stream} {name}: logcli={sum(logcli.values())} logsql={sum(logsql.values())}")
-        differing += unmatched(Counter({d: abs(n) for d, n in carry.items() if n}), previous)
-        verdict = "identical" if differing == 0 else f"{differing} lines differ"
-        print(f"{stream}: {verdict} over {HOURS}h (logcli {totals['logcli']}, logsql {totals['logsql']})")
-        failed = failed or differing > 0
-
-    sys.exit(1 if failed else 0)
 ---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: audit-archive-vlogs
+  # The CMP's platform view reads this name (cmp-archive-status.yaml).
+  name: audit-archive
 spec:
   schedule: "7 * * * *"
   concurrencyPolicy: Forbid
@@ -191,7 +108,7 @@ spec:
                 - name: AWS_DEFAULT_REGION
                   value: us-east-1
                 - name: ARCHIVE_PREFIX
-                  value: audit/vlogs
+                  value: audit
               envFrom:
                 - secretRef:
                     name: rook-ceph-object-user-openstack-rgw-audit-archive
@@ -206,96 +123,6 @@ spec:
                   memory: 128Mi
                 limits:
                   memory: 128Mi
-              securityContext:
-                allowPrivilegeEscalation: false
-                readOnlyRootFilesystem: true
-                capabilities:
-                  drop: ["ALL"]
----
-# Daily during the dual run; delete it with the logcli archive. A failed run
-# means the two archives differ: its log lists the hours and line hashes.
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: audit-vlogs-compare
-spec:
-  schedule: "30 6 * * *"
-  concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: 3
-  failedJobsHistoryLimit: 3
-  jobTemplate:
-    spec:
-      backoffLimit: 0
-      activeDeadlineSeconds: 3600
-      template:
-        spec:
-          restartPolicy: Never
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 65534
-            runAsGroup: 65534
-            seccompProfile:
-              type: RuntimeDefault
-          volumes:
-            - name: work
-              emptyDir:
-                sizeLimit: 2Gi
-            - name: scripts
-              configMap:
-                name: audit-archive-vlogs-scripts
-          initContainers:
-            # The three UTC days that hold the last 48 hours, both prefixes.
-            - name: download
-              image: amazon/aws-cli:2.27.0
-              command:
-                - bash
-                - -c
-                - |
-                  set -eu
-                  export AWS_ACCESS_KEY_ID="$AccessKey" AWS_SECRET_ACCESS_KEY="$SecretKey"
-                  includes=()
-                  for days_ago in 0 1 2; do
-                    includes+=(--include "*/$(date -u -d "-$days_ago day" +%Y/%m/%d)/*")
-                  done
-                  aws --endpoint-url "$Endpoint" s3 sync --only-show-errors \
-                    s3://cnp-audit-archive/audit/ /work/archive/ --exclude "*" "${includes[@]}"
-              env:
-                - name: HOME
-                  value: /work
-                - name: AWS_DEFAULT_REGION
-                  value: us-east-1
-              envFrom:
-                - secretRef:
-                    name: rook-ceph-object-user-openstack-rgw-audit-archive
-              volumeMounts:
-                - name: work
-                  mountPath: /work
-              resources:
-                requests:
-                  cpu: 50m
-                  memory: 128Mi
-                limits:
-                  memory: 128Mi
-              securityContext:
-                allowPrivilegeEscalation: false
-                readOnlyRootFilesystem: true
-                capabilities:
-                  drop: ["ALL"]
-          containers:
-            - name: compare
-              image: python:3.13.9-alpine3.22
-              command: ["python3", "-I", "/scripts/compare.py"]
-              volumeMounts:
-                - name: work
-                  mountPath: /work
-                - name: scripts
-                  mountPath: /scripts
-              resources:
-                requests:
-                  cpu: 50m
-                  memory: 256Mi
-                limits:
-                  memory: 256Mi
               securityContext:
                 allowPrivilegeEscalation: false
                 readOnlyRootFilesystem: true

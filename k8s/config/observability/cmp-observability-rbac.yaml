@@ -1,0 +1,55 @@
+# The CMP writes each prod app's SLO rules (VMRule), each project's alert
+# routes (VMAlertmanagerConfig) and the Secret of webhooks those routes read,
+# in cnp-observability only: the operator reads nothing from project
+# namespaces (D9). Its trace routing table (otelcol-gateway-routing) has its
+# own Role next to the gateway.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cmp-observability-writer
+  namespace: cnp-observability
+rules:
+  - apiGroups: [operator.victoriametrics.com]
+    resources: [vmrules, vmalertmanagerconfigs]
+    verbs: [get, list, create, update, delete]
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [get, list, create, update, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cmp-observability-writer
+  namespace: cnp-observability
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cmp-observability-writer
+subjects:
+  - kind: ServiceAccount
+    name: arcl-cmp
+    namespace: arcl-cmp
+---
+# An SLO is written for every prod app whose namespace has an HTTPRoute.
+# cmp-release-operator already grants get.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cmp-httproute-lister
+rules:
+  - apiGroups: [gateway.networking.k8s.io]
+    resources: [httproutes]
+    verbs: [list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cmp-httproute-lister
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cmp-httproute-lister
+subjects:
+  - kind: ServiceAccount
+    name: arcl-cmp
+    namespace: arcl-cmp

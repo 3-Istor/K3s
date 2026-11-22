@@ -1,0 +1,109 @@
+# One-shot copy of the CMP buckets from Garage to the Ceph RGW (CNP-189).
+# Needs the Secret garage-migration-ro (a read-only Garage key) and the three
+# ObjectBucketClaims of k8s/config/arcl-cmp/s3-buckets.yaml. Copies, then
+# fails unless `rclone check` finds every object identical (size and MD5).
+#
+#   kubectl -n arcl-cmp delete job garage-to-rgw --ignore-not-found
+#   kubectl -n arcl-cmp apply -f scripts/garage-to-rgw.yaml
+#   kubectl -n arcl-cmp logs -f job/garage-to-rgw
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: garage-to-rgw
+  namespace: arcl-cmp
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: rclone
+          image: docker.io/rclone/rclone:1.71.2
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              for pair in user-avatars:AV cnp-app-icons:IC cnp-project-exports:EX; do
+                bucket=${pair%%:*}; remote=RGW${pair##*:}
+                echo "== $bucket"
+                rclone copy --checksum --s3-no-check-bucket "garage:$bucket" "$remote:$bucket"
+                rclone check --one-way "garage:$bucket" "$remote:$bucket"
+                echo "objects garage=$(rclone lsf -R --files-only garage:$bucket | wc -l) rgw=$(rclone lsf -R --files-only $remote:$bucket | wc -l)"
+              done
+              echo VERIFIED
+          env:
+            - {name: RCLONE_CONFIG_GARAGE_TYPE, value: s3}
+            - {name: RCLONE_CONFIG_GARAGE_PROVIDER, value: Other}
+            - {name: RCLONE_CONFIG_GARAGE_ENDPOINT, value: "http://garage.garage-s3.svc.cluster.local:3900"}
+            - {name: RCLONE_CONFIG_GARAGE_REGION, value: garage}
+            - name: RCLONE_CONFIG_GARAGE_ACCESS_KEY_ID
+              valueFrom: {secretKeyRef: {name: garage-migration-ro, key: AWS_ACCESS_KEY_ID}}
+            - name: RCLONE_CONFIG_GARAGE_SECRET_ACCESS_KEY
+              valueFrom: {secretKeyRef: {name: garage-migration-ro, key: AWS_SECRET_ACCESS_KEY}}
+            - {name: RCLONE_CONFIG_RGWAV_TYPE, value: s3}
+            - {name: RCLONE_CONFIG_RGWAV_PROVIDER, value: Ceph}
+            - {name: RCLONE_CONFIG_RGWAV_ENDPOINT, value: "http://192.168.1.110:7480"}
+            - name: RCLONE_CONFIG_RGWAV_ACCESS_KEY_ID
+              valueFrom: {secretKeyRef: {name: user-avatars, key: AWS_ACCESS_KEY_ID}}
+            - name: RCLONE_CONFIG_RGWAV_SECRET_ACCESS_KEY
+              valueFrom: {secretKeyRef: {name: user-avatars, key: AWS_SECRET_ACCESS_KEY}}
+            - {name: RCLONE_CONFIG_RGWIC_TYPE, value: s3}
+            - {name: RCLONE_CONFIG_RGWIC_PROVIDER, value: Ceph}
+            - {name: RCLONE_CONFIG_RGWIC_ENDPOINT, value: "http://192.168.1.110:7480"}
+            - name: RCLONE_CONFIG_RGWIC_ACCESS_KEY_ID
+              valueFrom: {secretKeyRef: {name: cnp-app-icons, key: AWS_ACCESS_KEY_ID}}
+            - name: RCLONE_CONFIG_RGWIC_SECRET_ACCESS_KEY
+              valueFrom: {secretKeyRef: {name: cnp-app-icons, key: AWS_SECRET_ACCESS_KEY}}
+            - {name: RCLONE_CONFIG_RGWEX_TYPE, value: s3}
+            - {name: RCLONE_CONFIG_RGWEX_PROVIDER, value: Ceph}
+            - {name: RCLONE_CONFIG_RGWEX_ENDPOINT, value: "http://192.168.1.110:7480"}
+            - name: RCLONE_CONFIG_RGWEX_ACCESS_KEY_ID
+              valueFrom: {secretKeyRef: {name: cnp-project-exports, key: AWS_ACCESS_KEY_ID}}
+            - name: RCLONE_CONFIG_RGWEX_SECRET_ACCESS_KEY
+              valueFrom: {secretKeyRef: {name: cnp-project-exports, key: AWS_SECRET_ACCESS_KEY}}
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {memory: 256Mi}
+---
+# Loki's pre-RGW chunks, archived as they are (needs garage-migration-ro in
+# observability too).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: garage-to-rgw-loki
+  namespace: observability
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: rclone
+          image: docker.io/rclone/rclone:1.71.2
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              rclone copy --checksum --s3-no-check-bucket --transfers 16 garage:loki-data rgw:loki-garage-archive
+              rclone check --one-way garage:loki-data rgw:loki-garage-archive
+              echo "objects garage=$(rclone lsf -R --files-only garage:loki-data | wc -l) rgw=$(rclone lsf -R --files-only rgw:loki-garage-archive | wc -l)"
+              echo VERIFIED
+          env:
+            - {name: RCLONE_CONFIG_GARAGE_TYPE, value: s3}
+            - {name: RCLONE_CONFIG_GARAGE_PROVIDER, value: Other}
+            - {name: RCLONE_CONFIG_GARAGE_ENDPOINT, value: "http://garage.garage-s3.svc.cluster.local:3900"}
+            - {name: RCLONE_CONFIG_GARAGE_REGION, value: garage}
+            - name: RCLONE_CONFIG_GARAGE_ACCESS_KEY_ID
+              valueFrom: {secretKeyRef: {name: garage-migration-ro, key: AWS_ACCESS_KEY_ID}}
+            - name: RCLONE_CONFIG_GARAGE_SECRET_ACCESS_KEY
+              valueFrom: {secretKeyRef: {name: garage-migration-ro, key: AWS_SECRET_ACCESS_KEY}}
+            - {name: RCLONE_CONFIG_RGW_TYPE, value: s3}
+            - {name: RCLONE_CONFIG_RGW_PROVIDER, value: Ceph}
+            - {name: RCLONE_CONFIG_RGW_ENDPOINT, value: "http://192.168.1.110:7480"}
+            - name: RCLONE_CONFIG_RGW_ACCESS_KEY_ID
+              valueFrom: {secretKeyRef: {name: loki-garage-archive, key: AWS_ACCESS_KEY_ID}}
+            - name: RCLONE_CONFIG_RGW_SECRET_ACCESS_KEY
+              valueFrom: {secretKeyRef: {name: loki-garage-archive, key: AWS_SECRET_ACCESS_KEY}}
+          resources:
+            requests: {cpu: 200m, memory: 512Mi}
+            limits: {memory: 512Mi}

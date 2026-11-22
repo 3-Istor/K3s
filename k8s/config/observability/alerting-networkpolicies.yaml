@@ -1,0 +1,54 @@
+# Alertmanager has no authentication of its own: any pod that reaches it can
+# post a silence, including on security alerts (C3). Only the senders, the
+# readers and the scraper may.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vmalertmanager-clients
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vmalertmanager
+      app.kubernetes.io/instance: cnp
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        # VMAlert cnp (metrics) and vlogs (LogsQL).
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmalert
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: grafana
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmagent
+              app.kubernetes.io/instance: cnp
+        # Alerts tab, silences from the portal, the agents' policy checks.
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: arcl-cmp
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: backend
+              app.kubernetes.io/name: arcl-cmp
+      ports:
+        - port: 9093
+---
+# vmalert's API shows every rule and its last result: only its scraper.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vmalert-cnp-scrape-only
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vmalert
+      app.kubernetes.io/instance: cnp
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmagent
+              app.kubernetes.io/instance: cnp

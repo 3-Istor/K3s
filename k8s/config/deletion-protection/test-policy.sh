@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Probes cnp-deletion-protection on the current kubectl context (policy and CRDs must exist).
-# Creates cnp209-probe-<ts>-* namespaces, Applications, AppProjects and CNPG Clusters, then removes them.
+# Creates cnp209-probe-<ts>-* namespaces, Applications, AppProjects, CNPG Clusters and ObjectBucketClaims, then removes them.
 set -u
 P=cnp209-probe-$(date +%s)
 L=cnp.3istor.com/deletion-protected
@@ -68,13 +68,17 @@ run argoproj.io/v1alpha1 Application applications.argoproj.io argocd \
   '{project: default, destination: {server: "https://kubernetes.default.svc", namespace: default}, source: {repoURL: "https://example.invalid/r.git", path: .}}'
 run argoproj.io/v1alpha1 AppProject appprojects.argoproj.io argocd '{}'
 
-# CNPG Cluster: only the namespace label matters, the Cluster has none of its own.
+# CNPG Cluster and ObjectBucketClaim: only the namespace label matters, they have none of their own.
+# The claim names no real StorageClass so no bucket is provisioned (ceph-bucket-retain would outlive it).
 for x in t:true u:-; do
   check allow "Namespace db-${x%:*} create (label ${x#*:})" mk v1 Namespace "$P-db-${x%:*}" default "${x#*:}" -
   check allow "Cluster create in db-${x%:*}" mk postgresql.cnpg.io/v1 Cluster db "$P-db-${x%:*}" - '{instances: 1, storage: {size: 1Gi}}'
+  check allow "ObjectBucketClaim create in db-${x%:*}" mk objectbucket.io/v1alpha1 ObjectBucketClaim bucket "$P-db-${x%:*}" - '{generateBucketName: probe, storageClassName: cnp-probe-none}'
 done
 check deny  "Cluster delete in namespace labelled true" kubectl -n "$P-db-t" delete clusters.postgresql.cnpg.io db --wait=false
 check allow "Cluster delete in unlabelled namespace"    kubectl -n "$P-db-u" delete clusters.postgresql.cnpg.io db --wait=false
+check deny  "ObjectBucketClaim delete in namespace labelled true" kubectl -n "$P-db-t" delete objectbucketclaims.objectbucket.io bucket --wait=false
+check allow "ObjectBucketClaim delete in unlabelled namespace"    kubectl -n "$P-db-u" delete objectbucketclaims.objectbucket.io bucket --wait=false
 
 [ $bad = 0 ] && echo "all checks passed"
 exit $bad

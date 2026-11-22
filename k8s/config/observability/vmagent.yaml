@@ -31,6 +31,12 @@ spec:
   extraEnvs:
     - name: GOMAXPROCS
       value: "1"
+    # authKey of VMPodScrape vmauth (vmauth-keys.yaml).
+    - name: VMAUTH_METRICS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: vmauth-auth-keys
+          key: METRICS_AUTH_KEY
   resources:
     requests:
       cpu: 50m
@@ -146,18 +152,3 @@ subjects:
   - kind: ServiceAccount
     name: vmagent-cnp
     namespace: observability
----
-# The old vmselect pods: side-by-side comparison and rollback reads.
-apiVersion: v1
-kind: Service
-metadata:
-  name: vm-legacy-vmselect
-spec:
-  ports:
-    - name: http
-      port: 8481
-      targetPort: http
-  selector:
-    app: vmselect
-    app.kubernetes.io/instance: vm
-    app.kubernetes.io/name: victoria-metrics-cluster

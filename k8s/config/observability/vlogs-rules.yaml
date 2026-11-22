@@ -1,8 +1,5 @@
-# LogsQL ports of loki-security-rules.yaml and loki-log-rules.yaml, plus the
-# log counters Alloy used to derive. Evaluated by VMAlert vlogs
-# (vmalert-vlogs.yaml). Same alert names, labels and thresholds as the Loki
-# ones; logs_backend=vlogs marks them as the shadow copy during the dual run
-# (values-alertmanager.yaml routes them away from Discord).
+# Security and log-volume rules in LogsQL, plus per-project log counters.
+# Evaluated by VMAlert vlogs (vmalert-vlogs.yaml).
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMRule
 metadata:
@@ -14,8 +11,6 @@ spec:
     - name: security-audit
       type: vlogs
       interval: 1m
-      labels:
-        logs_backend: vlogs
       rules:
         # Terraform and the CMP bootstrap hold a root-policy token, so this
         # also fires on their runs: each one should be one we expect.
@@ -74,7 +69,7 @@ spec:
         # the CMP (CNP-124). Admin events carry ids only: the group ids come
         # from `terraform output -raw elevated_group_ids_regex`, the actors are
         # the 3-istor-openid and cmp-provisioner service accounts. Update them
-        # if those groups or clients are recreated, here and in the Loki rule.
+        # if those groups or clients are recreated, here.
         - alert: KeycloakElevatedGroupChangedOutsideCmp
           expr: |
             _time:5m {namespace=~"keycloak|.+-system"} "resourceType=\"GROUP_MEMBERSHIP\""
@@ -128,13 +123,11 @@ metadata:
 spec:
   groups:
     # Watched from the logs on purpose: a read-only store cannot store the
-    # metrics that would alert about itself (vmstorage went silent for 5 days
-    # on 2026-10-05 before this rule existed). VMSingle replaces vmstorage.
+    # metrics that would alert about itself (the old vmstorage went silent for
+    # 5 days on 2026-10-05 before this rule existed).
     - name: platform-metrics
       type: vlogs
       interval: 1m
-      labels:
-        logs_backend: vlogs
       rules:
         - alert: MetricsStorageRejectingWrites
           expr: |
@@ -149,13 +142,11 @@ spec:
           annotations:
             summary: "VictoriaMetrics is rejecting writes: metrics are being lost"
 
-    # Port of LogVolumeSpike (vmalert-rules.yaml), which reads Alloy's
-    # counters: same floors, same comparison with yesterday at this time.
+    # An app logging far more than at the same time yesterday is usually
+    # looping on an error. The floors keep quiet apps from tripping it.
     - name: project-logs
       type: vlogs
       interval: 1m
-      labels:
-        logs_backend: vlogs
       rules:
         - alert: LogVolumeSpike
           expr: |
@@ -173,8 +164,7 @@ spec:
             summary: "{{ $labels.namespace }} logged {{ $value | humanize }} lines in 10 minutes"
             description: "Far above its usual volume; it is often an error loop. Check the Logs view of the project in the CMP."
 ---
-# What Alloy counted per project (loki_process_custom_log_*_total), as one
-# sample per minute in VMSingle: sum_over_time(...[10m]) replaces
+# Log lines per project, as one sample per minute in VMSingle: sum_over_time(...[10m]) replaces
 # increase(...[10m]). Debug lines are no longer collected, so they are not
 # counted either.
 apiVersion: operator.victoriametrics.com/v1beta1

@@ -89,7 +89,7 @@ the `k3s-cluster` client, at most 1 hour for a Vault OIDC token (TTL 15
 minutes, max 1 hour, renewals do not re-read the groups).
 
 The CMP removes, journals and reports on Discord anyone it finds in an
-`elevated-*` group without an active grant (every 30 s), and the Loki rule
+`elevated-*` group without an active grant (every 30 s), and the LogsQL rule
 `KeycloakElevatedGroupChangedOutsideCmp` fires when such a change is not made
 by the CMP. Adding a cloud admin role later: a new `elevated-<name>` group
 here, bound to the role, and one catalogue entry in the CMP
@@ -98,7 +98,7 @@ here, bound to the role, and one catalogue entry in the CMP
 Break-glass, when the CMP or Keycloak cannot grant access:
 
 - Keycloak up, CMP down: the Keycloak master admin (offline vault) adds the
-  person to the `elevated-*` group in the 3istor realm. The Loki rule fires,
+  person to the `elevated-*` group in the 3istor realm. The LogsQL rule fires,
   which is expected; remove the member by hand afterwards, or the CMP removes
   them as soon as it is back.
 - Keycloak down, cluster: SSH to the K3s server node and use

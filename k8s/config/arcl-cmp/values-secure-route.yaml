@@ -32,3 +32,45 @@ routes:
       vault:
         path: "kvv2/arcl-cmp/envoy-auth"
         role: "arcl-cmp-role"
+
+  # Public pictures: the old Garage website URLs (avatars-s3.3istor.com/<file>)
+  # keep working, rewritten onto the public-read bucket on the RGW.
+  avatars:
+    hostnames:
+      - "avatars-s3.3istor.com"
+    rules:
+      # Anonymous writes are refused by the bucket policy, which only grants
+      # s3:GetObject.
+      - matches:
+          - path:
+              type: PathPrefix
+              value: "/"
+        # Envoy Gateway glues a "/" prefix replacement to the file name
+        # (/user-avatarsx.jpg): a regex rewrite keeps the separator.
+        filters:
+          - type: ExtensionRef
+            extensionRef:
+              group: gateway.envoyproxy.io
+              kind: HTTPRouteFilter
+              name: avatars-bucket-prefix
+        backendRefs:
+          - name: rgw
+            port: 7480
+    auth:
+      enabled: false
+
+  # Presigned export links are signed for this host. Only the exports bucket
+  # is reachable here, never the rest of the RGW (CNPG backups, audit archive).
+  s3-exports:
+    hostnames:
+      - "s3.3istor.com"
+    rules:
+      - matches:
+          - path:
+              type: PathPrefix
+              value: "/cnp-project-exports/"
+        backendRefs:
+          - name: rgw
+            port: 7480
+    auth:
+      enabled: false

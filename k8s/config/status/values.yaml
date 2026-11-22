@@ -130,12 +130,12 @@ config:
         - type: discord
           failure-threshold: 3
 
-    - name: Garage S3 (Storage)
+    - name: Object storage (Ceph RGW)
       group: 2. Core Services
-      url: "https://s3.3istor.com"
+      url: "https://s3.3istor.com/cnp-project-exports/"
       interval: 1m
       conditions:
-        # S3 API returns 403 Forbidden at root without credentials, confirming the API is up.
+        # The RGW refuses an anonymous listing with 403, confirming the API is up.
         - "[STATUS] == 403 || [STATUS] == 200"
       alerts:
         - type: discord

@@ -1,0 +1,231 @@
+# The clouds' only door (D22), behind WireGuard relays 18080 (writes) and
+# 18083 (reads). One writer and one reader per cloud, passwords from Vault.
+# vmauth stamps the cloud's name on everything it forwards, whatever the
+# client sent: extra_label on samples, extra_fields and VL-Extra-Fields on
+# logs (Fluent Bit's /insert/jsonline, as on-prem), X-Cnp-Cluster on spans (the gateway's 4319 port trusts it). Readers
+# only see their own cloud.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAuth
+metadata:
+  name: clouds
+spec:
+  replicaCount: 2
+  podDisruptionBudget:
+    maxUnavailable: 1
+  selectAllByDefault: false
+  userNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: observability
+  userSelector:
+    matchLabels:
+      cnp.3istor.com/vmauth: clouds
+  disableSelfServiceScrape: true
+  secrets:
+    - vmauth-auth-keys
+  extraArgs:
+    metricsAuthKey: file:///etc/vm/secrets/vmauth-auth-keys/METRICS_AUTH_KEY
+    flagsAuthKey: file:///etc/vm/secrets/vmauth-auth-keys/ADMIN_AUTH_KEY
+    pprofAuthKey: file:///etc/vm/secrets/vmauth-auth-keys/ADMIN_AUTH_KEY
+  extraEnvs:
+    - name: GOMAXPROCS
+      value: "1"
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 64Mi
+  configReloaderResources:
+    requests:
+      cpu: 5m
+      memory: 24Mi
+    limits:
+      cpu: 50m
+      memory: 24Mi
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: vmauth
+          app.kubernetes.io/instance: clouds
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMUser
+metadata:
+  name: cloud-aws
+  labels:
+    cnp.3istor.com/vmauth: clouds
+spec:
+  username: cloud-aws
+  passwordRef:
+    name: vmauth-cloud-aws
+    key: writer_password
+  disable_secret_creation: true
+  targetRefs:
+    - static:
+        url: http://vmsingle-cnp.observability.svc.cluster.local:8429?extra_label=cluster=aws
+      paths: [/api/v1/write]
+    - static:
+        url: http://vlogs-cnp.observability.svc.cluster.local:9428?extra_fields=cluster=aws
+      paths: [/insert/jsonline]
+      headers: ["VL-Extra-Fields: cluster=aws"]
+    - static:
+        url: http://otelcol-gateway.observability.svc.cluster.local:4319
+      paths: [/v1/traces]
+      headers: ["X-Cnp-Cluster: aws"]
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMUser
+metadata:
+  name: cloud-aws-reader
+  labels:
+    cnp.3istor.com/vmauth: clouds
+spec:
+  username: cloud-aws-reader
+  passwordRef:
+    name: vmauth-cloud-aws
+    key: reader_password
+  disable_secret_creation: true
+  targetRefs:
+    - static:
+        url: http://vmsingle-cnp.observability.svc.cluster.local:8429?extra_filters[]=%7Bcluster%3D%22aws%22%7D&extra_filters=%7Bcluster%3D%22aws%22%7D
+      paths:
+        - /select/0/prometheus/api/v1/(query|query_range|series|labels|label/[^/]+/values|status/buildinfo)
+      drop_src_path_prefix_parts: 3
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMUser
+metadata:
+  name: cloud-gcp
+  labels:
+    cnp.3istor.com/vmauth: clouds
+spec:
+  username: cloud-gcp
+  passwordRef:
+    name: vmauth-cloud-gcp
+    key: writer_password
+  disable_secret_creation: true
+  targetRefs:
+    - static:
+        url: http://vmsingle-cnp.observability.svc.cluster.local:8429?extra_label=cluster=gcp
+      paths: [/api/v1/write]
+    - static:
+        url: http://vlogs-cnp.observability.svc.cluster.local:9428?extra_fields=cluster=gcp
+      paths: [/insert/jsonline]
+      headers: ["VL-Extra-Fields: cluster=gcp"]
+    - static:
+        url: http://otelcol-gateway.observability.svc.cluster.local:4319
+      paths: [/v1/traces]
+      headers: ["X-Cnp-Cluster: gcp"]
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMUser
+metadata:
+  name: cloud-gcp-reader
+  labels:
+    cnp.3istor.com/vmauth: clouds
+spec:
+  username: cloud-gcp-reader
+  passwordRef:
+    name: vmauth-cloud-gcp
+    key: reader_password
+  disable_secret_creation: true
+  targetRefs:
+    - static:
+        url: http://vmsingle-cnp.observability.svc.cluster.local:8429?extra_filters[]=%7Bcluster%3D%22gcp%22%7D&extra_filters=%7Bcluster%3D%22gcp%22%7D
+      paths:
+        - /select/0/prometheus/api/v1/(query|query_range|series|labels|label/[^/]+/values|status/buildinfo)
+      drop_src_path_prefix_parts: 3
+---
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: vmauth-cloud-aws
+spec:
+  path: kvv2/observability/clouds/aws
+  vaultRole: observability-role
+  type: Opaque
+  keys:
+    - writer_password
+    - reader_password
+---
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: vmauth-cloud-gcp
+spec:
+  path: kvv2/observability/clouds/gcp
+  vaultRole: observability-role
+  type: Opaque
+  keys:
+    - writer_password
+    - reader_password
+---
+# Only the relays come in from outside the namespace; vmagent scrapes it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vmauth-clouds-clients
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vmauth
+      app.kubernetes.io/instance: clouds
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: wireguard
+          podSelector:
+            matchExpressions:
+              - {key: app, operator: In, values: [wireguard, wireguard-gcp]}
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmagent
+              app.kubernetes.io/instance: cnp
+      ports:
+        - port: 8427
+---
+# Adds to vmsingle-clients and vlogs-clients, which stay as V1 and V2 wrote
+# them. The trace gateway's policy (V4) already admits vmauth clouds on 4319.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vmsingle-vmauth-clouds
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vmsingle
+      app.kubernetes.io/instance: cnp
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmauth
+              app.kubernetes.io/instance: clouds
+      ports:
+        - port: 8429
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vlogs-vmauth-clouds
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vlsingle
+      app.kubernetes.io/instance: cnp
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmauth
+              app.kubernetes.io/instance: clouds
+      ports:
+        - port: 9428

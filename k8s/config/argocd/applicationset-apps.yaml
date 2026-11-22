@@ -45,7 +45,14 @@ spec:
               elementsYaml: |
                 {{- $out := list -}}
                 {{- $restores := dig "status" "move" "restores" (list) . -}}
-                {{- range $app := dig "apps" (list) .spec -}}
+                {{- $apps := dig "apps" (list) .spec -}}
+                {{- range $app := $apps -}}
+                  {{- $callers := list -}}
+                  {{- range $other := $apps -}}
+                    {{- range $link := dig "dependsOn" (list) $other -}}
+                      {{- if eq $link.app $app.name -}}{{- $callers = append $callers $other.name -}}{{- end -}}
+                    {{- end -}}
+                  {{- end -}}
                   {{- $components := list "app" -}}
                   {{- if eq $app.type "fullstack" -}}{{- $components = list "frontend" "backend" -}}{{- end -}}
                   {{- $envs := dig "environments" (list "prod") $app -}}
@@ -56,7 +63,7 @@ spec:
                       {{- if eq $c "backend" -}}
                         {{- range $restores -}}{{- if and (eq .app $app.name) (eq .env $env) -}}{{- $restore = . -}}{{- end -}}{{- end -}}
                       {{- end -}}
-                      {{- $out = append $out (dict "name" $app.name "type" $app.type "repoURL" (dig "repoURL" "" $app) "component" $c "env" $env "suffix" (ternary "" "-stg" (eq $env "prod")) "staged" $staged "public" (dig "public" false $app) "hostname" (dig "hostnames" $env "" $app) "dependsOn" (dig "dependsOn" (list) $app) "restore" $restore) -}}
+                      {{- $out = append $out (dict "name" $app.name "type" $app.type "repoURL" (dig "repoURL" "" $app) "component" $c "env" $env "suffix" (ternary "" "-stg" (eq $env "prod")) "staged" $staged "public" (dig "public" false $app) "hostname" (dig "hostnames" $env "" $app) "dependsOn" (dig "dependsOn" (list) $app) "allowFrom" ($callers | uniq | sortAlpha) "restore" $restore) -}}
                     {{- end -}}
                   {{- end -}}
                 {{- end -}}
@@ -71,9 +78,17 @@ spec:
   # (a template cannot add list items conditionally), plus db.restore.*
   # parameters that win over the app repo's own db.restore.
   #
-  # Imported apps (service, backing) never read their source repo (D1): the
-  # chart comes from infra-templates and the values from cnp-projects
-  # apps/<project>/<app>/values.yaml, written by the CMP. The inline values,
+  # Imported apps (service, backing) take their values from cnp-projects
+  # apps/<project>/<app>/values.yaml, written by the CMP, until their standard
+  # pull request is merged (CNP-303): the CMP then sets repoURL on the app and
+  # its values are deploy/values-<app>.yaml of the repository at HEAD, like a
+  # template app's, plus apps/<project>/<app>/release.yaml in cnp-projects,
+  # where the image lives: Argo CD Image Updater writes released versions
+  # there, never to the developer's main. A backing app, or a service the CI
+  # does not build, has no such file. Such an app gets network.allowFrom
+  # inline from the record (the apps whose dependsOn names it), the CMP no
+  # longer writing its values.
+  # The chart comes from infra-templates. The inline values,
   # which win over the file, carry what the registry decides: names, links
   # from dependsOn, the route only for a public app (on the project's own
   # Gateway and connector, like template apps since D-05/D-06), and the pull secret
@@ -101,6 +116,7 @@ spec:
               - {name: cnp.project, value: "{{ .metadata.name }}", forceString: true}
               - {name: cnp.app, value: "{{ .name }}", forceString: true}
               - {name: cnp.environment, value: "{{ .env }}", forceString: true}
+              - {name: cnp.type, value: "{{ .type }}", forceString: true}
               - {name: project_name, value: "{{ .metadata.name }}", forceString: true}
               {{- with .restore }}
               # Empty backupID and targetTime: restore up to the latest WAL.
@@ -125,6 +141,9 @@ spec:
     {{- $_ := set $ingress "gateway" (dict "name" (printf "%s-gateway" .metadata.name) "namespace" (printf "%s-system" .metadata.name)) }}
     {{- end }}
     {{- $values := dict "project_name" .metadata.name "app_name" .name "fullnameOverride" .name "links" $links "ingress" $ingress }}
+    {{- if .repoURL }}
+    {{- $_ := set $values "network" (dict "allowFrom" .allowFrom) }}
+    {{- end }}
     {{- if eq .type "backing" }}
     {{- $_ := set $values "imagePullSecrets" (list) }}
     {{- $_ := set $values "registrySecret" (dict "create" false) }}
@@ -138,17 +157,40 @@ spec:
           targetRevision: HEAD
           path: .
           helm:
+            {{- if .repoURL }}
+            # A service the CI does not build has no release file.
+            ignoreMissingValueFiles: true
+            valueFiles:
+              - '$values/deploy/values-{{ .name }}.yaml'
+              {{- if eq .type "service" }}
+              - '$release/apps/{{ .metadata.name }}/{{ .name }}/release.yaml'
+              {{- end }}
+            {{- else }}
             valueFiles:
               - '$values/apps/{{ .metadata.name }}/{{ .name }}/values.yaml'
+            {{- end }}
             values: {{ $values | toJson | toJson }}
             parameters:
               - {name: cnp.project, value: "{{ .metadata.name }}", forceString: true}
               - {name: cnp.app, value: "{{ .name }}", forceString: true}
               - {name: cnp.environment, value: "{{ .env }}", forceString: true}
+              - {name: cnp.type, value: "{{ .type }}", forceString: true}
               - {name: project_name, value: "{{ .metadata.name }}", forceString: true}
+        {{- if .repoURL }}
+        - repoURL: "{{ .repoURL }}"
+          targetRevision: HEAD
+          path: ""
+          ref: values
+        # The release lives in cnp-projects, not on a branch of the app's
+        # repo: Argo CD refuses two revisions of one repository in an app.
+        - repoURL: https://github.com/3-Istor/cnp-projects.git
+          targetRevision: main
+          ref: release
+        {{- else }}
         - repoURL: https://github.com/3-Istor/cnp-projects.git
           targetRevision: main
           ref: values
+        {{- end }}
     {{- end }}
   template:
     metadata:
@@ -175,9 +217,10 @@ spec:
           helm:
             valueFiles:
               - '{{ if eq .type "fullstack" }}$values/deploy/values-{{ .component }}.yaml{{ else }}$values/deploy/values.yaml{{ end }}'
-            # Who the release belongs to, repeated in both templatePatch
-            # branches. Parameters win over valueFiles and values, so the app
-            # repo (deploy values, CMP config edits) cannot change them:
+            # Who the release belongs to and what kind of app it is (cnp.type
+            # labels backing pods), repeated in both templatePatch branches.
+            # Parameters win over valueFiles and values, so the app repo
+            # (deploy values, CMP config edits) cannot change them:
             # infra-templates derives the Vault role and path, the registry
             # secret and links from cnp.* only, and project_name is pinned so
             # nothing else in the chart trusts the repo's copy.
@@ -185,6 +228,7 @@ spec:
               - {name: cnp.project, value: "{{ .metadata.name }}", forceString: true}
               - {name: cnp.app, value: "{{ .name }}", forceString: true}
               - {name: cnp.environment, value: "{{ .env }}", forceString: true}
+              - {name: cnp.type, value: "{{ .type }}", forceString: true}
               - {name: project_name, value: "{{ .metadata.name }}", forceString: true}
         - repoURL: "{{ .repoURL }}"
           targetRevision: HEAD

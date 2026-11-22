@@ -20,12 +20,6 @@ admin:
 env:
   GF_SECURITY_ADMIN_USER: admin
 
-envValueFrom:
-  GRAFANA_LOKI_PASSWORD:
-    secretKeyRef:
-      name: loki-clients
-      key: GRAFANA_LOKI_PASSWORD
-
 # Grafana only reads the admin password when it creates its database, so a
 # rotation in Vault never reaches the existing one without this.
 extraInitContainers:
@@ -68,7 +62,7 @@ grafana.ini:
 
 persistence:
   enabled: true
-  storageClassName: "ceph-block"
+  storageClassName: "ceph-rbd"
   size: 2Gi
 
 resources:
@@ -101,20 +95,6 @@ datasources:
         access: proxy
         jsonData:
           implementation: prometheus
-
-      # Loki runs with auth_enabled, so every query needs an explicit tenant.
-      - name: Loki
-        type: loki
-        uid: loki
-        url: "http://loki-gateway.observability.svc.cluster.local"
-        access: proxy
-        basicAuth: true
-        basicAuthUser: grafana
-        jsonData:
-          httpHeaderName1: "X-Scope-OrgID"
-        secureJsonData:
-          httpHeaderValue1: "default"
-          basicAuthPassword: "$GRAFANA_LOKI_PASSWORD"
 
       # V4 traces. No AccountID header: org 1 reads the platform tenant (0).
       # Project orgs get theirs from the CMP, through vmauth.
@@ -269,25 +249,27 @@ dashboards:
 
   # The monitoring stack watching itself.
   observability:
-    victoriametrics-cluster:
-      gnetId: 11176
-      revision: 60
+    victoriametrics-single:
+      gnetId: 10229
+      revision: 61
       datasource: Prometheus
     alertmanager:
       gnetId: 9578
       revision: 4
       datasource: Prometheus
-    loki-global:
-      gnetId: 13407
-      revision: 1
+    victorialogs-single:
+      gnetId: 22084
+      revision: 12
       datasource: Prometheus
 
-  # Log exploration, backed by the Loki datasource.
+  # Log exploration, backed by the VictoriaLogs datasource.
   logs:
-    loki-kubernetes-logs:
-      gnetId: 15141
-      revision: 1
-      datasource: Loki
+    victorialogs-explorer:
+      gnetId: 22759
+      revision: 9
+      datasource:
+        - name: DS_VICTORIALOGS
+          value: VictoriaLogs
 
   # Cost from OpenCost (EUR per hour, custom on-prem pricing) and off-hours sleep state from offhours-guard.
   finops:

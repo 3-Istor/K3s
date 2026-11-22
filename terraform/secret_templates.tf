@@ -213,56 +213,6 @@ variable "aws_secret_key" {
   sensitive = true
 }
 
-variable "avatars_s3_access_key_id" {
-  type      = string
-  sensitive = true
-}
-
-variable "avatars_s3_secret_key" {
-  type      = string
-  sensitive = true
-}
-
-variable "icons_s3_access_key_id" {
-  type      = string
-  sensitive = true
-}
-
-variable "icons_s3_secret_key" {
-  type      = string
-  sensitive = true
-}
-
-variable "export_s3_access_key_id" {
-  type      = string
-  sensitive = true
-}
-
-variable "export_s3_secret_key" {
-  type      = string
-  sensitive = true
-}
-
-variable "avatars_s3_endpoint" {
-  type    = string
-  default = "https://s3.3istor.com"
-}
-
-variable "avatars_s3_bucket" {
-  type    = string
-  default = "user-avatars"
-}
-
-variable "avatars_s3_region" {
-  type    = string
-  default = "eu-west-3"
-}
-
-variable "avatars_s3_public_url_base" {
-  type    = string
-  default = "https://avatars-s3.3istor.com"
-}
-
 variable "discord_webhook_url" {
   type      = string
   sensitive = true
@@ -321,16 +271,6 @@ resource "vault_kv_secret_v2" "arcl_cmp_creds" {
     "aws-region"                   = var.aws_region
     "aws-s3-bucket"                = var.aws_s3_bucket
     "aws-s3-key-prefix"            = var.aws_s3_key_prefix
-    "avatars-s3-access-key-id"     = var.avatars_s3_access_key_id
-    "avatars-s3-secret-access-key" = var.avatars_s3_secret_key
-    "avatars-s3-endpoint"          = var.avatars_s3_endpoint
-    "avatars-s3-bucket"            = var.avatars_s3_bucket
-    "avatars-s3-region"            = var.avatars_s3_region
-    "avatars-s3-public-url-base"   = var.avatars_s3_public_url_base
-    "icons-s3-access-key-id"       = var.icons_s3_access_key_id
-    "icons-s3-secret-access-key"   = var.icons_s3_secret_key
-    "export-s3-access-key-id"      = var.export_s3_access_key_id
-    "export-s3-secret-access-key"  = var.export_s3_secret_key
     "cloudflare-api-token"         = var.cloudflare_api_token_secret_var
     "cloudflare-zone-id"           = var.cloudflare_zone_id
     "discord-webhook-url"          = var.discord_webhook_url
@@ -537,6 +477,17 @@ resource "vault_kv_secret_v2" "status_secrets" {
   data_json = jsonencode({
     "DISCORD_WEBHOOK_URL" = var.status_discord_webhook_url
     "client-secret"       = keycloak_openid_client.openid_client.client_secret
+  })
+}
+
+# Zot's sync extension reads GHCR with the same bot token the CMP holds, so
+# rotating github_bot_token rotates both.
+resource "vault_kv_secret_v2" "zot_ghcr" {
+  mount = vault_mount.kvv2.path
+  name  = "zot/ghcr"
+  data_json = jsonencode({
+    "username" = var.github_bot_username
+    "token"    = var.github_bot_token
   })
 }
 

@@ -93,7 +93,7 @@ spec:
     - metadata:
         name: storage
       spec:
-        storageClassName: ceph-block
+        storageClassName: ceph-rbd
         accessModes: [ReadWriteOnce]
         resources:
           requests:
