@@ -100,7 +100,7 @@ spec:
       name: "{{ .metadata.name }}-bootstrap"
       labels:
         cnp.3istor.com/project: "{{ .metadata.name }}"
-        cnp.3istor.com/cloud: "{{ .spec.targetCloud }}"
+        cnp.3istor.com/cloud: '{{ dig "status" "move" "target" .spec.targetCloud . }}'
         cnp.3istor.com/deletion-protected: '{{ dig "deletionProtection" false .spec }}'
       annotations:
         # Without it the client-side diff counts the fields the API server
@@ -124,7 +124,7 @@ spec:
         helm:
           values: |
             projectName: "{{ .metadata.name }}"
-            targetCloud: "{{ .spec.targetCloud }}"
+            targetCloud: "{{ dig "status" "move" "target" .spec.targetCloud . }}"
             deletionProtection: {{ dig "deletionProtection" false .spec }}
             features:
               appProject: false
@@ -153,6 +153,9 @@ spec:
                 environments: {{ dig "environments" (list "prod") . | toJson }}
             {{- end }}
             tunnel:
+              # Stopped while a move prepares: the target's connector must not
+              # take traffic before the switch.
+              replicas: {{ if eq (dig "status" "move" "step" "" .) "prepare" }}0{{ else }}1{{ end }}
               hostnames:
               {{- range dig "apps" (list) .spec }}
                 {{- range $env, $host := dig "hostnames" (dict) . }}
@@ -160,10 +163,10 @@ spec:
                 {{- end }}
               {{- end }}
       destination:
-        # The whole point of the chantier: placement comes from the record, and
-        # it is a name rather than a URL because the URL changes when a cluster
-        # is rebuilt and the name does not.
-        name: "{{ .spec.targetCloud }}"
+        # Placement comes from the record, by name (a URL changes when a cluster
+        # is rebuilt). It follows the move target from the start of a move so
+        # the target is prepared ahead; the source keeps running unmanaged.
+        name: '{{ dig "status" "move" "target" .spec.targetCloud . }}'
         namespace: "{{ .metadata.name }}-system"
       syncPolicy:
         automated:

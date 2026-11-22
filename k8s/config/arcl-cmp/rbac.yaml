@@ -255,3 +255,117 @@ roleRef:
   kind: ClusterRole
   name: cmp-placement-reader
   apiGroup: rbac.authorization.k8s.io
+---
+# Project moves: the CMP refreshes the registry ApplicationSets after each
+# registry commit, and pre-pulls images on the target nodes with short-lived
+# Pods. Pod creation is bounded by the admission policy below.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cmp-appset-refresh
+  namespace: argocd
+rules:
+  - apiGroups: ["argoproj.io"]
+    resources: ["applicationsets"]
+    resourceNames: ["cnp-project-appprojects", "cnp-project-systems", "cnp-apps"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cmp-appset-refresh
+  namespace: argocd
+subjects:
+  - kind: ServiceAccount
+    name: arcl-cmp
+    namespace: arcl-cmp
+roleRef:
+  kind: Role
+  name: cmp-appset-refresh
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cmp-prepuller
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create", "delete", "get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cmp-prepuller
+subjects:
+  - kind: ServiceAccount
+    name: arcl-cmp
+    namespace: arcl-cmp
+roleRef:
+  kind: ClusterRole
+  name: cmp-prepuller
+  apiGroup: rbac.authorization.k8s.io
+---
+# The CMP may only create and delete image pre-pull Pods: project namespaces,
+# no volumes, no service account token, no host namespaces, a fixed no-op command.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: cmp-prepull-only
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+        operations: ["CREATE", "DELETE"]
+  matchConditions:
+    - name: cmp-service-account
+      expression: request.userInfo.username == "system:serviceaccount:arcl-cmp:arcl-cmp"
+  validations:
+    - expression: >-
+        request.operation != "DELETE" ||
+        (has(oldObject.metadata.labels) &&
+        "cnp.3istor.com/prepull" in oldObject.metadata.labels)
+      message: The CMP only deletes its pre-pull Pods.
+    - expression: >-
+        request.operation == "DELETE" || (
+        has(namespaceObject.metadata.labels) &&
+        "cnp.3istor.com/project" in namespaceObject.metadata.labels &&
+        has(object.metadata.labels) &&
+        "cnp.3istor.com/prepull" in object.metadata.labels)
+      message: The CMP only creates pre-pull Pods, in project namespaces.
+    - expression: >-
+        request.operation == "DELETE" || (
+        has(object.spec.nodeName) && object.spec.nodeName != "" &&
+        has(object.spec.automountServiceAccountToken) &&
+        object.spec.automountServiceAccountToken == false &&
+        !has(object.spec.volumes) &&
+        !has(object.spec.initContainers) &&
+        !has(object.spec.ephemeralContainers) &&
+        !(has(object.spec.hostNetwork) && object.spec.hostNetwork) &&
+        !(has(object.spec.hostPID) && object.spec.hostPID) &&
+        !(has(object.spec.hostIPC) && object.spec.hostIPC) &&
+        object.spec.containers.size() == 1)
+      message: A pre-pull Pod is pinned to a node and has no volumes, token or host namespaces.
+    - expression: >-
+        request.operation == "DELETE" || (
+        object.spec.containers[0].command == ["sh", "-c", "true"] &&
+        !has(object.spec.containers[0].args) &&
+        !has(object.spec.containers[0].env) &&
+        !has(object.spec.containers[0].envFrom) &&
+        !has(object.spec.containers[0].volumeMounts) &&
+        !has(object.spec.containers[0].ports) &&
+        (!has(object.spec.containers[0].securityContext) ||
+        !has(object.spec.containers[0].securityContext.privileged) ||
+        object.spec.containers[0].securityContext.privileged == false))
+      message: A pre-pull Pod only runs a no-op command.
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: cmp-prepull-only
+spec:
+  policyName: cmp-prepull-only
+  validationActions: ["Deny"]
