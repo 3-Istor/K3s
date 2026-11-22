@@ -120,7 +120,8 @@ spec:
               - {name: project_name, value: "{{ .metadata.name }}", forceString: true}
               {{- with .restore }}
               # Empty backupID and targetTime: restore up to the latest WAL.
-              - {name: db.restore.generation, value: "{{ .generation }}", forceString: true}
+              # No forceString: the chart schema wants an integer.
+              - {name: db.restore.generation, value: "{{ .generation }}"}
               - {name: db.restore.sourceServer, value: "{{ .sourceServer }}", forceString: true}
               - {name: db.restore.backupID, value: "", forceString: true}
               - {name: db.restore.targetTime, value: "", forceString: true}
