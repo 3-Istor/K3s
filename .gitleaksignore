@@ -1,3 +1,6 @@
 # promtool fixture series flagged by generic-api-key (no secret); later commits carry gitleaks:allow
 826b914d8f9ecc7daeecdc6f9b36191bfd067483:k8s/config/observability/backing-rules/backing_test.yaml:generic-api-key:36
 826b914d8f9ecc7daeecdc6f9b36191bfd067483:k8s/config/observability/backing-rules/backing_test.yaml:generic-api-key:38
+# Kyverno ai-no-provider-keys fixtures: fake sk-ant- values (no secret); later commits carry gitleaks:allow
+5a118271ad4fa68c7b702145e587eab829d3fcb8:k8s/config/kyverno/policies/tests/ai-no-provider-keys/resources.yaml:kubernetes-secret-yaml:44
+5a118271ad4fa68c7b702145e587eab829d3fcb8:k8s/config/kyverno/policies/tests/ai-no-provider-keys/resources.yaml:generic-api-key:49

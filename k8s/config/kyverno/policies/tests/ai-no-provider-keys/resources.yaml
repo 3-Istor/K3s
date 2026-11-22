@@ -62,7 +62,7 @@ metadata:
   name: unrelated
   namespace: epitweet
 data:
-  password: aHVudGVyMg==
+  password: aHVudGVyMg== # gitleaks:allow (fixture)
 ---
 apiVersion: v1
 kind: ConfigMap
