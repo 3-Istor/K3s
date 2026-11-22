@@ -50,9 +50,12 @@ spec:
         targetRevision: HEAD
         path: .
         helm:
+          # moveTarget is set only while a move runs: the AppProject then also
+          # allows the target cloud.
           values: |
             projectName: "{{ .metadata.name }}"
             targetCloud: "{{ .spec.targetCloud }}"
+            moveTarget: "{{ dig "status" "move" "target" "" . }}"
             deletionProtection: {{ dig "deletionProtection" false .spec }}
             features:
               appProject: true
@@ -108,10 +111,11 @@ spec:
         - resources-finalizer.argocd.argoproj.io
     spec:
       # The project's platform AppProject, which restricts destinations to the
-      # project's cluster and system namespace. A record whose targetCloud
-      # disagrees with this Application's destination is rejected by Argo CD
-      # rather than landing on the wrong cloud. Not the tenant AppProject: that
-      # one cannot hold the cluster-scoped objects this chart creates.
+      # project's cluster and system namespace, plus the move target while a
+      # move runs. A record whose targetCloud is in neither is rejected by
+      # Argo CD rather than landing on the wrong cloud. Not the tenant
+      # AppProject: that one cannot hold the cluster-scoped objects this chart
+      # creates.
       project: "{{ .metadata.name }}-platform"
       source:
         repoURL: https://github.com/3-Istor/cnp-project-base.git
