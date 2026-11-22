@@ -256,34 +256,8 @@ roleRef:
   name: cmp-placement-reader
   apiGroup: rbac.authorization.k8s.io
 ---
-# Project moves: the CMP refreshes the registry ApplicationSets after each
-# registry commit, and pre-pulls images on the target nodes with short-lived
+# Project moves: the CMP pre-pulls images on the target nodes with short-lived
 # Pods. Pod creation is bounded by the admission policy below.
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: cmp-appset-refresh
-  namespace: argocd
-rules:
-  - apiGroups: ["argoproj.io"]
-    resources: ["applicationsets"]
-    resourceNames: ["cnp-project-appprojects", "cnp-project-systems", "cnp-apps"]
-    verbs: ["get", "patch"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: cmp-appset-refresh
-  namespace: argocd
-subjects:
-  - kind: ServiceAccount
-    name: arcl-cmp
-    namespace: arcl-cmp
-roleRef:
-  kind: Role
-  name: cmp-appset-refresh
-  apiGroup: rbac.authorization.k8s.io
----
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
