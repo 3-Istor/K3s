@@ -1,0 +1,55 @@
+apiVersion: kagent.dev/v1alpha2
+kind: ModelConfig
+metadata:
+  name: through-sidecar
+  namespace: epitweet-grok-reader
+spec:
+  provider: Anthropic
+  model: claude-haiku-5-5
+  anthropic:
+    baseUrl: http://127.0.0.1:15001
+---
+apiVersion: kagent.dev/v1alpha2
+kind: ModelConfig
+metadata:
+  name: through-gateway
+  namespace: epitweet-grok-reader
+spec:
+  provider: Anthropic
+  model: claude-haiku-5-5
+  anthropic:
+    baseUrl: http://ai-gateway.ai-gateway.svc.cluster.local:8080
+---
+apiVersion: kagent.dev/v1alpha2
+kind: ModelConfig
+metadata:
+  name: direct-to-anthropic
+  namespace: epitweet-grok-reader
+spec:
+  provider: Anthropic
+  model: claude-haiku-5-5
+  anthropic:
+    baseUrl: https://api.anthropic.com
+---
+apiVersion: kagent.dev/v1alpha2
+kind: ModelConfig
+metadata:
+  name: with-key
+  namespace: epitweet-grok-reader
+spec:
+  provider: Anthropic
+  model: claude-haiku-5-5
+  apiKeySecret: anthropic-key
+  anthropic:
+    baseUrl: http://127.0.0.1:15001
+---
+apiVersion: kagent.dev/v1alpha2
+kind: ModelConfig
+metadata:
+  name: other-provider
+  namespace: epitweet-grok-reader
+spec:
+  provider: OpenAI
+  model: gpt-5
+  openAI:
+    baseUrl: http://127.0.0.1:15001

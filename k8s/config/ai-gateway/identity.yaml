@@ -1,0 +1,34 @@
+# Runs before routing: validates the token when there is one (routes enforce
+# Strict themselves) and turns it into the two headers the per-project routes
+# match on. Both are always overwritten, so a client cannot choose its route.
+# The token is kept for the route policies, which strip it before any
+# upstream except the MCP backend (run_python exchanges it).
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: ai-gateway-identity
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ai-gateway
+  traffic:
+    phase: PreRouting
+    jwtAuthentication:
+      mode: Optional
+      preserveToken: true
+      providers:
+        - issuer: https://auth.3istor.com/realms/3istor
+          audiences: [ai-gateway]
+          jwks:
+            remote:
+              jwksPath: /realms/3istor/protocol/openid-connect/certs
+              cacheDuration: 5m
+              backendRef: {group: "", kind: Service, name: keycloakx-http, namespace: keycloak, port: 80}
+    transformation:
+      request:
+        set:
+          - name: x-cnp-project
+            value: 'string(default(jwt.project, "none"))'
+          - name: x-cnp-caller
+            value: 'default(jwt.azp == "sandbox-runner" ? string(default(jwt.agent, "")).regexReplace("^service-account-", "") : jwt.azp, "anonymous")'

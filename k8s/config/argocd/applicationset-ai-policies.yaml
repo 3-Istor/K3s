@@ -1,0 +1,49 @@
+# The AI gateway's routes and policies of each project, generated from the
+# ProjectRecord's spec.ai only (rights, budgets, tools, callers, kill switch):
+# an agent's own values can never widen them. A record without spec.ai, or
+# with ai.enabled false, renders nothing and the gateway answers 403
+# ai_not_enabled for that project.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cnp-ai-policies
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: https://github.com/3-Istor/cnp-projects.git
+        revision: main
+        files:
+          - path: "registry/projects/*.yaml"
+  template:
+    metadata:
+      name: "{{ .metadata.name }}-ai-policies"
+      labels:
+        cnp.3istor.com/project: "{{ .metadata.name }}"
+        cnp.3istor.com/component: ai-policies
+      annotations:
+        argocd.argoproj.io/compare-options: ServerSideDiff=true
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/3-Istor/K3s.git
+        targetRevision: HEAD
+        path: charts/cnp-ai-policies
+        helm:
+          values: |
+            project: "{{ .metadata.name }}"
+            ai: {{ dig "ai" (dict) .spec | toJson }}
+      destination:
+        name: in-cluster
+        namespace: ai-gateway
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+          allowEmpty: true
+        syncOptions:
+          - ServerSideApply=true

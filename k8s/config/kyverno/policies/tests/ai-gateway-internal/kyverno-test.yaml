@@ -1,0 +1,35 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: ai-gateway-internal
+# The CLI cannot map the Gateway and AgentgatewayParameters kinds to their
+# resources (it reports them Excluded): those two rules are checked against
+# the API server with a server-side dry run instead.
+policies:
+  - ../../ai-gateway-internal.yaml
+resources:
+  - resources.yaml
+results:
+  - policy: ai-gateway-internal
+    kind: Service
+    result: pass
+    resources:
+      - ai-gateway/ai-gateway
+      - epitweet/public-lb
+  - policy: ai-gateway-internal
+    kind: Service
+    result: fail
+    resources:
+      - ai-gateway/exposed
+  - policy: ai-gateway-internal
+    kind: HTTPRoute
+    result: pass
+    resources:
+      - ai-gateway/llm-epitweet
+      - epitweet/frontend
+  - policy: ai-gateway-internal
+    kind: HTTPRoute
+    result: fail
+    resources:
+      - ai-gateway/on-public-gateway
+      - epitweet/expose-ai-gateway

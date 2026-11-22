@@ -40,6 +40,7 @@ resources:
   - vmalert.yaml
   - alertmanager.yaml
   - alerting-rules.yaml
+  - ai-rules.yaml
   - alerting-networkpolicies.yaml
   - cmp-observability-rbac.yaml
   - vmauth-keys.yaml
@@ -71,6 +72,11 @@ configMapGenerator:
   - name: otelcol-gateway
     files:
       - otelcol-gateway/config.yaml
+  - name: grafana-dashboard-ia
+    options:
+      disableNameSuffixHash: true
+    files:
+      - ia.json=dashboards/ia.json
 
 helmGlobals:
   chartHome: ../../../charts

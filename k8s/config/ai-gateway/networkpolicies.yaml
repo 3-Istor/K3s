@@ -1,0 +1,55 @@
+# Only the gateway proxy is reachable from outside the namespace, and only on
+# its listener; Redis and the rate limit service only from inside.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ai-gateway-proxy
+spec:
+  podSelector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: ai-gateway
+  policyTypes: [Ingress]
+  ingress:
+    - ports:
+        - port: 8080
+          protocol: TCP
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+      ports:
+        - port: 15020
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ratelimit-internal
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values: [ratelimit, ratelimit-redis]
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: budget-guard-scrape
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: budget-guard
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+      ports:
+        - port: 9090
+          protocol: TCP

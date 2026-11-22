@@ -1,0 +1,19 @@
+# Task artifacts (PNG, CSV) of run_python, served by the run-python service
+# (ns ai-tools, which grants this route with a ReferenceGrant). No token: the
+# task ids are 128-bit random and the objects expire after 24 h.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ai-artifacts
+spec:
+  parentRefs:
+    - name: ai-gateway
+  rules:
+    - matches:
+        - path: {type: PathPrefix, value: /ai-artifacts/}
+          method: GET
+      backendRefs:
+        - kind: Service
+          name: run-python
+          namespace: ai-tools
+          port: 3000

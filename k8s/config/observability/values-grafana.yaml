@@ -184,7 +184,20 @@ dashboardProviders:
         options:
           path: /var/lib/grafana/dashboards/finops
 
+      # AI landing zone (dashboards/ia.json, ConfigMap grafana-dashboard-ia).
+      - name: "ia"
+        orgId: 1
+        folder: "IA"
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/ia
+
 # Grafana Links: https://grafana.com/grafana/dashboards/<gnetId>
+dashboardsConfigMaps:
+  ia: grafana-dashboard-ia
+
 dashboards:
   # Cluster-wide views built on kube-state-metrics + cAdvisor + node-exporter.
   kubernetes:

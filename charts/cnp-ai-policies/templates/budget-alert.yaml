@@ -1,0 +1,27 @@
+{{- if and (include "cnp-ai.enabled" .) .Values.projectBudgetAlert.enabled (gt (int (dig "dailyTokenBudget" 0 .Values.ai)) 0) }}
+{{- $p := include "cnp-ai.project" . }}
+# The project's dailyTokenBudget only alerts; agents and apps have hard
+# budgets at the gateway.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: ai-project-{{ $p }}
+  namespace: {{ .Values.projectBudgetAlert.namespace }}
+  labels:
+    {{- include "cnp-ai.labels" . | nindent 4 }}
+    cnp.3istor.com/rules: metrics
+spec:
+  groups:
+    - name: ai-project-{{ $p }}
+      rules:
+        - alert: AIProjectDailyTokenBudgetExceeded
+          expr: sum(increase(cnp:ai_tokens_total{project="{{ $p }}"}[24h])) > {{ int .Values.ai.dailyTokenBudget }}
+          for: 5m
+          labels:
+            severity: warning
+            cnp_project: {{ $p | quote }}
+          annotations:
+            summary: "Projet {{ $p }} : budget IA journalier dépassé"
+            description: "{{ "{{" }} $value | humanize {{ "}}" }} jetons sur 24 h pour un budget de {{ int .Values.ai.dailyTokenBudget }} (alerte seulement, les agents gardent leurs budgets propres)."
+            runbook_url: https://github.com/3-Istor/cnp-docs/blob/main/docs/07-ai-landing-zone/06-finops-ia.md
+{{- end }}

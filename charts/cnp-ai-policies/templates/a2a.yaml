@@ -1,0 +1,85 @@
+{{- if include "cnp-ai.enabled" . }}
+{{- $p := include "cnp-ai.project" . }}
+{{- $gw := .Values.gateway }}
+{{- $clients := include "cnp-ai.clients" . | fromJson }}
+{{- $caller := include "cnp-ai.caller" . }}
+{{- $agents := dict }}
+{{- $suspended := list }}
+{{- range $azp, $c := $clients }}
+{{- if eq $c.kind "agent" }}{{ $_ := set $agents $c.name $c }}{{ end }}
+{{- if $c.suspended }}{{ $suspended = append $suspended $azp }}{{ end }}
+{{- end }}
+{{- if $agents }}
+# Agents never call each other pod to pod: every A2A call goes through here,
+# to the agent's Service in its namespace <project>-<agent> (ReferenceGrant
+# rendered with the agent by infra-templates).
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: a2a-{{ $p }}
+  labels:
+    {{- include "cnp-ai.labels" . | nindent 4 }}
+    cnp.3istor.com/ai-route: a2a
+spec:
+  parentRefs:
+    - name: {{ $gw.name }}
+  rules:
+    {{- range $name, $c := $agents }}
+    - name: {{ $c.suspended | ternary "suspended" "agent" }}-{{ $name }}
+      matches:
+        - path: {type: PathPrefix, value: /a2a/{{ $p }}/{{ $name }}}
+      {{- if not $c.suspended }}
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - kind: Service
+          name: {{ $name }}
+          namespace: {{ $p }}-{{ $name }}
+          port: {{ $gw.a2a.port }}
+      {{- end }}
+    {{- end }}
+{{- range $name, $c := $agents }}
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: a2a-{{ $p }}-{{ $name }}
+  labels:
+    {{- include "cnp-ai.labels" $ | nindent 4 }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: a2a-{{ $p }}
+      sectionName: {{ $c.suspended | ternary "suspended" "agent" }}-{{ $name }}
+  traffic:
+    {{- if $c.suspended }}
+    directResponse:
+      status: 403
+      body: {{ include "cnp-ai.suspendedBody" $ | quote }}
+      headers:
+        - {name: content-type, value: '"application/json"'}
+        - {name: x-cnp-refusal, value: '"policy"'}
+    {{- else }}
+    {{- $callers := list }}
+    {{- range $c.callers }}{{ if not (has . $suspended) }}{{ $callers = append $callers . }}{{ end }}{{ end }}
+    {{- include "cnp-ai.jwt" $ | nindent 4 }}
+    authorization:
+      action: Require
+      policy:
+        matchExpressions:
+          - '{{ $caller }} in {{ $callers | toJson }}'
+          - '!{{ $caller }}.startsWith("agent-") || (has(jwt.project) && jwt.project == {{ $p | quote }})'
+    rateLimit:
+      local:
+        - requests: {{ $gw.requestsPerMinute }}
+          unit: Minutes
+          key: '{{ $caller }}'
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

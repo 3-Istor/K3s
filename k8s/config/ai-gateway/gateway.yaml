@@ -1,0 +1,60 @@
+# The proxy defaults to a LoadBalancer Service: the gateway is reachable only
+# inside the cluster (Kyverno ai-gateway-internal).
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayParameters
+metadata:
+  name: ai-gateway-internal
+spec:
+  service:
+    spec:
+      type: ClusterIP
+  resources:
+    requests:
+      cpu: 50m
+      memory: 96Mi
+    limits:
+      memory: 384Mi
+  logging:
+    format: json
+  podDisruptionBudget:
+    spec:
+      minAvailable: 1
+  deployment:
+    spec:
+      replicas: 2
+  modelCatalog:
+    sources:
+      - configMap:
+          name: model-catalog-overlay
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ai-gateway
+spec:
+  gatewayClassName: agentgateway
+  infrastructure:
+    parametersRef:
+      group: agentgateway.dev
+      kind: AgentgatewayParameters
+      name: ai-gateway-internal
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+# Anthropic list prices in USD per million tokens, read for llm.cost. Overlay
+# (no metadata) on top of the built-in catalog.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: model-catalog-overlay
+data:
+  catalog.json: |
+    {"providers": {"anthropic": {"models": {
+      "claude-haiku-5-5": {"rates": {"input": "0.10", "output": "0.50", "cacheRead": "0.01", "cacheWrite": "0.125"}},
+      "claude-sonnet-5-5": {"rates": {"input": "2.00", "output": "10.00", "cacheRead": "0.10", "cacheWrite": "2.50"}}
+    }}}}

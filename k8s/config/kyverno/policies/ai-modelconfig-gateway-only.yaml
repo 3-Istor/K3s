@@ -1,0 +1,33 @@
+# Project agents' kagent model configs reach Anthropic through the AI gateway
+# only, directly or through the agent's gw-auth-proxy sidecar, and never hold
+# a key. Platform namespaces (kagent's own default config) are not tenants.
+
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: ai-modelconfig-gateway-only
+spec:
+  validationActions:
+    - Deny
+  matchConstraints:
+    namespaceSelector:
+      matchExpressions:
+        - key: cnp.3istor.com/project
+          operator: Exists
+    resourceRules:
+      - apiGroups: [kagent.dev]
+        apiVersions: ["*"]
+        operations: [CREATE, UPDATE]
+        resources: [modelconfigs]
+  variables:
+    - name: allowedBaseUrls
+      expression: >-
+        ['http://127.0.0.1:15001', 'http://ai-gateway.ai-gateway.svc.cluster.local:8080']
+  validations:
+    - message: "A ModelConfig must use the Anthropic provider through the AI gateway (http://127.0.0.1:15001 or http://ai-gateway.ai-gateway.svc.cluster.local:8080)."
+      expression: >-
+        object.spec.?provider.orValue('') == 'Anthropic'
+        && object.spec.?anthropic.baseUrl.orValue('') in variables.allowedBaseUrls
+    - message: "A ModelConfig must not reference a provider key: the AI gateway holds it."
+      expression: >-
+        !has(object.spec.apiKeySecret) && !has(object.spec.apiKeySecretRef)

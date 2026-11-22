@@ -40,3 +40,4 @@ resources:
   - agent-sandbox.yaml
   - kagent.yaml
   - ai-tools.yaml
+  - ai-gateway.yaml

@@ -13,3 +13,6 @@ resources:
   - verify-tenant-image-signatures.yaml
   - agent-runtimeclass.yaml
   - verify-gw-auth-proxy-signature.yaml
+  - ai-no-provider-keys.yaml
+  - ai-modelconfig-gateway-only.yaml
+  - ai-gateway-internal.yaml

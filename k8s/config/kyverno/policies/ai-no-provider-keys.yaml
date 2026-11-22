@@ -1,0 +1,60 @@
+# The Anthropic key lives in ai-gateway only (AI landing zone): no Pod env,
+# Secret or ConfigMap elsewhere may hold an sk-ant- value, and no VaultSecret
+# elsewhere may read kvv2/platform/ai/anthropic or use ai-gateway-role. On the
+# value, not the variable name: kagent needs ANTHROPIC_API_KEY set to a
+# placeholder.
+
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: ai-no-provider-keys
+spec:
+  validationActions:
+    - Deny
+  autogen:
+    podControllers:
+      controllers: []
+  matchConstraints:
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values: [ai-gateway]
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods, secrets, configmaps]
+      - apiGroups: [ricoberger.de]
+        apiVersions: [v1alpha1]
+        operations: [CREATE, UPDATE]
+        resources: [vaultsecrets]
+  variables:
+    - name: prefix
+      expression: "'sk-ant-'"
+    - name: containers
+      expression: >-
+        object.kind == 'Pod'
+          ? object.spec.containers + object.spec.?initContainers.orValue([])
+          : []
+  validations:
+    - message: "Anthropic key material (sk-ant-) is only allowed in the ai-gateway namespace: call the AI gateway instead."
+      expression: >-
+        variables.containers.all(c,
+          c.?env.orValue([]).all(e, !e.?value.orValue('').contains(variables.prefix)))
+    - message: "Anthropic key material (sk-ant-) is only allowed in the ai-gateway namespace: call the AI gateway instead."
+      expression: >-
+        object.kind != 'Secret' || (
+          object.?data.orValue({}).all(k,
+            !string(base64.decode(object.data[k])).contains(variables.prefix))
+          && object.?stringData.orValue({}).all(k,
+            !object.stringData[k].contains(variables.prefix)))
+    - message: "Anthropic key material (sk-ant-) is only allowed in the ai-gateway namespace: call the AI gateway instead."
+      expression: >-
+        object.kind != 'ConfigMap' ||
+          object.?data.orValue({}).all(k, !object.data[k].contains(variables.prefix))
+    - message: "Only the ai-gateway namespace may sync the AI provider key from Vault."
+      expression: >-
+        object.kind != 'VaultSecret' || (
+          !object.spec.?path.orValue('').startsWith('kvv2/platform/ai/')
+          && object.spec.?vaultRole.orValue('') != 'ai-gateway-role')

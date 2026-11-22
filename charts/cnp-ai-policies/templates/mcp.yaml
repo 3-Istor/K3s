@@ -1,0 +1,146 @@
+{{- if include "cnp-ai.enabled" . }}
+{{- $p := include "cnp-ai.project" . }}
+{{- $gw := .Values.gateway }}
+{{- $clients := include "cnp-ai.clients" . | fromJson }}
+{{- $caller := include "cnp-ai.caller" . }}
+{{- $tools := dict }}
+{{- $suspended := list }}
+{{- range $azp, $c := $clients }}
+{{- if $c.suspended }}{{ $suspended = append $suspended $azp }}
+{{- else if $c.tools }}{{ $_ := set $tools $azp $c.tools }}
+{{- end }}
+{{- end }}
+{{- if $tools }}
+# Tool names are the servers' own (prefixMode Never): a project server
+# publishes <server>__<tool>, the platform's run-python publishes run_python.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: mcp-{{ $p }}
+  labels:
+    {{- include "cnp-ai.labels" . | nindent 4 }}
+spec:
+  mcp:
+    prefixMode: Never
+    sessionRouting: Stateless
+    failureMode: FailOpen
+    targets:
+      - name: run-python
+        static:
+          host: {{ $gw.runPython.host }}
+          port: {{ $gw.runPython.port }}
+          path: {{ $gw.runPython.path }}
+          protocol: StreamableHTTP
+      - name: project
+        selector:
+          namespaces:
+            matchLabels:
+              cnp.3istor.com/project: {{ $p | quote }}
+          services:
+            matchLabels:
+              {{ $gw.mcpServiceLabel }}: "true"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: mcp-{{ $p }}
+  labels:
+    {{- include "cnp-ai.labels" . | nindent 4 }}
+    cnp.3istor.com/ai-route: mcp
+spec:
+  parentRefs:
+    - name: {{ $gw.name }}
+  rules:
+    {{- if $suspended }}
+    - name: suspended
+      matches:
+        {{- range $suspended }}
+        - path: {type: PathPrefix, value: /mcp/{{ $p }}}
+          headers:
+            - {name: x-cnp-caller, value: {{ . | quote }}}
+        {{- end }}
+    {{- end }}
+    - name: mcp
+      matches:
+        - path: {type: PathPrefix, value: /mcp/{{ $p }}}
+      backendRefs:
+        - group: agentgateway.dev
+          kind: AgentgatewayBackend
+          name: mcp-{{ $p }}
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: mcp-{{ $p }}
+  labels:
+    {{- include "cnp-ai.labels" . | nindent 4 }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: mcp-{{ $p }}
+      sectionName: mcp
+  traffic:
+    {{- include "cnp-ai.jwt" . | nindent 4 }}
+      # run_python exchanges the caller's token for the sandbox's own.
+      preserveToken: true
+    authorization:
+      action: Require
+      policy:
+        matchExpressions:
+          - 'has(jwt.project) && jwt.project == {{ $p | quote }}'
+          - '{{ $caller }} in {{ keys $tools | sortAlpha | toJson }}'
+          - 'int(jwt.exp) - int(jwt.iat) <= {{ $gw.agentTokenMaxLifetimeSeconds }}'
+    rateLimit:
+      local:
+        - requests: {{ $gw.mcpRequestsPerMinute }}
+          unit: Minutes
+          key: '{{ $caller }}'
+---
+# Per tool, per caller. Code in the sandbox (token exchanged by
+# sandbox-runner, scope mcp-read) gets the agent's tools except run_python.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: mcp-{{ $p }}-tools
+  labels:
+    {{- include "cnp-ai.labels" . | nindent 4 }}
+spec:
+  targetRefs:
+    - group: agentgateway.dev
+      kind: AgentgatewayBackend
+      name: mcp-{{ $p }}
+  backend:
+    mcp:
+      authorization:
+        action: Allow
+        policy:
+          matchExpressions:
+            - >-
+              {{ toJson $tools }}[{{ $caller }}].exists(t, t == mcp.tool.name)
+              && (jwt.azp != "sandbox-runner"
+                  || (mcp.tool.name != "run_python" && string(default(jwt.scope, "")).split(" ").exists(s, s == "mcp-read")))
+{{- if $suspended }}
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: mcp-{{ $p }}-suspended
+  labels:
+    {{- include "cnp-ai.labels" . | nindent 4 }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: mcp-{{ $p }}
+      sectionName: suspended
+  traffic:
+    directResponse:
+      status: 403
+      body: {{ include "cnp-ai.suspendedBody" . | quote }}
+      headers:
+        - {name: content-type, value: '"application/json"'}
+        - {name: x-cnp-refusal, value: '"policy"'}
+{{- end }}
+{{- end }}
+{{- end }}

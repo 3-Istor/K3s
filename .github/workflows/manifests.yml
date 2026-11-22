@@ -39,6 +39,9 @@ jobs:
           done
           exit $failed
 
+      - name: budget-guard unit tests
+        run: python3 -m unittest discover -s k8s/config/ai-gateway/budget-guard -v
+
       - name: Validate against Kubernetes schemas
         run: |
           kubeconform -strict -summary -ignore-missing-schemas /tmp/*.yaml
