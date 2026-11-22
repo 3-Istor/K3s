@@ -1,0 +1,25 @@
+# Kata Containers 4.4.0. Job mode: one install Job per node, one node at a
+# time (parallelism 1). Each install restarts K3s/containerd on its node; the
+# next node starts only after the previous one is Ready and settled.
+deploymentMode: job
+job:
+  parallelism: 1
+  nodeSettleSeconds: 60
+  ttlSecondsAfterFinished: 86400
+k8sDistribution: k3s
+imagePullPolicy: IfNotPresent
+kubectlImage:
+  tag: "20261115"
+# The VMs have /dev/kvm with nested virtualisation: QEMU (Rust runtime) only.
+shims:
+  disableAll: true
+  qemu-runtime-rs:
+    enabled: true
+defaultShim:
+  amd64: qemu-runtime-rs
+# RuntimeClasses kata-qemu-runtime-rs and kata (the platform name), both on
+# nodes labelled katacontainers.io/kata-runtime=true by the install Job.
+runtimeClasses:
+  enabled: true
+  createDefault: true
+  defaultName: kata

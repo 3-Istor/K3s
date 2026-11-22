@@ -1,0 +1,19 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: agent-runtimeclass
+policies:
+  - ../../agent-runtimeclass.yaml
+variables: values.yaml
+resources:
+  - resources.yaml
+results:
+  - policy: agent-runtimeclass
+    kind: Pod
+    result: pass
+    patchedResources: patched.yaml
+    resources:
+      - epitweet-grok-reader/reader
+      - epitweet-grok-actor/actor
+      - epitweet-kata-ns/lowered
+      - epitweet/plain

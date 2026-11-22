@@ -1,0 +1,8 @@
+# Platform MCP servers of the AI landing zone (kmcp MCPServer), reached only
+# through the AI gateway.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-tools
+  labels:
+    pod-security.kubernetes.io/enforce: restricted

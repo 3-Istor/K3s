@@ -37,3 +37,6 @@ resources:
   - compliance.yaml
   - zot.yaml
   - sandbox-runtimes.yaml
+  - agent-sandbox.yaml
+  - kagent.yaml
+  - ai-tools.yaml

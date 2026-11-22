@@ -1,0 +1,123 @@
+# run_python (code mode): one SandboxClaim in ai-sandbox per call. Contract and
+# sources: images/ai-runtime.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: run-python
+  namespace: ai-tools
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: run-python
+  namespace: ai-sandbox
+rules:
+  - apiGroups: [extensions.agents.x-k8s.io]
+    resources: [sandboxclaims]
+    verbs: [create, get, delete]
+  - apiGroups: [agents.x-k8s.io]
+    resources: [sandboxes]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: run-python
+  namespace: ai-sandbox
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: run-python}
+subjects:
+  - {kind: ServiceAccount, name: run-python, namespace: ai-tools}
+---
+# Reads cnp.3istor.com/isolation of the calling agent's namespace (Kata tier).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ai-tools-run-python-namespaces
+rules:
+  - apiGroups: [""]
+    resources: [namespaces]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ai-tools-run-python-namespaces
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: ai-tools-run-python-namespaces}
+subjects:
+  - {kind: ServiceAccount, name: run-python, namespace: ai-tools}
+---
+# Keycloak client sandbox-runner (token exchange to scope mcp-read, 300 s).
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: sandbox-runner-oidc
+  namespace: ai-tools
+spec:
+  path: kvv2/platform/ai-clients/sandbox-runner
+  vaultRole: ai-clients-role
+  keys:
+    - client_secret
+  templates:
+    RUNNER_CLIENT_SECRET: '{% index .Secrets "client_secret" %}'
+  type: Opaque
+---
+apiVersion: kagent.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: run-python
+  namespace: ai-tools
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  transportType: http
+  httpTransport:
+    targetPort: 3000
+    path: /mcp
+  deployment:
+    image: ghcr.io/3-istor/cnp-run-python:0.1.0
+    port: 3000
+    serviceAccountName: run-python
+    labels:
+      app.kubernetes.io/name: run-python
+    # ai-artifacts ObjectBucketClaim: kmcp mounts ConfigMaps as files, so the
+    # bucket coordinates of its ConfigMap are repeated here; its Secret gives
+    # AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY as env.
+    env:
+      BUCKET_HOST: "192.168.1.110"
+      BUCKET_PORT: "7480"
+      BUCKET_NAME: ai-artifacts
+    secretRefs:
+      - name: ai-artifacts
+      - name: sandbox-runner-oidc
+    resources:
+      requests: {cpu: 10m, memory: 32Mi}
+      limits: {memory: 64Mi}
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 65532
+      runAsGroup: 65532
+      seccompProfile: {type: RuntimeDefault}
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities: {drop: [ALL]}
+---
+# MCP and /ai-artifacts/ are served by the gateway only.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: run-python-ingress
+  namespace: ai-tools
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: run-python
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ai-gateway
+      ports:
+        - port: 3000
+          protocol: TCP

@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: reader
+  namespace: epitweet-grok-reader
+  labels: {app: kagent, kagent: grok-reader, cnp.3istor.com/isolation: gvisor}
+spec:
+  containers: [{name: agent, image: ghcr.io/kagent-dev/kagent/golang-adk:0.10.6}]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: actor
+  namespace: epitweet-grok-actor
+  labels: {app: kagent, kagent: grok-actor, cnp.3istor.com/isolation: kata}
+spec:
+  containers: [{name: agent, image: ghcr.io/kagent-dev/kagent/golang-adk:0.10.6}]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: lowered
+  namespace: epitweet-kata-ns
+  labels: {app: kagent, kagent: lowered, cnp.3istor.com/isolation: gvisor}
+spec:
+  containers: [{name: agent, image: ghcr.io/kagent-dev/kagent/golang-adk:0.10.6}]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: plain
+  namespace: epitweet
+  labels: {app: web}
+spec:
+  containers: [{name: web, image: nginx:1.29}]
