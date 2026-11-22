@@ -28,6 +28,25 @@ data:
     clientSecret: $oidc.keycloak.clientSecret
     requestedScopes: ["openid", "profile", "email", "groups"]
 
+  # VaultSecrets sync one wave before their consumers: without this check Argo CD
+  # moves on at creation, and on a fresh cluster (a project move) the pod starts
+  # before the operator writes the Secret (CreateContainerConfigError, ErrImagePull).
+  # A refused secret stays Progressing rather than Degraded, so a first attempt
+  # that fails while Vault roles propagate does not fail the sync.
+  resource.customizations.health.ricoberger.de_VaultSecret: |
+    hs = {}
+    if obj.status ~= nil and obj.status.conditions ~= nil then
+      for _, condition in ipairs(obj.status.conditions) do
+        if condition.type == "SecretCreated" then
+          if condition.status == "True" then
+            hs.status = "Healthy"; hs.message = condition.message or "Secret created"; return hs
+          end
+          hs.status = "Progressing"; hs.message = condition.message or condition.reason or "Secret not created"; return hs
+        end
+      end
+    end
+    hs.status = "Progressing"; hs.message = "Waiting for the Vault Secrets Operator"; return hs
+
   # CNPG Backups created as sync hooks (infra-templates migrations): without a
   # health check Argo CD treats them as healthy on creation and moves on before
   # the backup has run.
