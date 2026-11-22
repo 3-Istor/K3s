@@ -46,7 +46,7 @@ metadata:
   name: leaked-key
   namespace: epitweet
 data:
-  key: c2stYW50LWFwaTAzLVhYWFhYWFhYWFhYWA==
+  key: c2stYW50LWFwaTAzLVhYWFhYWFhYWFhYWA== # gitleaks:allow (fake key, policy fixture)
 ---
 apiVersion: v1
 kind: Secret
@@ -54,7 +54,7 @@ metadata:
   name: leaked-key-stringdata
   namespace: epitweet
 stringData:
-  key: sk-ant-api03-YYYYYYYYYYYY
+  key: sk-ant-api03-YYYYYYYYYYYY # gitleaks:allow (fake key, policy fixture)
 ---
 apiVersion: v1
 kind: Secret
