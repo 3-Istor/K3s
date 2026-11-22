@@ -1,0 +1,11 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Values
+namespaceSelector:
+  - name: epitweet-grok-reader
+    labels: {kubernetes.io/metadata.name: epitweet-grok-reader}
+  - name: epitweet-grok-actor
+    labels: {kubernetes.io/metadata.name: epitweet-grok-actor}
+  - name: epitweet-kata-ns
+    labels: {kubernetes.io/metadata.name: epitweet-kata-ns, cnp.3istor.com/isolation: kata}
+  - name: epitweet
+    labels: {kubernetes.io/metadata.name: epitweet}

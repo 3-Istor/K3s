@@ -1,0 +1,42 @@
+# Isolation of AI agents and their tools. The kagent Agent and kmcp MCPServer
+# CRDs have no runtimeClassName, and kagent reverts a patched Deployment, so
+# the class is set on the Pod. Source: label cnp.3istor.com/isolation on the
+# Pod (rendered from the agent values) or on its Namespace (rendered from the
+# ProjectRecord minimum). The strongest of the two and of any class already
+# set wins: runc < gvisor < kata. A Pod can raise its isolation, never lower it.
+apiVersion: policies.kyverno.io/v1
+kind: MutatingPolicy
+metadata:
+  name: agent-runtimeclass
+spec:
+  autogen:
+    podControllers:
+      controllers: []
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE]
+        resources: [pods]
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values: [kube-system, kyverno, kata-system, argocd]
+  variables:
+    - name: levels
+      expression: >-
+        [
+          has(object.metadata.labels) ? object.metadata.labels[?"cnp.3istor.com/isolation"].orValue("") : "",
+          has(namespaceObject.metadata.labels) ? namespaceObject.metadata.labels[?"cnp.3istor.com/isolation"].orValue("") : "",
+          object.spec.?runtimeClassName.orValue("")
+        ]
+    - name: requested
+      expression: variables.levels[0] in ["gvisor", "kata"] || variables.levels[1] in ["gvisor", "kata"]
+    - name: runtimeClass
+      expression: '"kata" in variables.levels ? "kata" : "gvisor"'
+  mutations:
+    - patchType: ApplyConfiguration
+      applyConfiguration:
+        expression: >-
+          variables.requested ? Object{spec: Object.spec{runtimeClassName: variables.runtimeClass}} : Object{}

@@ -1,0 +1,82 @@
+# A2A only through the AI gateway: kagent agent pods (label app=kagent) take
+# ingress from the gateway, the kagent controller (CMP test chat, sessions) and
+# metrics scraping only. A pod of any other namespace, another agent or an app
+# of the same project, is denied even where the project policy allows it:
+# Cilium deny rules win over allow rules.
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: ai-agents-ingress
+spec:
+  description: Agent pods are reached through ai-gateway or kagent only.
+  endpointSelector:
+    matchLabels:
+      app: kagent
+    matchExpressions:
+      - key: kagent
+        operator: Exists
+  enableDefaultDeny:
+    ingress: false
+    egress: false
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: ai-gateway
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kagent
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+  ingressDeny:
+    - fromEndpoints:
+        - matchExpressions:
+            - key: k8s:io.kubernetes.pod.namespace
+              operator: NotIn
+              values: [ai-gateway, kagent, observability]
+---
+# The kagent API (8083) creates and runs agents without authentication, and
+# the bundled PostgreSQL ships the chart's fixed password: only the CMP, the
+# gateway and agents (sessions) reach the API, only the controller the database.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kagent-ingress
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: arcl-cmp
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ai-gateway
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              app: kagent
+      ports:
+        - port: 8083
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kagent-postgresql
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: database
+      app.kubernetes.io/instance: kagent
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: controller
+              app.kubernetes.io/instance: kagent
+      ports:
+        - port: 5432
+          protocol: TCP

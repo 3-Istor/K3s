@@ -3,3 +3,11 @@ kind: Kustomization
 
 resources:
   - runtimeclass-gvisor.yaml
+
+helmCharts:
+  - name: kata-deploy
+    repo: oci://ghcr.io/kata-containers/kata-deploy-charts
+    version: 4.4.0
+    releaseName: kata-deploy
+    namespace: kata-system
+    valuesFile: values-kata-deploy.yaml

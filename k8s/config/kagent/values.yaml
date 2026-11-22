@@ -1,0 +1,55 @@
+# Agents never hold a provider key: their ModelConfig points at the
+# gw-auth-proxy sidecar (127.0.0.1:15001), which calls the AI gateway.
+providers:
+  default: anthropic
+  anthropic:
+    provider: Anthropic
+    model: claude-haiku-5-5
+    apiKeySecretRef: ""
+    apiKeySecretKey: ""
+    config:
+      baseUrl: http://127.0.0.1:15001
+
+# Sub-agent (A2A) URLs that kagent builds are rewritten to the agent's own
+# sidecar, which sends them to the gateway route /a2a/<project>/<agent>:
+# agents never call each other pod to pod.
+proxy:
+  url: http://127.0.0.1:15001
+
+controller:
+  resources:
+    requests: {cpu: 50m, memory: 96Mi}
+    limits: {memory: 256Mi}
+
+kmcp:
+  enabled: true
+  resources:
+    requests: {cpu: 10m, memory: 64Mi}
+    limits: {memory: 192Mi}
+
+database:
+  postgres:
+    bundled:
+      enabled: true
+      storage: 1Gi
+      storageClassName: ceph-rbd
+      resources:
+        requests: {cpu: 50m, memory: 96Mi}
+        limits: {memory: 256Mi}
+
+# The CMP is the UI of agents; kagent's own UI is not run nor exposed.
+ui:
+  replicas: 0
+
+kagent-tools: {enabled: false}
+grafana-mcp: {enabled: false}
+k8s-agent: {enabled: false}
+kgateway-agent: {enabled: false}
+istio-agent: {enabled: false}
+promql-agent: {enabled: false}
+observability-agent: {enabled: false}
+argo-rollouts-agent: {enabled: false}
+helm-agent: {enabled: false}
+cilium-policy-agent: {enabled: false}
+cilium-manager-agent: {enabled: false}
+cilium-debug-agent: {enabled: false}

@@ -11,3 +11,5 @@ resources:
   - restrict-tenant-images.yaml
   - restrict-tenant-registry-secret.yaml
   - verify-tenant-image-signatures.yaml
+  - agent-runtimeclass.yaml
+  - verify-gw-auth-proxy-signature.yaml

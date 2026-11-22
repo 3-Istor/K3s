@@ -12,6 +12,10 @@
 # GitHub keeps repo names unique within the org. "imports" is refused as an
 # app name so a template namespace cannot claim every imported image.
 #
+# One platform image any tenant runs, that exact repository only, and only
+# signed (ImageValidatingPolicy verify-gw-auth-proxy-signature, Deny):
+#   ghcr.io/3-istor/cnp-gw-auth-proxy        sidecar of every AI agent
+#
 # In-cluster registries are refused: Zot (10.43.0.50) mirrors ghcr.io with
 # the org's pull token, so addressing it directly would skip the org check.
 
@@ -83,6 +87,7 @@ spec:
       expression: >-
         variables.repositories.all(r,
           !r.startsWith('ghcr.io/3-istor/')
+          || r == 'ghcr.io/3-istor/cnp-gw-auth-proxy'
           || r.startsWith('ghcr.io/3-istor/imports/' + variables.project + '/')
           || (variables.app != '' && variables.app != 'imports'
               && (r == 'ghcr.io/3-istor/' + variables.app

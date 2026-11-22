@@ -1,0 +1,153 @@
+# Default code-mode sandbox: gVisor, one warm sandbox ready (about 0.5 s to a claim).
+apiVersion: extensions.agents.x-k8s.io/v1beta1
+kind: SandboxTemplate
+metadata:
+  name: python
+  namespace: ai-sandbox
+spec:
+  service: true
+  # The controller writes one NetworkPolicy per template: default deny, then
+  # these rules. Ingress only from run-python, egress only DNS and the gateway.
+  networkPolicyManagement: Managed
+  networkPolicy:
+    ingress:
+      - from:
+          - namespaceSelector:
+              matchLabels: {kubernetes.io/metadata.name: ai-tools}
+            podSelector:
+              matchLabels: {app.kubernetes.io/name: run-python}
+        ports: [{protocol: TCP, port: 8888}]
+    egress:
+      - to:
+          - namespaceSelector:
+              matchLabels: {kubernetes.io/metadata.name: kube-system}
+            podSelector:
+              matchLabels: {k8s-app: kube-dns}
+        ports: [{protocol: UDP, port: 53}, {protocol: TCP, port: 53}]
+      - to:
+          - namespaceSelector:
+              matchLabels: {kubernetes.io/metadata.name: ai-gateway}
+            podSelector:
+              matchLabels: {gateway.networking.k8s.io/gateway-name: ai-gateway}
+        ports: [{protocol: TCP, port: 8080}]
+  podTemplate:
+    spec:
+      runtimeClassName: gvisor
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: python
+          image: ghcr.io/3-istor/cnp-sandbox-python:0.1.0
+          imagePullPolicy: IfNotPresent
+          ports: [{containerPort: 8888}]
+          readinessProbe:
+            httpGet: {path: /, port: 8888}
+            periodSeconds: 2
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {cpu: "1", memory: 512Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: workspace, mountPath: /workspace}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: workspace
+          emptyDir: {sizeLimit: 100Mi}
+        - name: tmp
+          emptyDir: {medium: Memory, sizeLimit: 64Mi}
+---
+apiVersion: extensions.agents.x-k8s.io/v1beta1
+kind: SandboxWarmPool
+metadata:
+  name: python
+  namespace: ai-sandbox
+spec:
+  replicas: 1
+  sandboxTemplateRef: {name: python}
+---
+# Higher-risk tier: Kata VM per run, cold start, no warm pool (each VM costs 320Mi overhead).
+apiVersion: extensions.agents.x-k8s.io/v1beta1
+kind: SandboxTemplate
+metadata:
+  name: python-kata
+  namespace: ai-sandbox
+spec:
+  service: true
+  # The controller writes one NetworkPolicy per template: default deny, then
+  # these rules. Ingress only from run-python, egress only DNS and the gateway.
+  networkPolicyManagement: Managed
+  networkPolicy:
+    ingress:
+      - from:
+          - namespaceSelector:
+              matchLabels: {kubernetes.io/metadata.name: ai-tools}
+            podSelector:
+              matchLabels: {app.kubernetes.io/name: run-python}
+        ports: [{protocol: TCP, port: 8888}]
+    egress:
+      - to:
+          - namespaceSelector:
+              matchLabels: {kubernetes.io/metadata.name: kube-system}
+            podSelector:
+              matchLabels: {k8s-app: kube-dns}
+        ports: [{protocol: UDP, port: 53}, {protocol: TCP, port: 53}]
+      - to:
+          - namespaceSelector:
+              matchLabels: {kubernetes.io/metadata.name: ai-gateway}
+            podSelector:
+              matchLabels: {gateway.networking.k8s.io/gateway-name: ai-gateway}
+        ports: [{protocol: TCP, port: 8080}]
+  podTemplate:
+    spec:
+      runtimeClassName: kata
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: python
+          image: ghcr.io/3-istor/cnp-sandbox-python:0.1.0
+          imagePullPolicy: IfNotPresent
+          ports: [{containerPort: 8888}]
+          readinessProbe:
+            httpGet: {path: /, port: 8888}
+            periodSeconds: 2
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {cpu: "1", memory: 512Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: workspace, mountPath: /workspace}
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: workspace
+          emptyDir: {sizeLimit: 100Mi}
+        - name: tmp
+          emptyDir: {medium: Memory, sizeLimit: 64Mi}
+---
+apiVersion: extensions.agents.x-k8s.io/v1beta1
+kind: SandboxWarmPool
+metadata:
+  name: python-kata
+  namespace: ai-sandbox
+spec:
+  replicas: 0
+  sandboxTemplateRef: {name: python-kata}

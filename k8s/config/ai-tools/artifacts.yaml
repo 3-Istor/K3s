@@ -1,0 +1,41 @@
+# Files written by run_python (PNG, CSV). run-python sets a 1-day expiry
+# lifecycle on the bucket and serves them on the gateway route /ai-artifacts/
+# for 24 h. Delete reclaim: nothing here outlives a day.
+apiVersion: objectbucket.io/v1alpha1
+kind: ObjectBucketClaim
+metadata:
+  name: ai-artifacts
+  namespace: ai-tools
+spec:
+  bucketName: ai-artifacts
+  storageClassName: ceph-bucket
+---
+# Backend of the gateway route /ai-artifacts/ (HTTPRoute in ai-gateway).
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-artifacts
+  namespace: ai-tools
+spec:
+  selector:
+    app.kubernetes.io/name: run-python
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 3000
+      protocol: TCP
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: ai-gateway-routes
+  namespace: ai-tools
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: ai-gateway
+  to:
+    - group: ""
+      kind: Service
+      name: ai-artifacts
