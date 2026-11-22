@@ -1,6 +1,8 @@
-# Task artifacts (PNG, CSV) of run_python, served by the run-python service
-# (ns ai-tools, which grants this route with a ReferenceGrant). No token: the
-# task ids are 128-bit random and the objects expire after 24 h.
+# Task artifacts (PNG, CSV) of run_python, served by run-python through the
+# Service ai-artifacts (ns ai-tools, which grants this route with a
+# ReferenceGrant). Any token of the gateway's audience may read them: the
+# CMP fetches with the user's exchanged agent token, epitweet-mcp with the
+# actor's. Task ids are 128-bit random and objects expire after 24 h.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -14,6 +16,32 @@ spec:
           method: GET
       backendRefs:
         - kind: Service
-          name: run-python
+          name: ai-artifacts
           namespace: ai-tools
-          port: 3000
+          port: 8080
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: ai-artifacts
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: ai-artifacts
+  traffic:
+    jwtAuthentication:
+      mode: Strict
+      providers:
+        - issuer: https://auth.3istor.com/realms/3istor
+          audiences: [ai-gateway]
+          jwks:
+            remote:
+              jwksPath: /realms/3istor/protocol/openid-connect/certs
+              cacheDuration: 5m
+              backendRef: {group: "", kind: Service, name: keycloakx-http, namespace: keycloak, port: 80}
+    authorization:
+      action: Require
+      policy:
+        matchExpressions:
+          - 'has(jwt.project)'
