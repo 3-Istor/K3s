@@ -195,3 +195,25 @@ spec:
   containers:
     - name: app
       image: quay.io/minio/minio:RELEASE.2025-01-01T00-00-00Z
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: agent-with-platform-sidecar
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: agent
+      image: ghcr.io/kagent-dev/kagent/golang-adk:0.10.6
+    - name: gw-auth-proxy
+      image: ghcr.io/3-istor/cnp-gw-auth-proxy:0.1.0
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: platform-sidecar-name-prefix-trick
+  namespace: iot-optispace-stg
+spec:
+  containers:
+    - name: app
+      image: ghcr.io/3-istor/cnp-gw-auth-proxy-evil:0.1.0

@@ -18,6 +18,7 @@ results:
       - iot-system/system-components
       - iot-optispace-stg/any-public-image
       - iot-optispace-stg/other-public-registry
+      - iot-optispace-stg/agent-with-platform-sidecar
   - policy: restrict-tenant-images
     kind: Pod
     result: fail
@@ -34,3 +35,4 @@ results:
       - iot-optispace-stg/cluster-service-registry
       - iot-optispace-stg/org-image-upper-case
       - iot-optispace-stg/org-image-with-port
+      - iot-optispace-stg/platform-sidecar-name-prefix-trick
