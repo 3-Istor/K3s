@@ -138,6 +138,13 @@ extraEnv:
       secretKeyRef:
         name: arcl-cmp-finops-oidc
         key: client-secret
+  # --- AI gateway: the CMP's own client (cmp-ai) ---
+  - name: AI_CMP_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: arcl-cmp-ai-gateway
+        key: client_secret
+        optional: true
   # --- Terraform state: Keycloak client federated to AWS STS ---
   - name: TF_BACKEND_OIDC_CLIENT_SECRET
     valueFrom:
