@@ -22,10 +22,11 @@
   is read at HEAD.
   forceUpdate: the app runs the import workflow's image until the first
   release, which is not this image name and would otherwise be skipped.
-  Backing apps run catalogue images and get no updater.
+  Backing apps run catalogue images and get no updater. An mcp app releases
+  like a service; an agent has no image of its own.
 */}}
 {{- range $app := .Values.apps }}
-{{- if and (eq $app.type "service") $app.repoURL }}
+{{- if and (has $app.type (list "service" "mcp")) $app.repoURL }}
 ---
 apiVersion: argocd-image-updater.argoproj.io/v1alpha1
 kind: ImageUpdater

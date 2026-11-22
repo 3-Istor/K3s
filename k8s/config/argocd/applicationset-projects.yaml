@@ -134,11 +134,21 @@ spec:
               tunnel: {{ dig "features" "tunnel" false .spec }}
               keycloak: {{ dig "features" "keycloak" false .spec }}
               egressIsolation: {{ dig "features" "egressIsolation" false .spec }}
+              {{- if dig "ai" "enabled" false .spec }}
+              ai: true
+              {{- end }}
+            {{- $agents := dig "ai" "agents" (list) .spec }}
             apps:
             {{- range dig "apps" (list) .spec }}
               - name: "{{ .name }}"
-                {{- if has (dig "type" "" .) (list "service" "backing") }}
+                {{- if has (dig "type" "" .) (list "service" "backing" "agent" "mcp") }}
                 type: "{{ .type }}"
+                {{- end }}
+                {{- if eq (dig "type" "" .) "agent" }}
+                {{- $name := .name }}
+                {{- range $agents }}{{- if eq .name $name }}
+                isolation: "{{ dig "isolation" "gvisor" . }}"
+                {{- end }}{{- end }}
                 {{- end }}
                 environments: {{ dig "environments" (list "prod") . | toJson }}
             {{- end }}
