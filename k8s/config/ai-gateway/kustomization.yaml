@@ -76,4 +76,4 @@ helmCharts:
             dailyTokenBudget: 500000
           - name: ai-gateway-smoke
             azp: ai-gateway-smoke
-            dailyTokenBudget: 10
+            dailyTokenBudget: 50000
