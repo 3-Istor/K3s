@@ -118,6 +118,8 @@ spec:
               - {name: cnp.environment, value: "{{ .env }}", forceString: true}
               - {name: cnp.type, value: "{{ .type }}", forceString: true}
               - {name: project_name, value: "{{ .metadata.name }}", forceString: true}
+              # Backups always land on-prem; the endpoint depends on where the app runs.
+              - {name: db.backup.endpointURL, value: '{{ get (dict "onprem" "http://192.168.1.110:7480" "aws" "http://onprem-apps.cnp-vpn.svc.cluster.local:18084" "gcp" "http://onprem-apps.cnp-vpn.svc.cluster.local:18084") .spec.targetCloud }}', forceString: true}
               {{- with .restore }}
               # Empty backupID and targetTime: restore up to the latest WAL.
               # No forceString: the chart schema wants an integer.
@@ -231,6 +233,8 @@ spec:
               - {name: cnp.environment, value: "{{ .env }}", forceString: true}
               - {name: cnp.type, value: "{{ .type }}", forceString: true}
               - {name: project_name, value: "{{ .metadata.name }}", forceString: true}
+              # Backups always land on-prem; the endpoint depends on where the app runs.
+              - {name: db.backup.endpointURL, value: '{{ get (dict "onprem" "http://192.168.1.110:7480" "aws" "http://onprem-apps.cnp-vpn.svc.cluster.local:18084" "gcp" "http://onprem-apps.cnp-vpn.svc.cluster.local:18084") .spec.targetCloud }}', forceString: true}
         - repoURL: "{{ .repoURL }}"
           targetRevision: HEAD
           path: ""
