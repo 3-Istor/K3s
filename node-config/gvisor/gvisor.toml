@@ -1,0 +1,12 @@
+# Drop-in read by the containerd embedded in K3s (config-v3.toml.d is in the
+# generated config's imports). Registers the runsc handler used by
+# RuntimeClass/gvisor.
+version = 3
+
+[plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runsc]
+  runtime_type = "io.containerd.runsc.v1"
+  runtime_path = "/usr/local/bin/containerd-shim-runsc-v1"
+
+[plugins.'io.containerd.cri.v1.runtime'.containerd.runtimes.runsc.options]
+  TypeUrl = "io.containerd.runsc.v1.options"
+  ConfigPath = "/etc/containerd/runsc.toml"
