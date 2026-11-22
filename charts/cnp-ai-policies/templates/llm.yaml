@@ -1,0 +1,149 @@
+{{- if include "cnp-ai.enabled" . }}
+{{- $p := include "cnp-ai.project" . }}
+{{- $gw := .Values.gateway }}
+{{- $clients := include "cnp-ai.clients" . | fromJson }}
+{{- $caller := include "cnp-ai.caller" . }}
+{{- $active := dict }}
+{{- $suspended := list }}
+{{- range $azp, $c := $clients }}
+{{- if $c.suspended }}{{ $suspended = append $suspended $azp }}
+{{- else if gt (int $c.budget) 0 }}{{ $_ := set $active $azp $c }}
+{{- end }}
+{{- end }}
+{{- $models := dict }}
+{{- $budgets := dict }}
+{{- $webSearch := list }}
+{{- range $azp, $c := $active }}
+{{- $_ := set $models $azp $c.models }}
+{{- $_ := set $budgets $azp (int $c.budget) }}
+{{- if $c.webSearch }}{{ $webSearch = append $webSearch $azp }}{{ end }}
+{{- end }}
+{{- $model := printf "%s[%s].with(m, m.filter(x, has(llmRequest.model) && string(llmRequest.model).startsWith(x)).with(f, size(f) > 0 ? f[0] : m[0]))" (toJson $models) $caller }}
+# x-cnp-project and x-cnp-caller are set from the validated JWT by the
+# gateway's PreRouting policy (ai-gateway-identity), never by the client.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: llm-{{ $p }}
+  labels:
+    {{- include "cnp-ai.labels" . | nindent 4 }}
+    cnp.3istor.com/ai-route: llm
+spec:
+  parentRefs:
+    - name: {{ $gw.name }}
+  rules:
+    {{- if $suspended }}
+    - name: suspended
+      matches:
+        {{- range $suspended }}
+        - path: {type: PathPrefix, value: /v1/messages}
+          headers:
+            - {name: x-cnp-project, value: {{ $p | quote }}}
+            - {name: x-cnp-caller, value: {{ . | quote }}}
+        {{- end }}
+    {{- end }}
+    - name: llm
+      matches:
+        - path: {type: PathPrefix, value: /v1/messages}
+          headers:
+            - {name: x-cnp-project, value: {{ $p | quote }}}
+      backendRefs:
+        - group: agentgateway.dev
+          kind: AgentgatewayBackend
+          name: {{ $gw.llmBackend }}
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: llm-{{ $p }}
+  labels:
+    {{- include "cnp-ai.labels" . | nindent 4 }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: llm-{{ $p }}
+      sectionName: llm
+  traffic:
+    {{- include "cnp-ai.jwt" . | nindent 4 }}
+    authorization:
+      action: Require
+      policy:
+        matchExpressions:
+          - 'has(jwt.project) && jwt.project == {{ $p | quote }}'
+          - '{{ $caller }} in {{ keys $active | sortAlpha | toJson }}'
+          - '!{{ $caller }}.startsWith("agent-") || int(jwt.exp) - int(jwt.iat) <= {{ $gw.agentTokenMaxLifetimeSeconds }}'
+    rateLimit:
+      local:
+        - requests: {{ $gw.requestsPerMinute }}
+          unit: Minutes
+          key: '{{ $caller }}'
+      global:
+        backendRef:
+          name: {{ $gw.ratelimit.service }}
+          port: {{ $gw.ratelimit.port }}
+        domain: {{ $gw.ratelimit.domain }}
+        failureMode: FailClosed
+        descriptors:
+          # Daily token budget of the caller, UTC day (D21, D32).
+          - entries:
+              - name: azp
+                expression: '{{ $caller }}'
+            unit: Tokens
+            limitOverride: '{"unit": "day", "requestsPerUnit": {{ toJson $budgets }}[{{ $caller }}]}'
+          # Platform-wide cap in micro-USD; the limit lives in ratelimit-config.
+          - entries:
+              - name: platform
+                expression: '"all"'
+            unit: Tokens
+            cost: '(has(llm.cost) ? int(llm.cost.total * 1000000.0) : 0) + {{ $gw.webSearchMicroUsd }} * default(llm.toolCalls, []).filter(t, t.name == "web_search").size()'
+  backend:
+    ai:
+      routes:
+        /v1/messages: Messages
+        /v1/messages/count_tokens: AnthropicTokenCount
+      transformations:
+        - field: max_tokens
+          expression: 'has(llmRequest.max_tokens) ? math.least(int(llmRequest.max_tokens), {{ $gw.maxTokens }}) : {{ $gw.maxTokens }}'
+        - field: model
+          expression: '{{ $model }}'
+        - field: output_config
+          expression: 'default(llmRequest.output_config, {}).merge({"effort": {{ toJson $gw.effortByModel }}[{{ $model }}]})'
+        # web_search is a server tool billed by Anthropic: kept only for the
+        # agents granted it, silently removed for the others.
+        - field: tools
+          expression: 'has(llmRequest.tools) ? llmRequest.tools.filter(t, !(has(t.type) && string(t.type).startsWith("web_search")) || {{ $caller }} in {{ $webSearch | toJson }}) : fail()'
+      promptGuard:
+        request:
+          - regex:
+              action: Mask
+              matches:
+                {{- include "cnp-ai.secretPatterns" . | nindent 16 }}
+        response:
+          - regex:
+              action: Mask
+              matches:
+                {{- include "cnp-ai.secretPatterns" . | nindent 16 }}
+{{- if $suspended }}
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: llm-{{ $p }}-suspended
+  labels:
+    {{- include "cnp-ai.labels" . | nindent 4 }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: llm-{{ $p }}
+      sectionName: suspended
+  traffic:
+    directResponse:
+      status: 403
+      body: {{ include "cnp-ai.suspendedBody" . | quote }}
+      headers:
+        - {name: content-type, value: '"application/json"'}
+        - {name: x-cnp-refusal, value: '"policy"'}
+{{- end }}
+{{- end }}

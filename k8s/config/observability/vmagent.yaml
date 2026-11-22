@@ -85,6 +85,7 @@ spec:
           - kyverno
           - status
           - trivy-system
+          - ai-gateway
   podScrapeSelector: {}
   # Raw scrape configs can point anywhere and keep any label: platform only.
   scrapeConfigNamespaceSelector:

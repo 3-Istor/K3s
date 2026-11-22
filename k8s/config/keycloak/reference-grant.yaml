@@ -30,3 +30,19 @@ spec:
     - group: ""
       kind: Service
       name: keycloakx-http
+---
+# The AI gateway fetches the realm's JWKS in-cluster (ai-gateway, cnp-ai-policies).
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-ai-gateway-jwks
+  namespace: keycloak
+spec:
+  from:
+    - group: agentgateway.dev
+      kind: AgentgatewayPolicy
+      namespace: ai-gateway
+  to:
+    - group: ""
+      kind: Service
+      name: keycloakx-http

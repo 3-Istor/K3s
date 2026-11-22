@@ -1,0 +1,73 @@
+# Synced only into this namespace (Vault role ai-gateway-role reads nothing
+# else; Kyverno ai-no-provider-keys keeps the value out of every other one).
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: anthropic-api-key
+spec:
+  path: kvv2/platform/ai/anthropic
+  vaultRole: ai-gateway-role
+  keys:
+    - api-key
+  type: Opaque
+---
+# Sent as x-api-key; the client's own Authorization never reaches Anthropic
+# (the JWT policies strip it).
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: anthropic
+spec:
+  ai:
+    provider:
+      anthropic: {}
+  policies:
+    auth:
+      secretRef:
+        name: anthropic-api-key
+        key: api-key
+---
+# A project without AI (no cnp-ai-policies route for its x-cnp-project) lands
+# here: 401 without a valid token, 403 with one.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: llm-default
+  labels:
+    cnp.3istor.com/ai-route: llm
+spec:
+  parentRefs:
+    - name: ai-gateway
+  rules:
+    - name: not-enabled
+      matches:
+        - path: {type: PathPrefix, value: /v1/messages}
+        - path: {type: PathPrefix, value: /mcp}
+        - path: {type: PathPrefix, value: /a2a}
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: llm-default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: llm-default
+  traffic:
+    jwtAuthentication:
+      mode: Strict
+      providers:
+        - issuer: https://auth.3istor.com/realms/3istor
+          audiences: [ai-gateway]
+          jwks:
+            remote:
+              jwksPath: /realms/3istor/protocol/openid-connect/certs
+              cacheDuration: 5m
+              backendRef: {group: "", kind: Service, name: keycloakx-http, namespace: keycloak, port: 80}
+    directResponse:
+      status: 403
+      body: '{"error":"ai_not_enabled","message":"L''IA n''est pas activée pour ce projet, ou cet agent n''y est pas déclaré. Activez-la dans le CMP (onglet IA du projet)."}'
+      headers:
+        - {name: content-type, value: '"application/json"'}
+        - {name: x-cnp-refusal, value: '"policy"'}

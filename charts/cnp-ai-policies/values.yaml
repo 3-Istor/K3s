@@ -1,0 +1,50 @@
+# Project name (ProjectRecord metadata.name) and its spec.ai, passed as is by
+# the ApplicationSet cnp-ai-policies.
+project: ""
+ai: {}
+
+gateway:
+  name: ai-gateway
+  llmBackend: anthropic
+  ratelimit:
+    service: ratelimit
+    port: 8081
+    domain: ai-budget
+  # Keycloak realm 3istor as the gateway sees it.
+  issuer: https://auth.3istor.com/realms/3istor
+  audience: ai-gateway
+  jwks:
+    service: keycloakx-http
+    namespace: keycloak
+    port: 80
+    path: /realms/3istor/protocol/openid-connect/certs
+  maxTokens: 4096
+  requestsPerMinute: 30
+  mcpRequestsPerMinute: 60
+  # Agent tokens live 300 s (Keycloak client attribute set by the CMP); the
+  # gateway refuses any longer-lived one.
+  agentTokenMaxLifetimeSeconds: 300
+  # When an agent or app sets no dailyTokenBudget.
+  defaultDailyTokenBudget: 200000
+  # Anthropic server tool, billed per search on top of the tokens.
+  webSearchMicroUsd: 10000
+  effortByModel:
+    claude-haiku-5-5: low
+    claude-sonnet-5-5: medium
+  # Holder of user:members on the A2A route: the CMP calls agents for the
+  # project members it has authorised.
+  membersCaller: cmp-ai
+  runPython:
+    host: run-python.ai-tools.svc.cluster.local
+    port: 3000
+    path: /mcp
+  # Project MCP servers: Services with this label in the project's namespaces
+  # and a port with appProtocol agentgateway.dev/mcp.
+  mcpServiceLabel: cnp.3istor.com/mcp
+  a2a:
+    port: 8080
+
+# Alert rule on the project's daily token budget (alert only, no block).
+projectBudgetAlert:
+  enabled: true
+  namespace: observability

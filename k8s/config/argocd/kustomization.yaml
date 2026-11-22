@@ -17,6 +17,7 @@ resources:
   - applicationset-projects.yaml
   - applicationset-apps.yaml
   - applicationset-image-updaters.yaml
+  - applicationset-ai-policies.yaml
   - image-updater-app-registry-rbac.yaml
   - appproject-janitor.yaml
 

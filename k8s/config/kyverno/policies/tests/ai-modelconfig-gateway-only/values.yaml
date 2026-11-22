@@ -1,0 +1,6 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Values
+namespaceSelector:
+  - name: epitweet-grok-reader
+    labels:
+      cnp.3istor.com/project: epitweet

@@ -1,0 +1,94 @@
+# Platform AI spend cap: readable 429 and alerts (budget-guard/guard.py).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: budget-guard
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: budget-guard
+rules:
+  - apiGroups: [agentgateway.dev]
+    resources: [agentgatewaypolicies]
+    verbs: [create]
+  - apiGroups: [agentgateway.dev]
+    resources: [agentgatewaypolicies]
+    resourceNames: [ai-budget-exhausted]
+    verbs: [get, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: budget-guard
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: budget-guard
+subjects:
+  - kind: ServiceAccount
+    name: budget-guard
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: budget-guard
+  labels: &labels
+    app.kubernetes.io/name: budget-guard
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: *labels
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      serviceAccountName: budget-guard
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: guard
+          image: docker.io/library/python:3.13.9-alpine3.22
+          command: [python, -u, /app/guard.py]
+          env:
+            # Platform cap in USD. Keep ratelimit/config.yaml platform limit
+            # equal to this x 1 000 000.
+            - {name: CAP_USD, value: "5"}
+            - {name: INTERVAL_S, value: "15"}
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - name: metrics
+              containerPort: 9090
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 5m
+              memory: 24Mi
+            limits:
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: app
+              mountPath: /app
+      volumes:
+        - name: app
+          configMap:
+            name: budget-guard

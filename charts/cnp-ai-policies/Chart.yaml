@@ -1,0 +1,5 @@
+apiVersion: v2
+name: cnp-ai-policies
+description: AI gateway routes and policies of one project, generated from the ProjectRecord spec.ai
+type: application
+version: 0.1.0

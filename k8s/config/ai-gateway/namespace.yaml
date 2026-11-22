@@ -1,0 +1,8 @@
+# The only namespace that holds the Anthropic key (Kyverno ai-no-provider-keys).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-gateway
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted

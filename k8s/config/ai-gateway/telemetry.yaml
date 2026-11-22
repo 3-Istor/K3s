@@ -1,0 +1,60 @@
+# Access logs, metric labels and traces carry who called (azp, the agent for
+# sandbox tokens), for which project, which model and tool, and what the
+# gateway decided. The recording rules cnp:ai_* read these labels.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: ai-gateway-telemetry
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ai-gateway
+  frontend:
+    accessLog:
+      attributes:
+        add:
+          - name: azp
+            expression: 'default(request.headers["x-cnp-caller"], "anonymous")'
+          - name: project
+            expression: 'default(request.headers["x-cnp-project"], "none")'
+          - name: model
+            expression: 'default(llm.responseModel, default(llm.requestModel, ""))'
+          - name: tool
+            expression: 'default(mcp.tool.name, "")'
+          - name: decision
+            expression: &decision >-
+              response.code < 400 ? "allow"
+              : response.code == 401 ? "unauthenticated"
+              : default(response.headers["x-cnp-refusal"], "") != "" ? response.headers["x-cnp-refusal"]
+              : response.code == 429 ? (default(response.headers["x-ratelimit-limit"], "") == "30" ? "ratelimit" : "budget")
+              : response.code == 403 ? "policy"
+              : "error"
+          - name: web_search
+            expression: 'size(default(llm.toolCalls, []).filter(t, t.name == "web_search"))'
+          - name: cost_usd
+            expression: 'default(llm.cost.total, 0.0)'
+    metrics:
+      attributes:
+        add:
+          - name: azp
+            expression: 'default(request.headers["x-cnp-caller"], "anonymous")'
+          - name: project
+            expression: 'default(request.headers["x-cnp-project"], "none")'
+          - name: tool
+            expression: 'default(mcp.tool.name, "")'
+          - name: decision
+            expression: *decision
+    tracing:
+      url: http://otelcol-gateway.observability.svc.cluster.local:4317
+      protocol: GRPC
+      randomSampling: "1.0"
+      attributes:
+        add:
+          - name: cnp.project
+            expression: 'default(request.headers["x-cnp-project"], "none")'
+          - name: cnp.agent
+            expression: 'default(request.headers["x-cnp-caller"], "anonymous")'
+      resources:
+        - name: service.name
+          expression: '"ai-gateway"'

@@ -1,0 +1,54 @@
+# The AI gateway is internal (AI landing zone): its Services stay ClusterIP,
+# its routes attach only to its own Gateway, agentgateway Gateways exist only
+# in ai-gateway, and no route elsewhere (the public Envoy gateways) may point
+# at a Service in ai-gateway.
+
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: ai-gateway-internal
+spec:
+  validationActions:
+    - Deny
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [services]
+      - apiGroups: [gateway.networking.k8s.io]
+        apiVersions: ["*"]
+        operations: [CREATE, UPDATE]
+        resources: [gateways, httproutes, grpcroutes, tcproutes, tlsroutes]
+      - apiGroups: [agentgateway.dev]
+        apiVersions: ["*"]
+        operations: [CREATE, UPDATE]
+        resources: [agentgatewayparameters]
+  variables:
+    - name: inGateway
+      expression: object.metadata.namespace == 'ai-gateway'
+    - name: routeKinds
+      expression: "['HTTPRoute', 'GRPCRoute', 'TCPRoute', 'TLSRoute']"
+  validations:
+    - message: "Services in ai-gateway must be ClusterIP: the AI gateway is reachable inside the cluster only."
+      expression: >-
+        object.kind != 'Service' || !variables.inGateway
+        || object.spec.?type.orValue('ClusterIP') == 'ClusterIP'
+    - message: "AgentgatewayParameters must keep the gateway Service ClusterIP."
+      expression: >-
+        object.kind != 'AgentgatewayParameters'
+        || object.spec.?service.spec.type.orValue('') == 'ClusterIP'
+    - message: "agentgateway Gateways are only allowed in the ai-gateway namespace."
+      expression: >-
+        object.kind != 'Gateway' || variables.inGateway
+        || object.spec.gatewayClassName != 'agentgateway'
+    - message: "Routes in ai-gateway may only attach to the ai-gateway Gateway."
+      expression: >-
+        !(object.kind in variables.routeKinds) || !variables.inGateway
+        || object.spec.?parentRefs.orValue([]).all(p,
+             p.name == 'ai-gateway' && p.?namespace.orValue('ai-gateway') == 'ai-gateway')
+    - message: "Routes outside ai-gateway may not send traffic to a Service in ai-gateway."
+      expression: >-
+        !(object.kind in variables.routeKinds) || variables.inGateway
+        || object.spec.?rules.orValue([]).all(r,
+             r.?backendRefs.orValue([]).all(b, b.?namespace.orValue('') != 'ai-gateway'))

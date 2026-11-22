@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: agent-with-placeholder
+  namespace: epitweet-grok-reader
+spec:
+  containers:
+    - name: agent
+      image: cr.kagent.dev/kagent-dev/kagent/golang-adk:0.10.6
+      env:
+        - name: ANTHROPIC_API_KEY
+          value: placeholder-gateway-holds-the-key
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: agent-with-real-key
+  namespace: epitweet-grok-reader
+spec:
+  containers:
+    - name: agent
+      image: cr.kagent.dev/kagent-dev/kagent/golang-adk:0.10.6
+      env:
+        - name: SOME_NAME
+          value: sk-ant-api03-AAAAAAAAAAAAAAAAAAAA
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: init-with-real-key
+  namespace: epitweet-grok-reader
+spec:
+  initContainers:
+    - name: init
+      image: busybox:1.37
+      env:
+        - name: K
+          value: "Bearer sk-ant-api03-BBBBBBBBBBBBBBBB"
+  containers:
+    - name: agent
+      image: cr.kagent.dev/kagent-dev/kagent/golang-adk:0.10.6
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: leaked-key
+  namespace: epitweet
+data:
+  key: c2stYW50LWFwaTAzLVhYWFhYWFhYWFhYWA==
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: leaked-key-stringdata
+  namespace: epitweet
+stringData:
+  key: sk-ant-api03-YYYYYYYYYYYY
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: unrelated
+  namespace: epitweet
+data:
+  password: aHVudGVyMg==
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: leaked-key-cm
+  namespace: epitweet
+data:
+  env: "ANTHROPIC_API_KEY=sk-ant-api03-ZZZZZZZZZZ"
+---
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: steal-provider-key
+  namespace: epitweet
+spec:
+  path: kvv2/platform/ai/anthropic
+  vaultRole: epitweet-role
+  type: Opaque
+---
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: borrow-gateway-role
+  namespace: epitweet
+spec:
+  path: kvv2/projects/epitweet/x
+  vaultRole: ai-gateway-role
+  type: Opaque
+---
+apiVersion: ricoberger.de/v1alpha1
+kind: VaultSecret
+metadata:
+  name: own-secret
+  namespace: epitweet
+spec:
+  path: kvv2/projects/epitweet/apps/grok-bridge/ai-oidc
+  vaultRole: epitweet-role
+  type: Opaque

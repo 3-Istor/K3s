@@ -1,0 +1,28 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: ai-gateway
+spec:
+  selector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: ai-gateway
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      relabelConfigs:
+        - targetLabel: job
+          replacement: ai-gateway
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: budget-guard
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: budget-guard
+  podMetricsEndpoints:
+    - port: metrics
+      relabelConfigs:
+        - targetLabel: job
+          replacement: budget-guard

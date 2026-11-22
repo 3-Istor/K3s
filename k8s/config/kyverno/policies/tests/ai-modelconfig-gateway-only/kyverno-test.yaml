@@ -1,0 +1,23 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: ai-modelconfig-gateway-only
+policies:
+  - ../../ai-modelconfig-gateway-only.yaml
+variables: values.yaml
+resources:
+  - resources.yaml
+results:
+  - policy: ai-modelconfig-gateway-only
+    kind: ModelConfig
+    result: pass
+    resources:
+      - epitweet-grok-reader/through-sidecar
+      - epitweet-grok-reader/through-gateway
+  - policy: ai-modelconfig-gateway-only
+    kind: ModelConfig
+    result: fail
+    resources:
+      - epitweet-grok-reader/direct-to-anthropic
+      - epitweet-grok-reader/with-key
+      - epitweet-grok-reader/other-provider

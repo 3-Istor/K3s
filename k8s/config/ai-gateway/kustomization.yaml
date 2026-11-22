@@ -1,0 +1,76 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ai-gateway
+
+resources:
+  - namespace.yaml
+  - gateway.yaml
+  - anthropic.yaml
+  - identity.yaml
+  - telemetry.yaml
+  - ratelimit.yaml
+  - budget-guard.yaml
+  - networkpolicies.yaml
+  - scrape.yaml
+
+configMapGenerator:
+  - name: ratelimit-config
+    files:
+      - config.yaml=ratelimit/config.yaml
+  - name: budget-guard
+    files:
+      - budget-guard/guard.py
+
+helmGlobals:
+  chartHome: ../../../charts
+
+helmCharts:
+  - name: agentgateway-crds
+    repo: oci://cr.agentgateway.dev/charts
+    version: v1.7.0
+    releaseName: agentgateway-crds
+    namespace: ai-gateway
+
+  - name: agentgateway
+    repo: oci://cr.agentgateway.dev/charts
+    version: v1.7.0
+    releaseName: agentgateway
+    namespace: ai-gateway
+    valuesInline:
+      resources:
+        requests:
+          cpu: 20m
+          memory: 96Mi
+        limits:
+          memory: 256Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        runAsNonRoot: true
+        capabilities:
+          drop: [ALL]
+      podSecurityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      istio:
+        enabled: false
+
+  # The platform's own clients (project claim cnp-platform): the CMP and the
+  # operator smoke test. Projects get theirs from ApplicationSet cnp-ai-policies.
+  - name: cnp-ai-policies
+    releaseName: cnp-ai-policies-platform
+    namespace: ai-gateway
+    valuesInline:
+      project: cnp-platform
+      projectBudgetAlert:
+        enabled: false
+      ai:
+        enabled: true
+        models: [claude-haiku-5-5, claude-sonnet-5-5]
+        webSearch: false
+        apps:
+          - name: cmp-ai
+            dailyTokenBudget: 500000
+          - name: ai-gateway-smoke
+            dailyTokenBudget: 50000

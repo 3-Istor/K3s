@@ -1,0 +1,48 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: ai-no-provider-keys
+policies:
+  - ../../ai-no-provider-keys.yaml
+variables: values.yaml
+resources:
+  - resources.yaml
+results:
+  - policy: ai-no-provider-keys
+    kind: Pod
+    result: pass
+    resources:
+      - epitweet-grok-reader/agent-with-placeholder
+  - policy: ai-no-provider-keys
+    kind: Pod
+    result: fail
+    resources:
+      - epitweet-grok-reader/agent-with-real-key
+      - epitweet-grok-reader/init-with-real-key
+  - policy: ai-no-provider-keys
+    kind: Secret
+    result: fail
+    resources:
+      - epitweet/leaked-key
+      - epitweet/leaked-key-stringdata
+  - policy: ai-no-provider-keys
+    kind: Secret
+    result: pass
+    resources:
+      - epitweet/unrelated
+  - policy: ai-no-provider-keys
+    kind: ConfigMap
+    result: fail
+    resources:
+      - epitweet/leaked-key-cm
+  - policy: ai-no-provider-keys
+    kind: VaultSecret
+    result: fail
+    resources:
+      - epitweet/steal-provider-key
+      - epitweet/borrow-gateway-role
+  - policy: ai-no-provider-keys
+    kind: VaultSecret
+    result: pass
+    resources:
+      - epitweet/own-secret
