@@ -27,6 +27,9 @@ spec:
   validationActions:
     - Audit
   failurePolicy: Ignore
+  # Signature checks call the registry; 10 s timed out under control-plane load and failed closed.
+  webhookConfiguration:
+    timeoutSeconds: 30
   matchConstraints:
     namespaceSelector:
       matchExpressions:
