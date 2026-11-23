@@ -1,7 +1,7 @@
 name: AI runtime images
 
-# Tag ai-runtime/vX.Y.Z publishes the three images with version X.Y.Z:
-# ghcr.io/3-istor/cnp-gw-auth-proxy, cnp-run-python, cnp-sandbox-python.
+# Tag ai-runtime/vX.Y.Z publishes the images with version X.Y.Z:
+# ghcr.io/3-istor/cnp-gw-auth-proxy, cnp-run-python, cnp-web-search, cnp-sandbox-python.
 on:
   push:
     branches: [main]
@@ -53,6 +53,7 @@ jobs:
         include:
           - {image: gw-auth-proxy, context: images/ai-runtime, file: images/ai-runtime/Dockerfile.gw-auth-proxy}
           - {image: run-python, context: images/ai-runtime, file: images/ai-runtime/Dockerfile.run-python}
+          - {image: web-search, context: images/ai-runtime, file: images/ai-runtime/Dockerfile.web-search}
           - {image: sandbox-python, context: images/ai-runtime/sandbox-image, file: images/ai-runtime/sandbox-image/Dockerfile}
     env:
       RELEASE: ${{ startsWith(github.ref, 'refs/tags/ai-runtime/v') }}

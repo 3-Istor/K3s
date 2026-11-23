@@ -1,0 +1,61 @@
+# web_search: the Anthropic server tool wrapped as an MCP tool (kagent agents
+# only take MCP tools). Calls the gateway's /v1/messages with the caller's
+# JWT, so cost, budget and rights stay the calling agent's. Sources:
+# images/ai-runtime.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: web-search
+  namespace: ai-tools
+automountServiceAccountToken: false
+---
+apiVersion: kagent.dev/v1alpha1
+kind: MCPServer
+metadata:
+  name: web-search
+  namespace: ai-tools
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  transportType: http
+  httpTransport:
+    targetPort: 3000
+    path: /mcp
+  deployment:
+    image: ghcr.io/3-istor/cnp-web-search:0.2.0
+    port: 3000
+    serviceAccountName: web-search
+    labels:
+      app.kubernetes.io/name: web-search
+    resources:
+      requests: {cpu: 5m, memory: 16Mi}
+      limits: {memory: 48Mi}
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 65532
+      runAsGroup: 65532
+      seccompProfile: {type: RuntimeDefault}
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities: {drop: [ALL]}
+---
+# MCP is served by the gateway only.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web-search-ingress
+  namespace: ai-tools
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: web-search
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ai-gateway
+      ports:
+        - port: 3000
+          protocol: TCP

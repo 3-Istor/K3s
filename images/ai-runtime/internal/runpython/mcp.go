@@ -7,15 +7,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"log/slog"
 	"net/http"
 	"strings"
-)
 
-const (
-	mcpProtocolVersion = "2025-06-18"
-	maxRequestBytes    = 1 << 20
+	"github.com/3-Istor/K3s/images/ai-runtime/internal/mcp"
 )
 
 // ToolDescription is what the model reads to learn code mode.
@@ -41,178 +37,50 @@ type CodeRunner interface {
 	Run(ctx context.Context, callerJWT, code string, timeoutS int) (*Result, error)
 }
 
-// MCPHandler serves the stateless streamable-HTTP MCP endpoint (JSON responses only).
+// MCPHandler serves the run_python tool over MCP.
 type MCPHandler struct {
 	Runner  CodeRunner
 	Version string
 	Log     *slog.Logger
 }
 
-type rpcRequest struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      json.RawMessage `json:"id,omitempty"`
-	Method  string          `json:"method"`
-	Params  json.RawMessage `json:"params,omitempty"`
-}
-
-type rpcError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
-type rpcResponse struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      json.RawMessage `json:"id"`
-	Result  any             `json:"result,omitempty"`
-	Error   *rpcError       `json:"error,omitempty"`
-}
-
-type textContent struct {
-	Type string `json:"type"`
-	Text string `json:"text"`
-}
-
-type callResult struct {
-	Content           []textContent `json:"content"`
-	StructuredContent any           `json:"structuredContent,omitempty"`
-	IsError           bool          `json:"isError"`
-}
-
 func (h *MCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-	case http.MethodDelete:
-		w.WriteHeader(http.StatusOK)
-		return
-	default:
-		// Stateless server: no server-initiated stream on GET.
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	body, err := io.ReadAll(io.LimitReader(r.Body, maxRequestBytes+1))
-	if err != nil || len(body) > maxRequestBytes {
-		http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
-		return
-	}
-	callerJWT := bearer(r.Header.Get("Authorization"))
-
-	trimmed := strings.TrimSpace(string(body))
-	if strings.HasPrefix(trimmed, "[") {
-		var batch []rpcRequest
-		if err := json.Unmarshal(body, &batch); err != nil {
-			writeJSON(w, rpcResponse{JSONRPC: "2.0", ID: json.RawMessage("null"), Error: &rpcError{Code: -32700, Message: "parse error"}})
-			return
-		}
-		var out []rpcResponse
-		for _, req := range batch {
-			if resp, ok := h.handle(r.Context(), req, callerJWT); ok {
-				out = append(out, resp)
-			}
-		}
-		if len(out) == 0 {
-			w.WriteHeader(http.StatusAccepted)
-			return
-		}
-		writeJSON(w, out)
-		return
-	}
-	var req rpcRequest
-	if err := json.Unmarshal(body, &req); err != nil {
-		writeJSON(w, rpcResponse{JSONRPC: "2.0", ID: json.RawMessage("null"), Error: &rpcError{Code: -32700, Message: "parse error"}})
-		return
-	}
-	resp, ok := h.handle(r.Context(), req, callerJWT)
-	if !ok {
-		w.WriteHeader(http.StatusAccepted)
-		return
-	}
-	writeJSON(w, resp)
+	(&mcp.Server{
+		Name:    "run-python",
+		Version: h.Version,
+		Tool: mcp.Tool{
+			Name:        "run_python",
+			Description: ToolDescription,
+			InputSchema: inputSchema,
+			Annotations: map[string]any{"readOnlyHint": true, "openWorldHint": false},
+		},
+		Call:          h.call,
+		PlatformError: "the sandbox could not run this code (platform error, try again later)",
+		Log:           h.Log,
+	}).ServeHTTP(w, r)
 }
 
-// handle returns false for notifications, which get no response.
-func (h *MCPHandler) handle(ctx context.Context, req rpcRequest, callerJWT string) (rpcResponse, bool) {
-	if len(req.ID) == 0 || string(req.ID) == "null" {
-		return rpcResponse{}, false
+func (h *MCPHandler) call(ctx context.Context, callerJWT string, arguments json.RawMessage) (any, error) {
+	var args struct {
+		Code     string `json:"code"`
+		TimeoutS int    `json:"timeout_s"`
 	}
-	resp := rpcResponse{JSONRPC: "2.0", ID: req.ID}
-	switch req.Method {
-	case "initialize":
-		var p struct {
-			ProtocolVersion string `json:"protocolVersion"`
-		}
-		_ = json.Unmarshal(req.Params, &p)
-		version := p.ProtocolVersion
-		if version == "" {
-			version = mcpProtocolVersion
-		}
-		resp.Result = map[string]any{
-			"protocolVersion": version,
-			"capabilities":    map[string]any{"tools": map[string]any{"listChanged": false}},
-			"serverInfo":      map[string]any{"name": "run-python", "version": h.Version},
-		}
-	case "ping":
-		resp.Result = map[string]any{}
-	case "tools/list":
-		resp.Result = map[string]any{"tools": []map[string]any{{
-			"name":        "run_python",
-			"description": ToolDescription,
-			"inputSchema": inputSchema,
-			"annotations": map[string]any{"readOnlyHint": true, "openWorldHint": false},
-		}}}
-	case "tools/call":
-		resp.Result, resp.Error = h.call(ctx, req.Params, callerJWT)
-	default:
-		resp.Error = &rpcError{Code: -32601, Message: "method not found"}
+	if err := json.Unmarshal(arguments, &args); err != nil {
+		return nil, &mcp.ToolError{Msg: "invalid arguments: " + err.Error()}
 	}
-	return resp, true
-}
-
-func (h *MCPHandler) call(ctx context.Context, params json.RawMessage, callerJWT string) (any, *rpcError) {
-	var p struct {
-		Name      string `json:"name"`
-		Arguments struct {
-			Code     string `json:"code"`
-			TimeoutS int    `json:"timeout_s"`
-		} `json:"arguments"`
-	}
-	if err := json.Unmarshal(params, &p); err != nil {
-		return nil, &rpcError{Code: -32602, Message: "invalid params"}
-	}
-	if p.Name != "run_python" {
-		return nil, &rpcError{Code: -32602, Message: "unknown tool " + p.Name}
-	}
-	if strings.TrimSpace(p.Arguments.Code) == "" {
-		return toolError("code is empty"), nil
+	if strings.TrimSpace(args.Code) == "" {
+		return nil, &mcp.ToolError{Msg: "code is empty"}
 	}
 	if callerJWT == "" {
-		return toolError("run_python needs the caller's token: call it through the AI gateway"), nil
+		return nil, &mcp.ToolError{Msg: "run_python needs the caller's token: call it through the AI gateway"}
 	}
-	res, err := h.Runner.Run(ctx, callerJWT, p.Arguments.Code, p.Arguments.TimeoutS)
+	res, err := h.Runner.Run(ctx, callerJWT, args.Code, args.TimeoutS)
+	var userErr *UserError
+	if errors.As(err, &userErr) {
+		return nil, &mcp.ToolError{Msg: userErr.Msg}
+	}
 	if err != nil {
-		h.Log.Error("run_python failed", "err", err)
-		var userErr *UserError
-		if errors.As(err, &userErr) {
-			return toolError(userErr.Msg), nil
-		}
-		return toolError("the sandbox could not run this code (platform error, try again later)"), nil
+		return nil, err
 	}
-	text, _ := json.Marshal(res)
-	return callResult{Content: []textContent{{Type: "text", Text: string(text)}}, StructuredContent: res}, nil
-}
-
-func toolError(msg string) callResult {
-	return callResult{Content: []textContent{{Type: "text", Text: msg}}, IsError: true}
-}
-
-func bearer(header string) string {
-	scheme, token, ok := strings.Cut(header, " ")
-	if !ok || !strings.EqualFold(scheme, "bearer") {
-		return ""
-	}
-	return strings.TrimSpace(token)
-}
-
-func writeJSON(w http.ResponseWriter, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(v)
+	return res, nil
 }

@@ -43,6 +43,10 @@ gateway:
     host: run-python.ai-tools.svc.cluster.local
     port: 3000
     path: /mcp
+  webSearch:
+    host: web-search.ai-tools.svc.cluster.local
+    port: 3000
+    path: /mcp
   # Project MCP servers: Services with this label in the project's namespaces
   # and a port with appProtocol agentgateway.dev/mcp.
   mcpServiceLabel: cnp.3istor.com/mcp

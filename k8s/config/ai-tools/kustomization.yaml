@@ -4,4 +4,5 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - run-python.yaml
+  - web-search.yaml
   - artifacts.yaml
