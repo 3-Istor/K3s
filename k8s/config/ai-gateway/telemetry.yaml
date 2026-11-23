@@ -31,7 +31,7 @@ spec:
               : response.code == 403 ? "policy"
               : "error"
           - name: web_search
-            expression: 'size(default(llm.toolCalls, []).filter(t, t.name == "web_search"))'
+            expression: 'has(llmRequest.tools) && llmRequest.tools.exists(t, has(t.type) && string(t.type).startsWith("web_search")) ? size(default(llm.toolCalls, []).filter(t, t.name == "web_search")) : 0'
           - name: cost_usd
             expression: 'default(llm.cost.total, 0.0)'
     metrics:
