@@ -100,11 +100,14 @@ spec:
             unit: Tokens
             limitOverride: '{"unit": "day", "requestsPerUnit": {{ toJson $budgets }}[{{ $caller }}]}'
           # Platform-wide cap in micro-USD; the limit lives in ratelimit-config.
+          # Searches are billed only when the request carries the server tool:
+          # an agent's call to the web_search MCP tool is also a tool call
+          # named web_search, already billed by the web-search server's request.
           - entries:
               - name: platform
                 expression: '"all"'
             unit: Tokens
-            cost: '(has(llm.cost) ? int(llm.cost.total * 1000000.0) : 0) + {{ $gw.webSearchMicroUsd }} * default(llm.toolCalls, []).filter(t, t.name == "web_search").size()'
+            cost: '(has(llm.cost) ? int(llm.cost.total * 1000000.0) : 0) + (has(llmRequest.tools) && llmRequest.tools.exists(t, has(t.type) && string(t.type).startsWith("web_search")) ? {{ $gw.webSearchMicroUsd }} * default(llm.toolCalls, []).filter(t, t.name == "web_search").size() : 0)'
   backend:
     ai:
       routes:
