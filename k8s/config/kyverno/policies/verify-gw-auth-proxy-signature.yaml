@@ -1,8 +1,9 @@
 # The AI agent sidecar is the one org image restrict-tenant-images lets every
 # tenant run. In exchange it must be the platform's build: a cosign keyless
-# signature from the K3s ai-runtime workflow on an ai-runtime/v* tag. Deny and
-# fail closed, in tenant namespaces only: an unsigned or unverifiable sidecar
-# never starts.
+# signature from the K3s ai-runtime workflow on an ai-runtime/v* tag. An unsigned
+# sidecar is denied in tenant namespaces. The webhook fails open: Kyverno shares one
+# webhook per failure policy, so failing closed blocked every tenant pod whenever
+# Kyverno was slow (2026-11-23). restrict-tenant-images still pins the repository.
 apiVersion: policies.kyverno.io/v1
 kind: ImageValidatingPolicy
 metadata:
@@ -12,7 +13,7 @@ metadata:
 spec:
   validationActions:
     - Deny
-  failurePolicy: Fail
+  failurePolicy: Ignore
   # Signature checks call the registry; 10 s timed out under control-plane load and failed closed.
   webhookConfiguration:
     timeoutSeconds: 30
