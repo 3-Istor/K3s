@@ -6,6 +6,10 @@ P=cnp209-probe-$(date +%s)
 L=cnp.3istor.com/deletion-protected
 APP=--as=system:serviceaccount:argocd:argocd-application-controller
 APPSET=--as=system:serviceaccount:argocd:argocd-applicationset-controller
+# system:masters bypasses RBAC, so a denial can only come from the policy.
+CMP="--as=system:serviceaccount:arcl-cmp:arcl-cmp --as-group=system:masters"
+OTHER="--as=system:serviceaccount:default:other --as-group=system:masters"
+M=cnp.3istor.com/move-cleanup
 bad=0
 
 # mk <apiVersion> <kind> <name> <namespace> <label value|-> <spec|->
@@ -79,6 +83,24 @@ check deny  "Cluster delete in namespace labelled true" kubectl -n "$P-db-t" del
 check allow "Cluster delete in unlabelled namespace"    kubectl -n "$P-db-u" delete clusters.postgresql.cnpg.io db --wait=false
 check deny  "ObjectBucketClaim delete in namespace labelled true" kubectl -n "$P-db-t" delete objectbucketclaims.objectbucket.io bucket --wait=false
 check allow "ObjectBucketClaim delete in unlabelled namespace"    kubectl -n "$P-db-u" delete objectbucketclaims.objectbucket.io bucket --wait=false
+
+# Project move: only the CMP sets the annotation, then only the CMP deletes the protected namespace.
+for x in a:true b:true c:true d:true; do
+  check allow "Namespace mv-${x%:*} create (label true)" mk v1 Namespace "$P-mv-${x%:*}" default true -
+done
+check deny  "move-cleanup annotation as admin"             kubectl annotate namespace "$P-mv-a" $M=true
+check deny  "move-cleanup annotation as another user"      kubectl annotate namespace "$P-mv-a" $M=true $OTHER
+check deny  "Namespace create with move-cleanup"           kubectl create -f - <<<"{apiVersion: v1, kind: Namespace, metadata: {name: $P-mv-x, annotations: {$M: 'true'}}}"
+check deny  "delete as CMP without the annotation"         kubectl delete namespace "$P-mv-a" --wait=false $CMP
+check allow "move-cleanup annotation as CMP"               kubectl annotate namespace "$P-mv-b" $M=true $CMP
+check deny  "remove move-cleanup annotation as admin"      kubectl annotate namespace "$P-mv-b" $M- 
+check deny  "delete annotated namespace as admin"          kubectl delete namespace "$P-mv-b" --wait=false
+check deny  "delete annotated namespace as another user"   kubectl delete namespace "$P-mv-b" --wait=false $OTHER
+check allow "delete annotated namespace as CMP"            kubectl delete namespace "$P-mv-b" --wait=false $CMP
+# Objects of a namespace being cleaned up (the namespace controller deletes them) may go.
+check allow "Namespace mv-db annotated as CMP" kubectl annotate namespace "$P-db-t" $M=true $CMP
+check allow "Cluster delete in annotated namespace"     kubectl -n "$P-db-t" delete clusters.postgresql.cnpg.io db --wait=false
+check allow "ObjectBucketClaim delete in annotated namespace" kubectl -n "$P-db-t" delete objectbucketclaims.objectbucket.io bucket --wait=false
 
 [ $bad = 0 ] && echo "all checks passed"
 exit $bad
