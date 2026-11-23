@@ -1,5 +1,7 @@
 # Denies deleting objects labelled "true" and removing that label (Argo CD excepted).
 # An absent label or any other value is unprotected.
+# Exception for a project move: the CMP annotates the source namespace cnp.3istor.com/move-cleanup="true",
+# then deletes it. Only the CMP may write that annotation; once set, the namespace's data-bearing objects can go too.
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata:
@@ -8,7 +10,7 @@ spec:
   failurePolicy: Fail
   matchConstraints:
     resourceRules:
-      - { apiGroups: [""], apiVersions: ["v1"], resources: [namespaces], operations: [DELETE, UPDATE] }
+      - { apiGroups: [""], apiVersions: ["v1"], resources: [namespaces], operations: [CREATE, DELETE, UPDATE] }
       - { apiGroups: [argoproj.io], apiVersions: ["*"], resources: [applications, appprojects], operations: [DELETE, UPDATE] }
       - { apiGroups: [postgresql.cnpg.io], apiVersions: ["*"], resources: [clusters], operations: [DELETE] }
       - { apiGroups: [objectbucket.io], apiVersions: ["*"], resources: [objectbucketclaims], operations: [DELETE] }
@@ -26,10 +28,22 @@ spec:
       expression: "request.resource.resource in ['clusters', 'objectbucketclaims']"
     - name: argocd
       expression: "request.userInfo.username in ['system:serviceaccount:argocd:argocd-application-controller', 'system:serviceaccount:argocd:argocd-applicationset-controller']"
+    - name: cmp
+      expression: "request.userInfo.username == 'system:serviceaccount:arcl-cmp:arcl-cmp'"
+    - name: moveKey
+      expression: "'cnp.3istor.com/move-cleanup'"
+    - name: moveWas
+      expression: "oldObject != null && has(oldObject.metadata.annotations) && variables.moveKey in oldObject.metadata.annotations ? oldObject.metadata.annotations[variables.moveKey] : ''"
+    - name: moveNow
+      expression: "object != null && has(object.metadata.annotations) && variables.moveKey in object.metadata.annotations ? object.metadata.annotations[variables.moveKey] : ''"
+    - name: inMovingNamespace
+      expression: "namespaceObject != null && has(namespaceObject.metadata.annotations) && variables.moveKey in namespaceObject.metadata.annotations && namespaceObject.metadata.annotations[variables.moveKey] == 'true'"
   validations:
-    - expression: "!(request.operation == 'DELETE' && !variables.dataBearing && variables.was)"
+    - expression: "!(request.resource.resource == 'namespaces' && request.operation != 'DELETE' && variables.moveWas != variables.moveNow && !variables.cmp)"
+      message: Only the CMP sets the move-cleanup annotation.
+    - expression: "!(request.operation == 'DELETE' && !variables.dataBearing && variables.was && !(variables.cmp && variables.moveWas == 'true'))"
       message: Deletion protection is on for this project. Turn it off in the CMP first.
-    - expression: "!(request.operation == 'DELETE' && variables.dataBearing && variables.inProtectedNamespace)"
+    - expression: "!(request.operation == 'DELETE' && variables.dataBearing && variables.inProtectedNamespace && !variables.inMovingNamespace)"
       message: Deletion protection is on for this project. Turn it off in the CMP first.
     - expression: "!(request.operation == 'UPDATE' && variables.was && !variables.still && !variables.argocd)"
       message: Only Argo CD removes the deletion protection label. Turn it off in the CMP.
