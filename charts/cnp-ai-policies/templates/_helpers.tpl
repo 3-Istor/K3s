@@ -11,7 +11,9 @@ Every client of the project the gateway knows, by azp, as JSON:
   {"agent-p-a": {"kind":"agent","name":"a","models":[..],"budget":N,
                  "webSearch":bool,"tools":[..],"suspended":bool,"callers":[azp..]}}
 Rights come from the ProjectRecord only: an agent's models are cut to the
-project's, web_search needs spec.ai.webSearch.
+project's, web_search needs spec.ai.webSearch. web_search is both an MCP tool
+(platform server web-search) and, for that server's own /v1/messages call
+made with the agent's token, the Anthropic server tool (webSearch).
 */}}
 {{- define "cnp-ai.clients" -}}
 {{- $p := include "cnp-ai.project" . -}}
@@ -27,7 +29,9 @@ project's, web_search needs spec.ai.webSearch.
     {{- if has . $projectModels -}}{{- $models = append $models . -}}{{- end -}}
   {{- end -}}
   {{- $tools := dig "tools" (list) . -}}
+  {{- $webSearch := and $projectWebSearch (has "web_search" $tools) -}}
   {{- $mcpTools := without $tools "web_search" -}}
+  {{- if $webSearch -}}{{- $mcpTools = append $mcpTools "web_search" -}}{{- end -}}
   {{- $callers := list -}}
   {{- range (dig "callers" (list) .) -}}
     {{- $parts := splitList ":" . -}}
@@ -48,7 +52,7 @@ project's, web_search needs spec.ai.webSearch.
   {{- $_ := set $clients (printf "agent-%s-%s" $p .name) (dict
         "kind" "agent" "name" .name "models" $models
         "budget" (int (dig "dailyTokenBudget" $gw.defaultDailyTokenBudget .))
-        "webSearch" (and $projectWebSearch (has "web_search" $tools))
+        "webSearch" $webSearch
         "tools" $mcpTools
         "suspended" (eq (dig "status" "active" .) "suspended")
         "callers" (uniq $callers)) -}}

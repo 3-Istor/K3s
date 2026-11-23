@@ -7,6 +7,7 @@ Images of the CNP AI landing zone agent runtime, deployed from `k8s/config/ai-to
 |---|---|
 | `ghcr.io/3-istor/cnp-gw-auth-proxy` | Sidecar of every kagent agent. Listens on `127.0.0.1:15001` and forwards model (`/v1/*`), MCP (`/mcp/*`) and A2A calls to the AI gateway with the agent's Keycloak `client_credentials` JWT, renewed 60 s before expiry. Sub-agent calls from kagent (`proxy.url` = the sidecar, header `x-kagent-host: <agent>.<project>-<agent>`) go to `/a2a/<project>/<agent>`; agent cards are rewritten to point back at the sidecar, so A2A never goes pod to pod. |
 | `ghcr.io/3-istor/cnp-run-python` | MCP server of the `run_python` tool (code mode). Per call: token exchange of the caller's JWT (client `sandbox-runner`, scope `mcp-read`, 300 s), one agent-sandbox `SandboxClaim` (`python` on gVisor, `python-kata` when the agent's namespace is `cnp.3istor.com/isolation=kata`), run, artifacts to the `ai-artifacts` bucket, served on `GET /ai-artifacts/<task>/<name>` for 24 h. |
+| `ghcr.io/3-istor/cnp-web-search` | MCP server of the `web_search` tool. kagent agents only take MCP tools, so the Anthropic web search server tool is wrapped: per call, one `/v1/messages` request to the AI gateway with the caller's own JWT (cost, budget and rights of the calling agent), `claude-haiku-5-5`, effort low, `max_tokens` 1500, `web_search_20260209` with `max_uses: 1`. Returns `{results: [{title, url, snippet}], searched_at}`; URLs and titles come from the search result blocks only. |
 | `ghcr.io/3-istor/cnp-sandbox-python` | Sandbox image: Python 3.13, numpy, pandas, matplotlib, the exec server and `cnp_tools`. `from cnp_tools import tools; tools.<server>.<tool>(**args)` is generated from the gateway's MCP tool list. |
 
 ## Configuration
@@ -18,9 +19,12 @@ run-python: `RUNNER_CLIENT_SECRET`, the ObjectBucketClaim ConfigMap and Secret (
 `BUCKET_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`), optional `SANDBOX_NAMESPACE` (`ai-sandbox`),
 `SANDBOX_TEMPLATE_GVISOR` (`python`), `SANDBOX_TEMPLATE_KATA` (`python-kata`), `TOKEN_URL`, `GATEWAY_URL`.
 
+web-search: optional `GATEWAY_URL`, `MODEL` (`claude-haiku-5-5`), `EFFORT` (`low`), `MAX_TOKENS` (1500 at most),
+`SEARCH_TOOL_TYPE` (`web_search_20260209`), `LISTEN` (`:3000`).
+
 ## Release
 
-Tag `ai-runtime/vX.Y.Z` on main (workflow `.github/workflows/ai-runtime.yml`): the three images are built,
+Tag `ai-runtime/vX.Y.Z` on main (workflow `.github/workflows/ai-runtime.yml`): the images are built,
 pushed as `X.Y.Z`, signed with cosign keyless and carry a CycloneDX SBOM attestation.
 
 ```bash

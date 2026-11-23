@@ -12,7 +12,8 @@
 {{- end }}
 {{- if $tools }}
 # Tool names are the servers' own (prefixMode Never): a project server
-# publishes <server>__<tool>, the platform's run-python publishes run_python.
+# publishes <server>__<tool>, the platform's run-python and web-search publish
+# run_python and web_search.
 apiVersion: agentgateway.dev/v1alpha1
 kind: AgentgatewayBackend
 metadata:
@@ -30,6 +31,12 @@ spec:
           host: {{ $gw.runPython.host }}
           port: {{ $gw.runPython.port }}
           path: {{ $gw.runPython.path }}
+          protocol: StreamableHTTP
+      - name: web-search
+        static:
+          host: {{ $gw.webSearch.host }}
+          port: {{ $gw.webSearch.port }}
+          path: {{ $gw.webSearch.path }}
           protocol: StreamableHTTP
       - name: project
         selector:
@@ -82,7 +89,8 @@ spec:
       sectionName: mcp
   traffic:
     {{- include "cnp-ai.jwt" . | nindent 4 }}
-      # run_python exchanges the caller's token for the sandbox's own.
+      # run_python exchanges the caller's token for the sandbox's own;
+      # web_search calls /v1/messages with it.
       preserveToken: true
     authorization:
       action: Require
@@ -98,7 +106,8 @@ spec:
           key: '{{ $caller }}'
 ---
 # Per tool, per caller. Code in the sandbox (token exchanged by
-# sandbox-runner, scope mcp-read) gets the agent's tools except run_python.
+# sandbox-runner, scope mcp-read) gets the agent's tools except run_python and
+# web_search (the LLM route does not take sandbox tokens).
 apiVersion: agentgateway.dev/v1alpha1
 kind: AgentgatewayPolicy
 metadata:
@@ -119,7 +128,7 @@ spec:
             - >-
               {{ toJson $tools }}[{{ $caller }}].exists(t, t == mcp.tool.name)
               && (jwt.azp != "sandbox-runner"
-                  || (mcp.tool.name != "run_python" && string(default(jwt.scope, "")).split(" ").exists(s, s == "mcp-read")))
+                  || (!(mcp.tool.name in ["run_python", "web_search"]) && string(default(jwt.scope, "")).split(" ").exists(s, s == "mcp-read")))
 {{- if $suspended }}
 ---
 apiVersion: agentgateway.dev/v1alpha1
