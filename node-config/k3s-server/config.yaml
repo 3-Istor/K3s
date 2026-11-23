@@ -19,8 +19,34 @@ kube-apiserver-arg:
 kubelet-arg:
   - "image-gc-high-threshold=60"
   - "image-gc-low-threshold=45"
+  # The control plane (API, etcd, controllers) runs in this kubelet's node but
+  # requests nothing: without a reservation the scheduler packs tenant pods here
+  # as if the node were empty, while the server VM sits at 100 % CPU.
+  - "kube-reserved=cpu=500m,memory=2Gi"
+  - "system-reserved=cpu=250m,memory=512Mi"
 # Embedded etcd instead of kine/SQLite (2026-11-21): kine turns every list
 # and watch into LIKE scans that the server VM could not keep up with, and
 # its WAL grew to 1.5 GB in six hours. Snapshots: every 12 h, 5 kept, in
 # /var/lib/rancher/k3s/server/db/snapshots.
 cluster-init: true
+# etcd lives on an RBD image whose fsync averages 70 ms (2026-11-23), with
+# stalls of 5 to 10 s when the hypervisor is busy. With the default 15 s lease
+# and 10 s renew deadline, the embedded controller-manager lost its lease and
+# exited, which restarts the whole k3s process and every controller watching
+# it (8 restarts in two days). These leases ride out a stall.
+kube-controller-manager-arg:
+  - "leader-elect-lease-duration=60s"
+  - "leader-elect-renew-deadline=45s"
+  - "leader-elect-retry-period=10s"
+kube-scheduler-arg:
+  - "leader-elect-lease-duration=60s"
+  - "leader-elect-renew-deadline=45s"
+  - "leader-elect-retry-period=10s"
+kube-cloud-controller-manager-arg:
+  - "leader-elect-lease-duration=60s"
+  - "leader-elect-renew-deadline=45s"
+  - "leader-elect-retry-period=10s"
+# Every slow request logged a warning: ~30 lines/s into journald, which then
+# used 90 % of a CPU and more of the same disk, slowing etcd further.
+etcd-arg:
+  - "log-level=error"
