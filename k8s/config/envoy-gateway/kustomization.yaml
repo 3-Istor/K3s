@@ -22,6 +22,16 @@ helmCharts:
     includeCRDs: true
     # The controller uses ~5m and ~115Mi; the chart asks 100m and 256Mi.
     valuesInline:
+      # A 60s lease rides out the few-second etcd stalls of the server VM; the
+      # 15s default lost the lease, and restarted the controller, every few hours.
+      config:
+        envoyGateway:
+          provider:
+            kubernetes:
+              leaderElection:
+                leaseDuration: 60s
+                renewDeadline: 45s
+                retryPeriod: 10s
       deployment:
         envoyGateway:
           resources:

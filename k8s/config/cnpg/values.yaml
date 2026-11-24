@@ -24,3 +24,10 @@ backups:
 
 monitoring:
   podMonitorEnabled: true
+
+# Operator chart (the keys above belong to the cluster chart and are ignored).
+# A 60s lease rides out the few-second etcd stalls of the server VM; with the
+# 15s default the operator lost its lease and exited every few hours.
+additionalArgs:
+  - --leader-lease-duration=60
+  - --leader-renew-deadline=45

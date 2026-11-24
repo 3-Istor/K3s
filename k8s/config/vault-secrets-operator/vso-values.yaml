@@ -10,7 +10,10 @@ image:
 
 vault:
   authMethod: kubernetes
-  reconciliationTime: 60
+  # Every VaultSecret with a vaultRole logs in again on each reconcile (no
+  # client reuse, no token revoke). At 60s, 111 secrets kept the operator
+  # looping and Vault doing ~11 raft writes/s on the etcd VM's disk.
+  reconciliationTime: 600
   address: http://vault.vault.svc.cluster.local:8200
   kubernetesRole: "vault-secrets-operator-role"
 
