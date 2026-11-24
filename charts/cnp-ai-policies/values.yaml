@@ -25,7 +25,17 @@ gateway:
   # gateway refuses any longer-lived one.
   agentTokenMaxLifetimeSeconds: 300
   # When an agent or app sets no dailyTokenBudget.
-  defaultDailyTokenBudget: 200000
+  defaultDailyTokenBudget: 500000
+  # Cache marks on tools, system and the conversation, so an agent's loop
+  # rereads its prefix at a tenth of the input price. kagent 0.10.6 sends
+  # none (its Anthropic client has no promptCaching before 1.0). minTokens 0:
+  # the gateway estimates the system prompt alone, while the cached prefix
+  # also holds the tools; Anthropic ignores a mark under its own minimum.
+  promptCaching:
+    cacheSystem: true
+    cacheTools: true
+    cacheMessages: true
+    minTokens: 0
   # Anthropic server tool, billed per search on top of the tokens.
   webSearchMicroUsd: 10000
   # Highest effort each model may run at (x-cnp-effort can only lower it).

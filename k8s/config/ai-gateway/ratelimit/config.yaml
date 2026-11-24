@@ -4,4 +4,4 @@ descriptors:
     value: all
     rate_limit: {unit: year, requests_per_unit: 5000000}
   - key: azp
-    rate_limit: {unit: day, requests_per_unit: 200000}
+    rate_limit: {unit: day, requests_per_unit: 500000}
