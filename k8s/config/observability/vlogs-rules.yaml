@@ -195,3 +195,17 @@ spec:
               (_msg:~"(?i)\\b(error|fatal|panic|exception|traceback)\\b"
                 or json.level:~"(?i)^(error|fatal|panic|critical)$")
             | stats by (project, namespace) count() as error_lines
+        # Level from the JSON level field when the line has one, else from
+        # the words of the message; debug and trace lines count as other.
+        - record: cnp_log_lines_by_level:count1m
+          expr: |
+            _time:1m {project=~".+"}
+            | format "other" as level
+            | format if (_msg:~"(?i)\\binfo\\b") "info" as level
+            | format if (_msg:~"(?i)\\bwarn(ing)?\\b") "warn" as level
+            | format if (_msg:~"(?i)\\b(error|fatal|panic|exception|traceback)\\b") "error" as level
+            | format if (json.level:~"(?i)^(info|notice)$") "info" as level
+            | format if (json.level:~"(?i)^warn(ing)?$") "warn" as level
+            | format if (json.level:~"(?i)^(error|fatal|panic|critical)$") "error" as level
+            | format if (json.level:~"(?i)^(debug|trace)$") "other" as level
+            | stats by (project, namespace, level) count() as lines

@@ -1,0 +1,79 @@
+# Per-namespace series the CMP project views read (names are a contract).
+# Every series carries namespace: vmauth hands a project org only the
+# namespaces of that project. The raw sources lack it or carry it under
+# another label, so each rule derives it.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: namespace-signals
+  labels:
+    cnp.3istor.com/rules: metrics
+spec:
+  groups:
+    - name: namespace-signals.records
+      interval: 1m
+      rules:
+        # From the per-minute counts recorded on VictoriaLogs
+        # (vlogs-project-counters).
+        - record: cnp_ns:log_lines:rate5m
+          expr: |
+            sum by (namespace, level) (
+              sum_over_time(cnp_log_lines_by_level:count1m[5m])
+            ) / 300
+        # Hubble names the two ends source_namespace and destination_namespace.
+        # A drop inside one namespace yields the same label set on both sides
+        # of the or, so it is counted once.
+        - record: cnp_ns:denied_flows:rate5m
+          expr: |
+            sum by (namespace) (
+              label_replace(
+                rate(hubble_drop_total{reason=~"POLICY_DENIED|POLICY_DENY", source_namespace!=""}[5m]),
+                "namespace", "$1", "source_namespace", "(.+)")
+              or
+              label_replace(
+                rate(hubble_drop_total{reason=~"POLICY_DENIED|POLICY_DENY", destination_namespace!=""}[5m]),
+                "namespace", "$1", "destination_namespace", "(.+)")
+            )
+        # The agent or app namespace is its gateway client id without the
+        # kind prefix: agent-<project>-<name> runs in <project>-<name>.
+        # Platform clients (cmp-ai, the smoke test) belong to no project.
+        - record: cnp_ns:ai_tokens:rate5m
+          expr: |
+            sum by (namespace, azp, direction) (
+              label_replace(
+                label_replace(
+                  rate(agentgateway_gen_ai_client_token_usage_sum{gateway="ai-gateway/ai-gateway", azp=~"(agent|app)-.+"}[5m]),
+                  "direction", "$1", "gen_ai_token_type", "(?:input_)?(.+)"),
+                "namespace", "$1", "azp", "(?:agent|app)-(.+)")
+            )
+    - name: namespace-signals.cost
+      # Allocation gauges move with pod requests: 5 minutes is enough.
+      interval: 5m
+      rules:
+        # OpenCost exports the pod's namespace as exported_namespace (its own
+        # is namespace="opencost"). On-prem prices are custom EUR per hour.
+        # The resource label keeps cpu, ram and storage apart through the or.
+        - record: cnp_ns:cost_eur:rate1h
+          expr: |
+            sum by (namespace) (
+              label_replace(
+                label_replace(
+                  container_cpu_allocation{namespace="opencost"}
+                    * on (node) group_left () node_cpu_hourly_cost{namespace="opencost"},
+                  "resource", "cpu", "", ""),
+                "namespace", "$1", "exported_namespace", "(.+)")
+              or
+              label_replace(
+                label_replace(
+                  container_memory_allocation_bytes{namespace="opencost"} / 2^30
+                    * on (node) group_left () node_ram_hourly_cost{namespace="opencost"},
+                  "resource", "ram", "", ""),
+                "namespace", "$1", "exported_namespace", "(.+)")
+              or
+              label_replace(
+                label_replace(
+                  pod_pvc_allocation{namespace="opencost"} / 2^30
+                    * on (persistentvolume) group_left () pv_hourly_cost{namespace="opencost"},
+                  "resource", "storage", "", ""),
+                "namespace", "$1", "exported_namespace", "(.+)")
+            )

@@ -41,6 +41,7 @@ resources:
   - alertmanager.yaml
   - alerting-rules.yaml
   - ai-rules.yaml
+  - namespace-rules.yaml
   - alerting-networkpolicies.yaml
   - cmp-observability-rbac.yaml
   - vmauth-keys.yaml
