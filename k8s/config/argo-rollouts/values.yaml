@@ -1,6 +1,12 @@
 # Values: https://github.com/argoproj/argo-helm/blob/main/charts/argo-rollouts/values.yaml
 
 controller:
+  # A 60s lease rides out the few-second etcd stalls of the server VM; the 15s
+  # default lost the lease, and restarted the controller, every few hours.
+  extraArgs:
+    - --leader-election-lease-duration=60s
+    - --leader-election-renew-deadline=45s
+    - --leader-election-retry-period=10s
   # RAM is tight on this cluster; a missed reconcile during a restart only delays a step.
   replicas: 1
   # 128Mi was OOMKilled on every start once the gatewayAPI plugin process came

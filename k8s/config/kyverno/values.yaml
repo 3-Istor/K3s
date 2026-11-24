@@ -4,11 +4,16 @@
 # Requests sized on 7-day usage (CNP-272). The chart's 100m per controller
 # held 400m for ~70m of use; the 128Mi limits sat 10Mi above the cleanup and
 # reports controllers' peaks.
+# Kyverno derives its lease from the retry period (lease = 6x, renew = 5x):
+# 10s gives a 60s lease. The 12s default lost the lease, and the process
+# exited, on every few-second etcd stall of the server VM.
 admissionController:
   replicas: 1
   serviceMonitor:
     enabled: true
   container:
+    extraArgs:
+      leaderElectionRetryPeriod: 10s
     resources:
       requests:
         cpu: 50m
@@ -19,6 +24,8 @@ backgroundController:
   replicas: 1
   serviceMonitor:
     enabled: true
+  extraArgs:
+    leaderElectionRetryPeriod: 10s
   resources:
     requests:
       cpu: 25m
@@ -29,6 +36,8 @@ cleanupController:
   replicas: 1
   serviceMonitor:
     enabled: true
+  extraArgs:
+    leaderElectionRetryPeriod: 10s
   resources:
     requests:
       cpu: 25m
@@ -39,6 +48,8 @@ reportsController:
   replicas: 1
   serviceMonitor:
     enabled: true
+  extraArgs:
+    leaderElectionRetryPeriod: 10s
   resources:
     requests:
       cpu: 100m

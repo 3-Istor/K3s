@@ -1,5 +1,14 @@
 resource "vault_auth_backend" "kubernetes" {
   type = "kubernetes"
+
+  # Caps the roles' 24h token_ttl. vault-secrets-operator logs in on every
+  # reconcile and never revokes, so 24h tokens piled up by the tens of
+  # thousands in vault.db. Clients here re-login on expiry (CMP, secret-age).
+  # The CMP needs 45 min for a Terraform run, so not below 1h.
+  tune {
+    default_lease_ttl = "1h"
+    max_lease_ttl     = "1h"
+  }
 }
 
 resource "vault_kubernetes_auth_backend_config" "kubernetes_auth" {

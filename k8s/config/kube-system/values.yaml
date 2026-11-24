@@ -1,6 +1,12 @@
 # Default 2, but need to ask for this kind of thing what's the real needs for HA or is ok ? because it's an operator
 operator:
   replicas: 1
+  # A 60s lease rides out the few-second etcd stalls of the server VM; the 15s
+  # default lost the lease, and restarted the operator, every few hours.
+  extraArgs:
+    - --leader-election-lease-duration=60s
+    - --leader-election-renew-deadline=45s
+    - --leader-election-retry-period=10s
 
 # Bare-Metal Setup (e.g., Talos etc.)
 # ipam:
