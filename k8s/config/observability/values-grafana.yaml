@@ -55,6 +55,9 @@ grafana.ini:
     # The CMP owns org memberships; role sync would reset them to org 1 on every login.
     # It also disables role_attribute_path.
     skip_org_role_sync: true
+  dashboards:
+    # Project orgs set their own home through the CMP; this one is org 1's.
+    default_home_dashboard_path: /var/lib/grafana/dashboards/platform/platform-home.json
   users:
     # Org 1 reads every namespace's metrics: a new login gets no role there.
     # The CMP makes infra Admin and security-auditor Viewer (CNP-228).
@@ -194,9 +197,30 @@ dashboardProviders:
         options:
           path: /var/lib/grafana/dashboards/ia
 
+      # Org 1 home (dashboards/platform-home.json) and the per-project view.
+      - name: "platform"
+        orgId: 1
+        folder: ""
+        type: file
+        disableDeletion: false
+        editable: false
+        options:
+          path: /var/lib/grafana/dashboards/platform
+
+      - name: "projects"
+        orgId: 1
+        folder: "Projects"
+        type: file
+        disableDeletion: false
+        editable: false
+        options:
+          path: /var/lib/grafana/dashboards/projects
+
 # Grafana Links: https://grafana.com/grafana/dashboards/<gnetId>
 dashboardsConfigMaps:
   ia: grafana-dashboard-ia
+  platform: grafana-dashboard-platform
+  projects: grafana-dashboard-projects
 
 dashboards:
   # Cluster-wide views built on kube-state-metrics + cAdvisor + node-exporter.

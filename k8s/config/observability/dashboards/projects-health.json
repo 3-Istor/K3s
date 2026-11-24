@@ -1,0 +1,273 @@
+{
+  "uid": "cnp-projects-health",
+  "title": "All projects health",
+  "tags": [
+    "cnp",
+    "platform",
+    "projects"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "refresh": "1m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Requests per second by project",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (cnp_project) (cnp_slo:requests:rate5m{cnp_slo=\"availability\"})",
+          "legendFormat": "{{cnp_project}}",
+          "instant": false,
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "5xx share by project",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (cnp_project) (cnp_slo:errors:rate5m{cnp_slo=\"availability\"}) / sum by (cnp_project) (cnp_slo:requests:rate5m{cnp_slo=\"availability\"})",
+          "legendFormat": "{{cnp_project}}",
+          "instant": false,
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "bargauge",
+      "title": "Error budget left (worst app)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.5
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "min by (cnp_project) (slo:period_error_budget_remaining:ratio{cnp_slo=\"availability\"})",
+          "legendFormat": "{{cnp_project}}",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Error log lines per minute by project",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (cnp_project) (cnp_ns:log_lines:rate5m{level=\"error\"} * on (namespace) group_left (cnp_project) (max by (namespace, cnp_project) (cnp_slo:requests:rate5m) * 0 + 1)) * 60",
+          "legendFormat": "{{cnp_project}}",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "description": "Needs the cnp_ns:log_lines:rate5m recording rule."
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Cost by namespace (EUR per hour)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyEUR"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "topk(10, sum by (namespace) (cnp_ns:cost_eur:rate1h))",
+          "legendFormat": "{{namespace}}",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "description": "Needs the cnp_ns:cost_eur:rate1h recording rule."
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Projects",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 24,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (cnp_project) (cnp_slo:requests:rate5m{cnp_slo=\"availability\"})",
+          "legendFormat": "Requests/s",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (cnp_project) (cnp_slo:errors:rate5m{cnp_slo=\"availability\"}) / sum by (cnp_project) (cnp_slo:requests:rate5m{cnp_slo=\"availability\"})",
+          "legendFormat": "5xx",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "min by (cnp_project) (slo:period_error_budget_remaining:ratio{cnp_slo=\"availability\"})",
+          "legendFormat": "Budget left",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "cnp_project",
+            "mode": "outer"
+          }
+        }
+      ]
+    }
+  ]
+}

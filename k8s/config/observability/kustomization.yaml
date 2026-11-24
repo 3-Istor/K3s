@@ -78,6 +78,16 @@ configMapGenerator:
       disableNameSuffixHash: true
     files:
       - ia.json=dashboards/ia.json
+  - name: grafana-dashboard-platform
+    options:
+      disableNameSuffixHash: true
+    files:
+      - platform-home.json=dashboards/platform-home.json
+  - name: grafana-dashboard-projects
+    options:
+      disableNameSuffixHash: true
+    files:
+      - projects-health.json=dashboards/projects-health.json
 
 helmGlobals:
   chartHome: ../../../charts
