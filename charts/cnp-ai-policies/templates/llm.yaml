@@ -99,6 +99,9 @@ spec:
                 expression: '{{ $caller }}'
             unit: Tokens
             limitOverride: '{"unit": "day", "requestsPerUnit": {{ toJson $budgets }}[{{ $caller }}]}'
+            # The default Tokens cost counts cache reads as input: prompt
+            # caching would save money and none of the budget.
+            cost: 'int(default(llm.providerInputTokens, 0)) + int(default(llm.cacheCreationInputTokens, 0)) + int(default(llm.outputTokens, 0))'
           # Platform-wide cap in micro-USD; the limit lives in ratelimit-config.
           # Searches are billed only when the request carries the server tool:
           # an agent's call to the web_search MCP tool is also a tool call
@@ -110,6 +113,8 @@ spec:
             cost: '(has(llm.cost) ? int(llm.cost.total * 1000000.0) : 0) + (has(llmRequest.tools) && llmRequest.tools.exists(t, has(t.type) && string(t.type).startsWith("web_search")) ? {{ $gw.webSearchMicroUsd }} * default(llm.toolCalls, []).filter(t, t.name == "web_search").size() : 0)'
   backend:
     ai:
+      promptCaching:
+        {{- toYaml $gw.promptCaching | nindent 8 }}
       routes:
         /v1/messages: Messages
         /v1/messages/count_tokens: AnthropicTokenCount
