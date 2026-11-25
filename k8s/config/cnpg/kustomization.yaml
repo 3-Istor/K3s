@@ -11,7 +11,7 @@ helmGlobals:
 helmCharts:
   - name: cloudnative-pg
     repo: https://cloudnative-pg.github.io/charts
-    version: "0.29.0"
+    version: "0.29.1"
     releaseName: cnpg
     namespace: cnpg-system
     valuesFile: values.yaml
@@ -19,7 +19,7 @@ helmCharts:
   # deprecated since CNPG 1.26.
   - name: plugin-barman-cloud
     repo: https://cloudnative-pg.github.io/charts
-    version: "0.8.1"
+    version: "0.9.0"
     releaseName: barman-cloud
     namespace: cnpg-system
     valuesFile: values-barman-cloud.yaml
