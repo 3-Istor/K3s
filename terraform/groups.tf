@@ -40,24 +40,26 @@ resource "keycloak_group" "security_auditor" {
 }
 
 # Platform group members. Each keycloak_group_memberships is authoritative for its group: a
-# member added by hand in the console is removed at the next apply. Project groups are not
-# listed here, the CMP owns them. cluster-admin kubectl is not standing: it is
+# member added by hand in the console is removed at the next apply. finops and
+# security-auditor are managed from the CMP portal; Terraform only adds the demo
+# accounts (demo_portal). Project groups are not listed here, the CMP owns them. cluster-admin kubectl is not standing: it is
 # the elevated-k3s-admin grant, brokered by the CMP.
 locals {
   platform_admins = ["brian.perret", "hugo.guillet"]
 
   platform_group_members = {
-    infra            = local.platform_admins
-    security-auditor = local.demo_accounts_of_role["auditor"]
-    finops           = local.demo_accounts_of_role["finops"]
-    member           = concat(keys(local.team_members), tolist(local.demo_accounts), ["manager.test"])
+    infra  = local.platform_admins
+    member = concat(keys(local.team_members), tolist(local.demo_accounts), ["manager.test"])
   }
 
   platform_groups = {
-    infra            = keycloak_group.infra.id
-    security-auditor = keycloak_group.security_auditor.id
-    finops           = keycloak_group.finops.id
-    member           = keycloak_group.member.id
+    infra  = keycloak_group.infra.id
+    member = keycloak_group.member.id
+  }
+
+  portal_groups = {
+    auditor = keycloak_group.security_auditor.id
+    finops  = keycloak_group.finops.id
   }
 
   managed_usernames = merge(
@@ -73,6 +75,19 @@ resource "keycloak_group_memberships" "platform" {
   group_id = each.value
   # Through managed_usernames so a typo fails the plan and users exist before membership.
   members = [for name in local.platform_group_members[each.key] : local.managed_usernames[name]]
+}
+
+# Non-exhaustive: the portal adds and removes other members. Remove the old
+# platform["finops"] and platform["security-auditor"] from the state before applying.
+resource "keycloak_user_groups" "demo_portal" {
+  for_each = {
+    for pair in setproduct(keys(local.portal_groups), local.demo_people) :
+    "demo-${pair[0]}-${pair[1]}" => local.portal_groups[pair[0]]
+  }
+  realm_id   = keycloak_realm.kube_lab.id
+  user_id    = keycloak_user.demo[each.key].id
+  group_ids  = [each.value]
+  exhaustive = false
 }
 
 moved {
