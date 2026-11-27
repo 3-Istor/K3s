@@ -124,7 +124,7 @@ env:
     IMPORT_WORKFLOW_OWNER_ID: "271529816"
     # Commits of .github/workflows/import.yml allowed to call the worker API,
     # comma separated. A workflow change is live only once its commit is here.
-    IMPORT_WORKFLOW_SHAS: "710937a68f0e2333a0e7c39c24947d0e71e3469a,fe348b4edd2ef9f57d6111fe24cd392013e0d4fc,fae32ad782d2571ae57e9760cf06e19e22e0099c,5e801a917713c2c4ed4993c69207af07d4d8366a,872c1407e1287ed8326d8645764a892b1a882977,37746aa61fa8334dcf0845848c3034fb6394f758,103a00f3cfa14e8150268472d412a662520ed5c7,f2f98b80d55cf8370ac9ba2f598899853ef571d6"
+    IMPORT_WORKFLOW_SHAS: "710937a68f0e2333a0e7c39c24947d0e71e3469a,fe348b4edd2ef9f57d6111fe24cd392013e0d4fc,fae32ad782d2571ae57e9760cf06e19e22e0099c,5e801a917713c2c4ed4993c69207af07d4d8366a,872c1407e1287ed8326d8645764a892b1a882977,37746aa61fa8334dcf0845848c3034fb6394f758,103a00f3cfa14e8150268472d412a662520ed5c7,f2f98b80d55cf8370ac9ba2f598899853ef571d6,4e7f9617832adfdffccbf36abc0e7a8b9c5e7544"
     IMPORT_OIDC_AUDIENCE: "cmp-import"
     # "self-hosted" only for a runner group of ephemeral, one-job runners: a
     # persistent runner lets one import read the next one's source and tokens.
