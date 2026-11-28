@@ -44,7 +44,7 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: put-policy
-          image: docker.io/amazon/aws-cli:2.31.33
+          image: docker.io/amazon/aws-cli:2.40.3
           args:
             - s3api
             - put-bucket-policy
