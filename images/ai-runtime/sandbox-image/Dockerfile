@@ -1,4 +1,4 @@
-FROM python:3.13.9-slim
+FROM python:3.15.1-slim
 
 RUN pip install --no-cache-dir numpy==2.5.5 pandas==3.1.1 matplotlib==3.11.2 \
  && useradd --uid 1000 --create-home sbx \
